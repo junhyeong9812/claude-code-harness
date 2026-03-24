@@ -229,6 +229,12 @@
   - `context.md` — 맥락 노트 (템플릿: `templates/context.md`)
   - `checklist.md` — 체크리스트 (템플릿: `templates/checklist.md`)
 
+**문서 저장 경로 규칙**:
+- 경로: `docs/{날짜}/{작업명}/` (예: `docs/2026-03-24/multi-variant-terms/`)
+- 날짜: 작업 시작일 (YYYY-MM-DD)
+- 작업명: 케밥 케이스로 작업 내용을 간결하게 (예: `multi-variant-terms`, `boost-tuning`)
+- 해당 폴더 안에 plan.md, context.md, checklist.md를 생성한다.
+
 **산출물**:
 - `plan.md` — 변경 파일 목록, 순서, 방법, 트레이드오프
 - `context.md` — 결정 근거, 도메인 지식, 금지 영역
