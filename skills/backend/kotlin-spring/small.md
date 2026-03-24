@@ -1,11 +1,12 @@
 # Kotlin / Spring Boot - 소규모 프로젝트 가이드
 
-> 팀 1~3명, 엔드포인트 20개 이하, MVP/내부 툴/단일 마이크로서비스
+> 엔드포인트 50개 이하, MVP/내부 툴/단일 마이크로서비스
 
 ---
 
 ## 핵심 원칙
 
+- **도메인 폴더 + 플랫 파일**: 도메인별 폴더 안에 Controller, Service, Repository, Entity, DTO를 같은 레벨에 배치
 - **data class DTO**: 불변 데이터 전달, copy() 활용
 - **Null Safety**: `?` 연산자로 NPE 원천 차단
 - **Extension Functions**: 유틸리티를 깔끔하게 확장
@@ -18,13 +19,28 @@
 
 ```
 src/main/kotlin/com/example/myapp/
-├── MyAppApplication.kt            # @SpringBootApplication
-├── UserController.kt              # @RestController
-├── UserRepository.kt              # JpaRepository
-├── User.kt                        # @Entity
-├── UserDto.kt                     # data class DTO (요청/응답)
-├── GlobalExceptionHandler.kt      # @ControllerAdvice
-└── SecurityConfig.kt
+├── MyAppApplication.kt
+├── user/
+│   ├── UserController.kt
+│   ├── UserService.kt
+│   ├── UserRepository.kt
+│   ├── User.kt                        # Entity
+│   ├── UserDto.kt                     # data class DTO
+│   └── UserMapper.kt
+├── order/
+│   ├── OrderController.kt
+│   ├── OrderService.kt
+│   ├── OrderRepository.kt
+│   ├── Order.kt
+│   ├── OrderItem.kt
+│   ├── OrderDto.kt
+│   └── OrderMapper.kt
+├── product/
+│   └── ...
+└── common/
+    ├── GlobalExceptionHandler.kt
+    ├── SecurityConfig.kt
+    └── PageResponse.kt
 
 src/main/resources/
 ├── application.yml
@@ -32,7 +48,11 @@ src/main/resources/
     └── V1__create_users.sql
 
 src/test/kotlin/com/example/myapp/
-├── UserControllerTest.kt
+├── user/
+│   ├── UserControllerTest.kt
+│   └── UserServiceTest.kt
+├── order/
+│   └── OrderControllerTest.kt
 └── MyAppApplicationTests.kt
 ```
 
@@ -41,8 +61,8 @@ src/test/kotlin/com/example/myapp/
 ## Entity (allopen/noarg 플러그인 필요)
 
 ```kotlin
-// User.kt
-package com.example.myapp
+// user/User.kt
+package com.example.myapp.user
 
 import jakarta.persistence.*
 import java.time.Instant
@@ -73,8 +93,8 @@ class User(
 ## data class DTO
 
 ```kotlin
-// UserDto.kt
-package com.example.myapp
+// user/UserDto.kt
+package com.example.myapp.user
 
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
@@ -97,16 +117,25 @@ data class UserResponse(
     val email: String,
     val name: String,
     val createdAt: Instant,
-) {
-    companion object {
-        fun from(user: User) = UserResponse(
-            id = user.id,
-            email = user.email,
-            name = user.name,
-            createdAt = user.createdAt,
-        )
-    }
-}
+)
+```
+
+---
+
+## Mapper
+
+```kotlin
+// user/UserMapper.kt
+package com.example.myapp.user
+
+fun User.toResponse() = UserResponse(
+    id = id,
+    email = email,
+    name = name,
+    createdAt = createdAt,
+)
+
+fun List<User>.toResponses() = map { it.toResponse() }
 ```
 
 ---
@@ -114,8 +143,8 @@ data class UserResponse(
 ## Repository
 
 ```kotlin
-// UserRepository.kt
-package com.example.myapp
+// user/UserRepository.kt
+package com.example.myapp.user
 
 import org.springframework.data.jpa.repository.JpaRepository
 
@@ -127,27 +156,23 @@ interface UserRepository : JpaRepository<User, Long> {
 
 ---
 
-## Controller
+## Service
 
 ```kotlin
-// UserController.kt
-package com.example.myapp
+// user/UserService.kt
+package com.example.myapp.user
 
-import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.*
-import org.springframework.web.server.ResponseStatusException
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.stereotype.Service
+import org.springframework.web.server.ResponseStatusException
 
-@RestController
-@RequestMapping("/api/v1/users")
-class UserController(
+@Service
+class UserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
 ) {
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    fun createUser(@Valid @RequestBody request: UserCreateRequest): UserResponse {
+    fun createUser(request: UserCreateRequest): UserResponse {
         if (userRepository.existsByEmail(request.email)) {
             throw ResponseStatusException(HttpStatus.CONFLICT, "이미 등록된 이메일입니다")
         }
@@ -158,25 +183,20 @@ class UserController(
             password = passwordEncoder.encode(request.password),
         )
         userRepository.save(user)
-        return UserResponse.from(user)
+        return user.toResponse()
     }
 
-    @GetMapping("/{id}")
-    fun getUser(@PathVariable id: Long): UserResponse {
+    fun getUser(id: Long): UserResponse {
         val user = userRepository.findById(id).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다")
         }
-        return UserResponse.from(user)
+        return user.toResponse()
     }
 
-    @GetMapping
-    fun listUsers(
-        @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "20") size: Int,
-    ): List<UserResponse> {
+    fun listUsers(page: Int, size: Int): List<UserResponse> {
         return userRepository
             .findAll(org.springframework.data.domain.PageRequest.of(page, minOf(size, 100)))
-            .map { UserResponse.from(it) }
+            .map { it.toResponse() }
             .content
     }
 }
@@ -184,37 +204,51 @@ class UserController(
 
 ---
 
-## Extension Functions 활용
+## Controller
 
 ```kotlin
-// Extensions.kt
-package com.example.myapp
+// user/UserController.kt
+package com.example.myapp.user
 
-import org.springframework.data.repository.CrudRepository
+import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.*
 
-// Repository extension: findById가 null을 반환하도록
-fun <T, ID> CrudRepository<T, ID>.findByIdOrNull(id: ID): T? =
-    findById(id!!).orElse(null)
+@RestController
+@RequestMapping("/api/v1/users")
+class UserController(
+    private val userService: UserService,
+) {
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createUser(@Valid @RequestBody request: UserCreateRequest): UserResponse {
+        return userService.createUser(request)
+    }
 
-// Entity → Response 변환 extension
-fun User.toResponse() = UserResponse(
-    id = id,
-    email = email,
-    name = name,
-    createdAt = createdAt,
-)
+    @GetMapping("/{id}")
+    fun getUser(@PathVariable id: Long): UserResponse {
+        return userService.getUser(id)
+    }
 
-// List 변환
-fun List<User>.toResponses() = map { it.toResponse() }
+    @GetMapping
+    fun listUsers(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): List<UserResponse> {
+        return userService.listUsers(page, size)
+    }
+}
 ```
 
 ---
 
-## 글로벌 예외 핸들러
+## common/ 공통 모듈
+
+### 글로벌 예외 핸들러
 
 ```kotlin
-// GlobalExceptionHandler.kt
-package com.example.myapp
+// common/GlobalExceptionHandler.kt
+package com.example.myapp.common
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
@@ -257,6 +291,36 @@ class GlobalExceptionHandler {
         }
     }
 }
+```
+
+### 공통 응답
+
+```kotlin
+// common/PageResponse.kt
+package com.example.myapp.common
+
+data class PageResponse<T>(
+    val content: List<T>,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
+)
+```
+
+---
+
+## Extension Functions 활용
+
+```kotlin
+// common/Extensions.kt
+package com.example.myapp.common
+
+import org.springframework.data.repository.CrudRepository
+
+// Repository extension: findById가 null을 반환하도록
+fun <T, ID> CrudRepository<T, ID>.findByIdOrNull(id: ID): T? =
+    findById(id!!).orElse(null)
 ```
 
 ---
@@ -305,11 +369,9 @@ dependencies {
 ## 테스트 (MockK)
 
 ```kotlin
-// src/test/kotlin/com/example/myapp/UserControllerTest.kt
-package com.example.myapp
+// src/test/kotlin/com/example/myapp/user/UserControllerTest.kt
+package com.example.myapp.user
 
-import com.ninjasquad.springmockk.MockkBean
-import io.mockk.every
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -318,8 +380,6 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
-import java.time.Instant
-import java.util.Optional
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -327,9 +387,6 @@ class UserControllerTest {
 
     @Autowired
     lateinit var mockMvc: MockMvc
-
-    @Autowired
-    lateinit var userRepository: UserRepository
 
     @Test
     fun `사용자 생성 성공`() {
@@ -360,6 +417,52 @@ class UserControllerTest {
 }
 ```
 
+### Service 단위 테스트
+
+```kotlin
+// src/test/kotlin/com/example/myapp/user/UserServiceTest.kt
+package com.example.myapp.user
+
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.web.server.ResponseStatusException
+
+class UserServiceTest {
+
+    private val userRepository = mockk<UserRepository>(relaxed = true)
+    private val passwordEncoder = mockk<PasswordEncoder>()
+    private val userService = UserService(userRepository, passwordEncoder)
+
+    @Test
+    fun `이메일 중복 시 CONFLICT 예외`() {
+        every { userRepository.existsByEmail("dup@test.com") } returns true
+
+        assertThrows<ResponseStatusException> {
+            userService.createUser(
+                UserCreateRequest("dup@test.com", "테스트", "password123")
+            )
+        }
+    }
+
+    @Test
+    fun `사용자 생성 시 비밀번호 인코딩`() {
+        every { userRepository.existsByEmail(any()) } returns false
+        every { passwordEncoder.encode("password123") } returns "encoded"
+        every { userRepository.save(any()) } returnsArgument 0
+
+        userService.createUser(
+            UserCreateRequest("new@test.com", "테스트", "password123")
+        )
+
+        verify { passwordEncoder.encode("password123") }
+    }
+}
+```
+
 ---
 
 ## Null Safety 활용 예시
@@ -374,7 +477,7 @@ fun getUserEmail(id: Long): String {
 
 // let 스코프 함수로 null 안전 변환
 fun findAndConvert(id: Long): UserResponse? {
-    return userRepository.findByIdOrNull(id)?.let { UserResponse.from(it) }
+    return userRepository.findByIdOrNull(id)?.let { it.toResponse() }
 }
 ```
 
@@ -384,8 +487,18 @@ fun findAndConvert(id: Long): UserResponse? {
 
 | 안티패턴 | 이유 |
 |----------|------|
-| Service 레이어 분리 | Controller에서 Repository 직접 호출로 충분 |
+| 레이어별 하위 폴더 분리 | `controller/`, `service/`, `repository/` 폴더로 나누면 도메인 응집도가 떨어짐 |
 | sealed class 에러 | `ResponseStatusException`으로 충분 |
 | Coroutines | 블로킹 I/O 기반 Spring MVC에서 불필요 |
 | 멀티 모듈 | 단일 모듈로 충분 |
 | Arrow-kt | 소규모에서는 과도한 FP 추상화 |
+
+---
+
+## 전환 시그널
+
+다음 조건이 보이면 중규모 구조로 전환을 검토한다:
+
+- **도메인 폴더 안 파일이 10개를 넘기기 시작할 때** - 도메인 내부에 하위 구조가 필요하다는 신호
+- **Service 하나가 200줄 이상으로 커질 때** - 비즈니스 로직을 분리해야 할 시점
+- **외부 시스템 연동이 생길 때** - 인프라 레이어 분리가 필요해짐

@@ -1,14 +1,15 @@
 # Java / Spring Boot - 소규모 프로젝트 가이드
 
-> 팀 1~3명, 엔드포인트 20개 이하, MVP/내부 툴/단일 마이크로서비스
+> 엔드포인트 50개 이하, MVP/내부 툴/단일 마이크로서비스
 
 ---
 
 ## 핵심 원칙
 
 - **Spring Boot 3.x + Java 21**: Records, Pattern Matching, Virtual Threads
-- **Flat 패키지 구조**: 패키지 중첩 최소화
+- **도메인 폴더 + 플랫 파일**: 도메인별 폴더 안에 관련 파일을 평탄하게 배치
 - **Records as DTO**: 불변 데이터 전달 객체
+- **Service 레이어**: Controller와 Repository 사이에 비즈니스 로직 분리
 - **JpaRepository**: Spring Data JPA 기본 인터페이스 활용
 - **@ControllerAdvice**: 글로벌 예외 핸들링
 - **Flyway**: DB 마이그레이션
@@ -19,14 +20,39 @@
 
 ```
 src/main/java/com/example/myapp/
-├── MyAppApplication.java          # @SpringBootApplication
-├── UserController.java            # @RestController
-├── UserRepository.java            # JpaRepository 인터페이스
-├── User.java                      # @Entity JPA 모델
-├── UserCreateRequest.java         # Record DTO (요청)
-├── UserResponse.java              # Record DTO (응답)
-├── GlobalExceptionHandler.java    # @ControllerAdvice
-└── SecurityConfig.java            # 보안 설정
+├── MyAppApplication.java
+│
+├── user/
+│   ├── UserController.java
+│   ├── UserService.java
+│   ├── UserRepository.java
+│   ├── User.java                      # Entity
+│   ├── UserCreateRequest.java         # Record DTO
+│   ├── UserResponse.java              # Record DTO
+│   └── UserNotFoundException.java
+│
+├── order/
+│   ├── OrderController.java
+│   ├── OrderService.java
+│   ├── OrderRepository.java
+│   ├── Order.java
+│   ├── OrderItem.java
+│   ├── CreateOrderRequest.java
+│   ├── OrderResponse.java
+│   └── InsufficientStockException.java
+│
+├── product/
+│   ├── ProductController.java
+│   ├── ProductService.java
+│   ├── ProductRepository.java
+│   ├── Product.java
+│   ├── ProductRequest.java
+│   └── ProductResponse.java
+│
+└── common/
+    ├── GlobalExceptionHandler.java
+    ├── SecurityConfig.java
+    └── PageResponse.java
 
 src/main/resources/
 ├── application.yml
@@ -35,7 +61,8 @@ src/main/resources/
 └── ...
 
 src/test/java/com/example/myapp/
-├── UserControllerTest.java
+├── user/
+│   └── UserControllerTest.java
 └── MyAppApplicationTests.java
 ```
 
@@ -44,8 +71,8 @@ src/test/java/com/example/myapp/
 ## Entity
 
 ```java
-// User.java
-package com.example.myapp;
+// user/User.java
+package com.example.myapp.user;
 
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -92,8 +119,8 @@ public class User {
 ## Record DTO
 
 ```java
-// UserCreateRequest.java
-package com.example.myapp;
+// user/UserCreateRequest.java
+package com.example.myapp.user;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -107,8 +134,8 @@ public record UserCreateRequest(
 ```
 
 ```java
-// UserResponse.java
-package com.example.myapp;
+// user/UserResponse.java
+package com.example.myapp.user;
 
 import java.time.Instant;
 
@@ -131,11 +158,27 @@ public record UserResponse(
 
 ---
 
+## 도메인 예외
+
+```java
+// user/UserNotFoundException.java
+package com.example.myapp.user;
+
+public class UserNotFoundException extends RuntimeException {
+
+    public UserNotFoundException(Long id) {
+        super("사용자를 찾을 수 없습니다: id=" + id);
+    }
+}
+```
+
+---
+
 ## Repository
 
 ```java
-// UserRepository.java
-package com.example.myapp;
+// user/UserRepository.java
+package com.example.myapp.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
@@ -148,37 +191,34 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 ---
 
-## Controller
+## Service
 
 ```java
-// UserController.java
-package com.example.myapp;
+// user/UserService.java
+package com.example.myapp.user;
 
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
-@RestController
-@RequestMapping("/api/v1/users")
-public class UserController {
+@Service
+@Transactional(readOnly = true)
+public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse createUser(@Valid @RequestBody UserCreateRequest request) {
+    @Transactional
+    public UserResponse createUser(UserCreateRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 등록된 이메일입니다");
+            throw new IllegalArgumentException("이미 등록된 이메일입니다");
         }
 
         var user = new User(
@@ -190,22 +230,58 @@ public class UserController {
         return UserResponse.from(user);
     }
 
-    @GetMapping("/{id}")
-    public UserResponse getUser(@PathVariable Long id) {
+    public UserResponse getUser(Long id) {
         var user = userRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+            .orElseThrow(() -> new UserNotFoundException(id));
         return UserResponse.from(user);
     }
 
+    public Page<UserResponse> listUsers(int page, int size) {
+        return userRepository.findAll(PageRequest.of(page, Math.min(size, 100)))
+            .map(UserResponse::from);
+    }
+}
+```
+
+---
+
+## Controller
+
+```java
+// user/UserController.java
+package com.example.myapp.user;
+
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/v1/users")
+public class UserController {
+
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserResponse createUser(@Valid @RequestBody UserCreateRequest request) {
+        return userService.createUser(request);
+    }
+
+    @GetMapping("/{id}")
+    public UserResponse getUser(@PathVariable Long id) {
+        return userService.getUser(id);
+    }
+
     @GetMapping
-    public List<UserResponse> listUsers(
+    public Page<UserResponse> listUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return userRepository.findAll(
-                org.springframework.data.domain.PageRequest.of(page, Math.min(size, 100)))
-            .map(UserResponse::from)
-            .getContent();
+        return userService.listUsers(page, size);
     }
 }
 ```
@@ -215,31 +291,37 @@ public class UserController {
 ## 글로벌 예외 핸들러
 
 ```java
-// GlobalExceptionHandler.java
-package com.example.myapp;
+// common/GlobalExceptionHandler.java
+package com.example.myapp.common;
 
+import com.example.myapp.user.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ResponseStatusException.class)
-    public ProblemDetail handleResponseStatus(ResponseStatusException ex) {
+    @ExceptionHandler(UserNotFoundException.class)
+    public ProblemDetail handleNotFound(UserNotFoundException ex) {
         var problem = ProblemDetail.forStatusAndDetail(
-            HttpStatus.valueOf(ex.getStatusCode().value()),
-            ex.getReason()
+            HttpStatus.NOT_FOUND, ex.getMessage()
         );
-        problem.setType(URI.create("https://api.example.com/errors/" +
-            ex.getStatusCode().value()));
+        problem.setType(URI.create("https://api.example.com/errors/not-found"));
+        return problem;
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleConflict(IllegalArgumentException ex) {
+        var problem = ProblemDetail.forStatusAndDetail(
+            HttpStatus.CONFLICT, ex.getMessage()
+        );
+        problem.setType(URI.create("https://api.example.com/errors/conflict"));
         return problem;
     }
 
@@ -270,7 +352,69 @@ public class GlobalExceptionHandler {
 
 ---
 
+## 공용 DTO
+
+```java
+// common/PageResponse.java
+package com.example.myapp.common;
+
+import java.util.List;
+
+public record PageResponse<T>(
+    List<T> content,
+    int page,
+    int size,
+    long totalElements,
+    int totalPages
+) {
+    public static <T> PageResponse<T> from(org.springframework.data.domain.Page<T> page) {
+        return new PageResponse<>(
+            page.getContent(),
+            page.getNumber(),
+            page.getSize(),
+            page.getTotalElements(),
+            page.getTotalPages()
+        );
+    }
+}
+```
+
+---
+
 ## 설정
+
+```java
+// common/SecurityConfig.java
+package com.example.myapp.common;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/api/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .build();
+    }
+}
+```
 
 ```yaml
 # src/main/resources/application.yml
@@ -323,8 +467,8 @@ CREATE INDEX idx_users_email ON users (email);
 ## 테스트
 
 ```java
-// src/test/java/com/example/myapp/UserControllerTest.java
-package com.example.myapp;
+// src/test/java/com/example/myapp/user/UserControllerTest.java
+package com.example.myapp.user;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -431,8 +575,22 @@ dependencies {
 
 | 안티패턴 | 이유 |
 |----------|------|
-| Service 레이어 분리 | Controller에서 Repository 직접 호출로 충분 |
+| 레이어별 하위 폴더 분리 | `controller/`, `service/`, `repository/` 폴더로 나누면 도메인 응집도가 떨어짐 |
 | MapStruct 도입 | `Record.from()` 정적 메서드로 충분 |
-| Package-by-feature | 파일이 적을 때는 flat 구조가 더 명확 |
 | QueryDSL | JpaRepository 기본 메서드와 `@Query`로 충분 |
 | 멀티 모듈 | 단일 모듈로 충분 |
+
+---
+
+## 전환 시그널
+
+아래 징후가 나타나면 중규모 가이드로 전환을 검토한다:
+
+| 시그널 | 설명 |
+|--------|------|
+| 엔드포인트 50개 초과 | API가 50개를 넘기면 도메인 간 의존성이 복잡해짐 |
+| 도메인 폴더 7개 이상 | 패키지 탐색이 어려워지고 공통 모듈 추출이 필요해짐 |
+| Service 간 순환 참조 | 도메인 간 결합도가 높아져 모듈 분리가 필요 |
+| 테스트 실행 시간 3분 초과 | 테스트 격리 및 슬라이스 테스트 도입 필요 |
+| 배포 파이프라인 분리 요구 | 독립 배포가 필요하면 멀티 모듈 검토 |
+| 공통 코드 비율 30% 초과 | `common/` 폴더가 비대해지면 라이브러리 추출 검토 |

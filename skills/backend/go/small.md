@@ -1,6 +1,6 @@
 # Go - 소규모 프로젝트 가이드
 
-> 팀 1~3명, 엔드포인트 20개 이하, MVP/내부 툴/단일 마이크로서비스
+> 엔드포인트 50개 이하, MVP/내부 툴/단일 마이크로서비스
 
 ---
 
@@ -8,7 +8,8 @@
 
 - **net/http (Go 1.22+)**: `http.NewServeMux()`의 향상된 라우팅 사용
 - **chi router**: 미들웨어가 필요하면 chi 사용 (net/http 호환)
-- **Flat 레이아웃**: `cmd/` + `internal/` 없이 루트에 파일 배치
+- **도메인 패키지 + Flat 파일**: 도메인별 폴더 안에 handler, service, model, dto를 평탄하게 배치
+- **Handler → Service**: Handler는 HTTP 처리, Service는 비즈니스 로직 + DB 호출
 - **sqlc**: SQL → 타입 안전 Go 코드 생성
 - **goose**: DB 마이그레이션
 - **Table-driven 테스트**: Go 표준 테스트 관행
@@ -19,23 +20,34 @@
 
 ```
 project/
-├── main.go                  # 진입점, 서버 시작
-├── handler.go               # HTTP 핸들러
-├── model.go                 # 도메인 모델, DTO
-├── db.go                    # DB 연결
-├── config.go                # 환경 설정
-├── middleware.go             # 미들웨어 (로깅, CORS 등)
+├── main.go                      # 진입점, DI 조립, 서버 시작
+│
+├── user/
+│   ├── handler.go               # HTTP 핸들러
+│   ├── service.go               # 비즈니스 로직
+│   ├── model.go                 # 도메인 모델
+│   └── dto.go                   # 요청/응답 DTO
+│
+├── order/
+│   ├── handler.go
+│   ├── service.go
+│   ├── model.go
+│   └── dto.go
+│
+├── common/
+│   ├── config.go                # 환경 설정
+│   ├── database.go              # DB 연결
+│   ├── middleware.go            # 로깅, CORS 등
+│   └── response.go              # JSON 응답 헬퍼
+│
 ├── db/
-│   ├── query.sql            # sqlc 쿼리
-│   ├── schema.sql           # DDL
-│   ├── sqlc.yaml            # sqlc 설정
-│   └── generated/           # sqlc 생성 코드
+│   ├── query.sql
+│   ├── schema.sql
+│   ├── sqlc.yaml
+│   └── generated/
+│
 ├── migrations/
-│   ├── 001_create_users.sql
-│   └── ...
-├── handler_test.go          # 테스트
 ├── go.mod
-├── go.sum
 └── .env
 ```
 
@@ -44,8 +56,8 @@ project/
 ## 환경 설정
 
 ```go
-// config.go
-package main
+// common/config.go
+package common
 
 import (
 	"os"
@@ -80,8 +92,8 @@ func getEnv(key, fallback string) string {
 ## DB 연결
 
 ```go
-// db.go
-package main
+// common/database.go
+package common
 
 import (
 	"context"
@@ -105,6 +117,91 @@ func NewDB(databaseURL string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+```
+
+---
+
+## JSON 응답 헬퍼
+
+```go
+// common/response.go
+package common
+
+import (
+	"encoding/json"
+	"net/http"
+)
+
+type ErrorResponse struct {
+	Type   string `json:"type"`
+	Title  string `json:"title"`
+	Status int    `json:"status"`
+}
+
+func WriteJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+func WriteError(w http.ResponseWriter, status int, title string) {
+	WriteJSON(w, status, ErrorResponse{
+		Type:   "https://api.example.com/errors",
+		Title:  title,
+		Status: status,
+	})
+}
+```
+
+---
+
+## 미들웨어
+
+```go
+// common/middleware.go
+package common
+
+import (
+	"log"
+	"net/http"
+	"time"
+)
+
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+		next.ServeHTTP(wrapped, r)
+
+		log.Printf("%s %s %d %s",
+			r.Method, r.URL.Path, wrapped.statusCode, time.Since(start))
+	})
+}
+
+func CORSMiddleware(next http.Handler, origin string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
 }
 ```
 
@@ -160,11 +257,30 @@ DELETE FROM users WHERE id = $1;
 
 ---
 
-## 모델 / DTO
+## 도메인 모델
 
 ```go
-// model.go
-package main
+// user/model.go
+package user
+
+import "time"
+
+type User struct {
+	ID        int32
+	Email     string
+	Name      string
+	Password  string
+	CreatedAt time.Time
+}
+```
+
+---
+
+## DTO (요청/응답)
+
+```go
+// user/dto.go
+package user
 
 import "time"
 
@@ -196,12 +312,93 @@ type UserResponse struct {
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 }
+```
 
-// 에러 응답
-type ErrorResponse struct {
-	Type   string `json:"type"`
-	Title  string `json:"title"`
-	Status int    `json:"status"`
+---
+
+## Service (비즈니스 로직)
+
+```go
+// user/service.go
+package user
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"myproject/db/generated"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	ErrDuplicateEmail = errors.New("이미 등록된 이메일입니다")
+	ErrUserNotFound   = errors.New("사용자를 찾을 수 없습니다")
+)
+
+type Service struct {
+	queries *generated.Queries
+}
+
+func NewService(queries *generated.Queries) *Service {
+	return &Service{queries: queries}
+}
+
+func (s *Service) CreateUser(ctx context.Context, req CreateUserRequest) (UserResponse, error) {
+	// 중복 확인
+	_, err := s.queries.GetUserByEmail(ctx, req.Email)
+	if err == nil {
+		return UserResponse{}, ErrDuplicateEmail
+	}
+
+	// 비밀번호 해싱
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
+	if err != nil {
+		return UserResponse{}, fmt.Errorf("비밀번호 해싱 실패: %w", err)
+	}
+
+	user, err := s.queries.CreateUser(ctx, generated.CreateUserParams{
+		Email:    req.Email,
+		Name:     req.Name,
+		Password: string(hashed),
+	})
+	if err != nil {
+		return UserResponse{}, fmt.Errorf("사용자 생성 실패: %w", err)
+	}
+
+	return UserResponse{
+		ID: user.ID, Email: user.Email, Name: user.Name, CreatedAt: user.CreatedAt,
+	}, nil
+}
+
+func (s *Service) GetUser(ctx context.Context, id int32) (UserResponse, error) {
+	user, err := s.queries.GetUser(ctx, id)
+	if err != nil {
+		return UserResponse{}, ErrUserNotFound
+	}
+
+	return UserResponse{
+		ID: user.ID, Email: user.Email, Name: user.Name, CreatedAt: user.CreatedAt,
+	}, nil
+}
+
+func (s *Service) ListUsers(ctx context.Context, limit, offset int32) ([]UserResponse, error) {
+	users, err := s.queries.ListUsers(ctx, generated.ListUsersParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("사용자 목록 조회 실패: %w", err)
+	}
+
+	resp := make([]UserResponse, len(users))
+	for i, u := range users {
+		resp[i] = UserResponse{
+			ID: u.ID, Email: u.Email, Name: u.Name, CreatedAt: u.CreatedAt,
+		}
+	}
+	return resp, nil
 }
 ```
 
@@ -210,36 +407,42 @@ type ErrorResponse struct {
 ## HTTP 핸들러
 
 ```go
-// handler.go
-package main
+// user/handler.go
+package user
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
-	"myproject/db/generated"
-
-	"golang.org/x/crypto/bcrypt"
+	"myproject/common"
 )
 
 type Handler struct {
-	queries *generated.Queries
+	service *Service
 }
 
-func NewHandler(queries *generated.Queries) *Handler {
-	return &Handler{queries: queries}
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
+}
+
+// RegisterRoutes는 mux에 user 도메인의 라우트를 등록한다.
+func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("POST /api/v1/users", h.CreateUser)
+	mux.HandleFunc("GET /api/v1/users/{id}", h.GetUser)
+	mux.HandleFunc("GET /api/v1/users", h.ListUsers)
 }
 
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "잘못된 요청 형식입니다")
+		common.WriteError(w, http.StatusBadRequest, "잘못된 요청 형식입니다")
 		return
 	}
 
 	if errs := req.Validate(); len(errs) > 0 {
-		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
+		common.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{
 			"type":   "https://api.example.com/errors/validation",
 			"title":  "입력값 검증 실패",
 			"status": 422,
@@ -248,48 +451,38 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 중복 확인
-	_, err := h.queries.GetUserByEmail(r.Context(), req.Email)
-	if err == nil {
-		writeError(w, http.StatusConflict, "이미 등록된 이메일입니다")
-		return
-	}
-
-	// 비밀번호 해싱
-	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
-
-	user, err := h.queries.CreateUser(r.Context(), generated.CreateUserParams{
-		Email:    req.Email,
-		Name:     req.Name,
-		Password: string(hashed),
-	})
+	user, err := h.service.CreateUser(r.Context(), req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "사용자 생성 실패")
+		if errors.Is(err, ErrDuplicateEmail) {
+			common.WriteError(w, http.StatusConflict, err.Error())
+			return
+		}
+		common.WriteError(w, http.StatusInternalServerError, "사용자 생성 실패")
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, UserResponse{
-		ID: user.ID, Email: user.Email, Name: user.Name, CreatedAt: user.CreatedAt,
-	})
+	common.WriteJSON(w, http.StatusCreated, user)
 }
 
 func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id") // Go 1.22+ net/http
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "유효하지 않은 ID입니다")
+		common.WriteError(w, http.StatusBadRequest, "유효하지 않은 ID입니다")
 		return
 	}
 
-	user, err := h.queries.GetUser(r.Context(), int32(id))
+	user, err := h.service.GetUser(r.Context(), int32(id))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "사용자를 찾을 수 없습니다")
+		if errors.Is(err, ErrUserNotFound) {
+			common.WriteError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		common.WriteError(w, http.StatusInternalServerError, "사용자 조회 실패")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, UserResponse{
-		ID: user.ID, Email: user.Email, Name: user.Name, CreatedAt: user.CreatedAt,
-	})
+	common.WriteJSON(w, http.StatusOK, user)
 }
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -299,42 +492,19 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		limit = 20
 	}
 
-	users, err := h.queries.ListUsers(r.Context(), generated.ListUsersParams{
-		Limit:  int32(limit),
-		Offset: int32(offset),
-	})
+	users, err := h.service.ListUsers(r.Context(), int32(limit), int32(offset))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "사용자 목록 조회 실패")
+		common.WriteError(w, http.StatusInternalServerError, "사용자 목록 조회 실패")
 		return
 	}
 
-	resp := make([]UserResponse, len(users))
-	for i, u := range users {
-		resp[i] = UserResponse{ID: u.ID, Email: u.Email, Name: u.Name, CreatedAt: u.CreatedAt}
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-// --- 헬퍼 ---
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func writeError(w http.ResponseWriter, status int, title string) {
-	writeJSON(w, status, ErrorResponse{
-		Type:   "https://api.example.com/errors",
-		Title:  title,
-		Status: status,
-	})
+	common.WriteJSON(w, http.StatusOK, users)
 }
 ```
 
 ---
 
-## 메인 (서버 시작)
+## 메인 (DI 조립 + 서버 시작)
 
 ```go
 // main.go
@@ -349,33 +519,35 @@ import (
 	"syscall"
 	"time"
 
+	"myproject/common"
 	"myproject/db/generated"
+	"myproject/user"
 )
 
 func main() {
-	cfg := LoadConfig()
+	cfg := common.LoadConfig()
 
-	db, err := NewDB(cfg.DatabaseURL)
+	db, err := common.NewDB(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
 	queries := generated.New(db)
-	h := NewHandler(queries)
 
+	// DI 조립
+	userService := user.NewService(queries)
+	userHandler := user.NewHandler(userService)
+
+	// 라우트 등록
 	mux := http.NewServeMux()
-
-	// 라우트 등록 (Go 1.22+ 패턴)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		common.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	mux.HandleFunc("POST /api/v1/users", h.CreateUser)
-	mux.HandleFunc("GET /api/v1/users/{id}", h.GetUser)
-	mux.HandleFunc("GET /api/v1/users", h.ListUsers)
+	userHandler.RegisterRoutes(mux)
 
 	// 미들웨어 적용
-	handler := LoggingMiddleware(CORSMiddleware(mux, cfg.CORSOrigin))
+	handler := common.LoggingMiddleware(common.CORSMiddleware(mux, cfg.CORSOrigin))
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
@@ -407,62 +579,11 @@ func main() {
 
 ---
 
-## 미들웨어
-
-```go
-// middleware.go
-package main
-
-import (
-	"log"
-	"net/http"
-	"time"
-)
-
-func LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-
-		next.ServeHTTP(wrapped, r)
-
-		log.Printf("%s %s %d %s",
-			r.Method, r.URL.Path, wrapped.statusCode, time.Since(start))
-	})
-}
-
-func CORSMiddleware(next http.Handler, origin string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-type responseWriter struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func (rw *responseWriter) WriteHeader(code int) {
-	rw.statusCode = code
-	rw.ResponseWriter.WriteHeader(code)
-}
-```
-
----
-
 ## Table-Driven 테스트
 
 ```go
-// handler_test.go
-package main
+// user/handler_test.go
+package user
 
 import (
 	"bytes"
@@ -502,8 +623,8 @@ func TestCreateUser_Validation(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 
-			// 핸들러에 mock queries 주입 필요
-			h := NewHandler(nil) // 실제로는 mock 사용
+			// 핸들러에 mock service 주입
+			h := NewHandler(nil) // 검증은 service 호출 전에 실패하므로 nil 가능
 			h.CreateUser(rec, req)
 
 			if rec.Code != tt.wantStatus {
@@ -519,7 +640,9 @@ func TestHealthEndpoint(t *testing.T) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 	mux.ServeHTTP(rec, req)
 
@@ -535,8 +658,18 @@ func TestHealthEndpoint(t *testing.T) {
 
 | 안티패턴 | 이유 |
 |----------|------|
-| `cmd/` + `internal/` 구조 | 파일이 10개 이하면 불필요 |
-| 인터페이스 먼저 정의 | 구현체가 하나면 인터페이스 불필요 |
+| `cmd/` + `internal/` 구조 분리 | 엔드포인트 50개 이하에서는 불필요한 복잡성 |
 | DI 프레임워크 (wire 등) | 수동 조립으로 충분 |
 | gRPC | REST로 충분한 규모 |
 | 도메인 이벤트 | 직접 함수 호출이 더 명확 |
+| Repository 별도 레이어 | Service에서 sqlc 직접 호출로 충분 |
+
+---
+
+## 전환 시그널
+
+다음 신호가 보이면 **중규모 구조**(`cmd/internal` + Repository 레이어)로 전환을 검토한다:
+
+- 도메인 폴더 안 파일이 **10개를 넘기기** 시작할 때
+- Service 하나가 **200줄 이상**으로 커질 때
+- **외부 시스템 연동**(결제, 알림 등)이 생길 때
