@@ -1,7 +1,11 @@
 #!/bin/bash
-# 오케스트레이션 파이프라인 강제 훅
+# 오케스트레이션 모드 기반 훅
 # UserPromptSubmit 이벤트에서 실행됨
 # stdin으로 JSON 입력을 받음 (session_id 포함)
+#
+# 지원 모드:
+#   - discuss: 토론/학습/설계 모드 (파이프라인 없음)
+#   - 1-research ~ 5-feedback: 구현 모드 파이프라인
 
 STATE_DIR="${HOME}/.claude/session-state"
 mkdir -p "$STATE_DIR"
@@ -18,26 +22,34 @@ fi
 SESSION_FILE="${STATE_DIR}/pipeline-${SESSION_ID}"
 
 if [ ! -f "$SESSION_FILE" ]; then
-  # === 첫 프롬프트: 파이프라인 강제 진입 ===
+  # === 첫 프롬프트: 모드 판단 안내 ===
   echo "1-research" > "$SESSION_FILE"
   cat <<'FIRST'
 ╔══════════════════════════════════════════════════════════╗
-║  오케스트레이션 파이프라인 활성화                          ║
+║  오케스트레이션 활성화                                     ║
 ║                                                          ║
-║  반드시 아래 순서를 따르세요:                              ║
+║  orchestration.md를 읽고 모드를 판단하세요:                ║
 ║                                                          ║
-║  [1.리서치] → [2.계획] → [3.구현] → [4.테스트] → [5.피드백] ║
+║  [구현 모드]  코드 작성/수정/버그 수정                      ║
+║    → orchestration-impl.md                               ║
+║    → [1.리서치]→[2.계획]→[3.구현]→[4.테스트]→[5.피드백]     ║
 ║                                                          ║
-║  - 바로 구현하지 마세요. orchestration.md를 먼저 읽으세요. ║
-║  - 코드를 추론하지 마세요. 반드시 실제로 열어서 읽으세요.  ║
+║  [토론 모드]  토론/학습/설계 (코드 작성 없음)               ║
+║    → orchestration-discuss.md                             ║
+║    → 자유 대화 흐름                                       ║
 ║                                                          ║
-║  단계 전환: ~/.claude/hooks/stage-transition.sh [1~5]     ║
+║  모드 전환: ~/.claude/hooks/stage-transition.sh            ║
+║    구현: stage-transition.sh [1~5]                        ║
+║    토론: stage-transition.sh discuss                      ║
 ╚══════════════════════════════════════════════════════════╝
 FIRST
 else
-  # === 이후 프롬프트: 현재 단계 리마인더 + 핵심 주의사항 ===
+  # === 이후 프롬프트: 현재 모드/단계 리마인더 ===
   CURRENT=$(cat "$SESSION_FILE")
   case "$CURRENT" in
+    discuss)
+      echo "── [토론/학습/설계 모드] ── 구현 전환: stage-transition.sh 1 ──"
+      ;;
     1-research)
       STAGE="1.리서치"
       NEXT="분석 완료 → 2.계획으로"
@@ -69,8 +81,12 @@ else
       TIPS=""
       ;;
   esac
-  echo "── 파이프라인 [$STAGE] ── 다음: $NEXT ──"
-  if [ -n "$TIPS" ]; then
-    echo ">> $TIPS"
+
+  # discuss 모드는 위에서 이미 출력했으므로 나머지만 처리
+  if [ "$CURRENT" != "discuss" ]; then
+    echo "── 파이프라인 [$STAGE] ── 다음: $NEXT ──"
+    if [ -n "$TIPS" ]; then
+      echo ">> $TIPS"
+    fi
   fi
 fi
