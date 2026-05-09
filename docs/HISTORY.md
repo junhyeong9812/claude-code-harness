@@ -125,6 +125,95 @@
 
 ---
 
+## Phase 7: 오케스트레이션 모드 분리
+
+### 배경
+단일 `orchestration.md`가 구현·토론·에이전트 운용 지침을 모두 포함해 비대해졌고, 토론/학습 요청에서도 구현 파이프라인이 끼어드는 마찰이 반복됨.
+
+### 수행 내용
+- `orchestration.md`를 **라우터**로 축소 — 모드 판단(구현 vs 토론) + 공통 규칙만 담당
+- `orchestration-impl.md` 신설 — 구현 오케스트레이션(리서치→계획→구현→테스트→피드백 + 서브 파이프라인 + 산출물 규칙 + 보안)
+- `orchestration-discuss.md` 신설 — 토론/학습/설계 모드(자유 대화 흐름 + 서브 모드)
+- `orchestration-agent.md` 신설 — 서브 에이전트 운용 가이드(판단 기준 + 실행 규칙)
+- `CLAUDE.md` 핵심 원칙 갱신 — 모드 판단을 진입점으로 명시
+
+### 설계 결정
+- 라우터-스포크 구조: 사용자 입력 → 라우터 → 분기 → 해당 문서로 이동. 단일 거대 문서보다 모드별 부담이 작아짐.
+- 토론 모드는 즉흥 코드 작성을 금지 — 코드 작업은 항상 구현 모드로 명시 전환해야 함.
+
+---
+
+## Phase 8: 스킬 시스템 폐기
+
+### 배경
+Phase 2~3에서 작성한 75+ 스킬 문서(언어/프레임워크별 코드 예시)가 실제 작업에서 거의 참조되지 않음. LLM이 이미 아는 일반론을 외부 문서로 다시 적어두는 형태였고, 진짜 필요한 컨텍스트는 **이 프로젝트의 코드/가이드**와 **이 작업의 산출물(plan/context/checklist/learned)**임을 확인.
+
+### 수행 내용
+- `skills/`, `dist/skills/` 트리 전체 삭제 — 약 94,000줄 / 75+ 파일 / `security-common.md` 포함
+- 보안 체크리스트는 `orchestration-impl.md` §11로 인라인 흡수 (별도 문서 유지하지 않음)
+- `README.md` 핵심 철학 섹션 갱신 — "스킬 매뉴얼 폐기" 명시
+- 템플릿(`templates/`, `dist/templates/`) 정리 — 스킬 참조 제거, plan/context/checklist 일관성 보강
+
+### 설계 결정
+- 강제하는 대상을 **코드 패턴**이 아닌 **산출물·순서·승인**으로 한정 — 시스템이 작아지고, LLM 일반 지식과 충돌하지 않음.
+- 패턴 참조 우선순위: `docs/guide/`(프로젝트 가이드) > 기존 코드 컨벤션 > LLM 일반 지식.
+
+---
+
+## Phase 9: Tier 1 가드 + 컨텍스트 자동 로드 + 외부 큐레이션 의무화 (2026-05-08)
+
+### 배경
+30일(2026-04-08~05-08) 누적 사용 기록 분석 결과, 같은 류의 마찰이 반복되고 있음을 확인:
+- `master에 push 하지 마`, `docs는 push 하지 마`, `야매로 처리하지 마` 같은 자연어 가드를 매번 수동으로 적용
+- 매 세션 "어제 한 일 기억해?"로 시작 — 컨텍스트 외부화 미흡
+- 모델이 만든 1·2·3 옵션 안에서만 결정 — "4번 옵션의 부재"로 사각지대 누적
+
+상세 분석: `docs/analysis/2026-05-08-llm-usage-feedback.md`.
+
+### 수행 내용
+
+**가드 훅 신설** (`dist/hooks/git-guard.sh`):
+- PreToolUse Bash 매처. `git push` / docs-only `git commit`을 사용자 명시 요청(키워드 매칭) 시에만 통과.
+- 사용자 의도 추출: `~/.claude/projects/<slug>/<latest>.jsonl`의 마지막 user 메시지에서 `push|푸시|배포|밀어|올려|merge.*main` (push) / `docs commit|문서 커밋` (commit) 매칭.
+- 종료 코드 2로 차단, stderr에 사유 안내.
+
+**SessionStart 컨텍스트 로더** (`dist/hooks/session-context-loader.sh`):
+- 세션 시작 시 cwd의 `docs/plans/<최근 날짜>/<최근 작업>/` 자동 검출.
+- `plan.md ## 1. 목표`, `context.md ## 1. 배경` 섹션 + `checklist.md` 미완료 개수/항목을 시스템 메시지로 출력.
+- `docs/plans/` 자체가 없으면 조용히 종료.
+
+**외부 큐레이션 의무화**:
+- `orchestration-impl.md`에 **B1.5 외부 큐레이션** 절 신설 — 리서치 단계에서 WebSearch 1회 이상 의무. plan.md에 "생략 사유" 명시 시에만 escape.
+- `orchestration-discuss.md` 3.6 신설 — 학습/토론 모드에서 새 라이브러리/트렌드/컷오프 이후 영역은 답변 전 검색 권장, 명시 요청 시 의무.
+- `orchestration.md` 5.1 신설 — 라우터 수준 공통 규칙 한 줄.
+- `CLAUDE.md` 핵심 원칙 5번에 "외부 큐레이션을 게을리하지 않는다" 추가.
+
+**settings.json 머지**:
+- 기존 `UserPromptSubmit` 보존
+- `PreToolUse` (matcher: Bash → git-guard.sh) 추가
+- `SessionStart` (→ session-context-loader.sh) 추가
+
+**테스트**: 12/12 PASS — git-guard 7개 시나리오 + session-context-loader 3개 + settings.json 검증 + 회귀.
+
+### 설계 결정
+- 가드 훅은 `git-guard.sh` 1개로 통합 (PreToolUse Bash는 단일 진입점, 분리하면 관리 비용만 증가).
+- 사용자 의도 판단을 NLP 없이 키워드 매칭으로 단순화 — 90% 케이스 처리 가능, 견고함.
+- 외부 큐레이션을 "권장" 아닌 "의무 + escape hatch" 로 — 누적 사각지대 방지, 단 합리적 예외 허용.
+- install.sh 우회하고 직접 `cp` + `Edit` 으로 동기화 — install.sh는 빈 settings 전제, 채워진 환경엔 머지 안내만 함.
+
+### 산출물
+- 분석 보고서: `docs/analysis/2026-05-08-llm-usage-feedback.md`
+- 작업 폴더: `docs/plans/2026-05-08/feedback-and-guards/` (plan/context/checklist/learned)
+- 메모리: `~/.claude/projects/-home-jun-project-claude-study/memory/policy_guards_2026-05-08.md`
+
+### 다음 점검
+2026-08-08 (90일 후) 동일 30일 분석을 반복해 정책 효과 측정. 핵심 지표:
+- "docs push 하지 마" / "야매로 하지 마" 류 자연어 가드 발생 횟수 (목표 0)
+- 세션 시작 시 "어제 뭐 했지?" 빈도 (목표 0)
+- WebSearch 사용 비중 변화 (현재 0.6% → 목표 5%+)
+
+---
+
 ## 최종 검증 결과
 
 5개 시나리오로 전체 워크플로우 검증 완료:
@@ -151,27 +240,35 @@
 
 ```
 claude_study/
-├── README.md                    # 프로젝트 전체 설명
-├── CLAUDE.md                    # 최상위 진입점
-├── orchestration.md             # 컨트롤 타워 (8절)
-├── agent_orchestration.md       # 원본 가이드 (참고용)
-├── install.sh                   # 프로젝트 설치 스크립트
-├── dist/                        # 배포 패키지 (.claude/로 복사할 파일들)
+├── README.md                       # 프로젝트 전체 설명
+├── CLAUDE.md                       # 최상위 진입점
+├── orchestration.md                # 라우터 (모드 판단 + 공통 규칙)
+├── orchestration-impl.md           # 구현 오케스트레이션
+├── orchestration-discuss.md        # 토론/학습/설계 오케스트레이션
+├── orchestration-agent.md          # 서브 에이전트 운용 가이드
+├── agent_orchestration.md          # 원본 가이드 (참고용)
+├── install.sh                      # 프로젝트 설치 스크립트
+├── templates/                      # 원본 템플릿 (5종)
+├── dist/                           # 배포 패키지 (.claude/로 복사할 파일들)
 │   ├── CLAUDE.md
-│   ├── orchestration.md
-│   ├── settings.json            # 훅 설정
+│   ├── orchestration*.md           # 라우터 + 구현/토론/에이전트 (4종)
+│   ├── settings.json               # 훅 설정 (UserPromptSubmit + PreToolUse + SessionStart)
 │   ├── hooks/
-│   │   ├── prompt-guard.sh      # 파이프라인 강제 훅
-│   │   └── stage-transition.sh  # 단계 전환 유틸리티
-│   ├── skills/                  # 75개 스킬 문서
-│   └── templates/               # 4개 템플릿
-├── skills/                      # 원본 스킬 문서
-├── templates/                   # 원본 템플릿
+│   │   ├── prompt-guard.sh         # 모드/단계 리마인더 (Phase 6)
+│   │   ├── stage-transition.sh     # 단계 수동 전환 (Phase 6)
+│   │   ├── git-guard.sh            # push/docs commit 가드 (Phase 9)
+│   │   └── session-context-loader.sh  # SessionStart 자동 컨텍스트 (Phase 9)
+│   └── templates/                  # 5종 (plan/context/checklist/learned/learned-example)
 └── docs/
-    ├── HISTORY.md               # 이 파일
+    ├── HISTORY.md                  # 이 파일
     ├── phase1-structure.md
-    └── phase2-bestpractices.md
+    ├── phase2-bestpractices.md
+    ├── analysis/                   # 사용 패턴 분석 보고서 (Phase 9~)
+    └── plans/                      # 본 시스템 자체에 대한 작업 기록
+        └── YYYY-MM-DD/작업명/
 ```
+
+> Phase 8 시점에 `skills/`, `dist/skills/` 트리는 전체 삭제됨. 보안 체크리스트는 `orchestration-impl.md` §11로 인라인 흡수.
 
 ## 사용법
 
