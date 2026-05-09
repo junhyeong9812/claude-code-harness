@@ -36,7 +36,8 @@ fi
 # ─────────────────────────────────────────────
 get_last_user_message() {
   local slug latest
-  slug="$(echo "$CWD" | sed 's|/|-|g')"
+  # Claude Code slug 규칙: 경로 구분자(/), 언더스코어(_), 점(.) 모두 하이픈(-)으로 변환
+  slug="$(echo "$CWD" | tr '/_.' '---')"
   # session_id로 우선 매칭
   if [ -n "$SESSION_ID" ] && [ -f "$HOME/.claude/projects/$slug/$SESSION_ID.jsonl" ]; then
     latest="$HOME/.claude/projects/$slug/$SESSION_ID.jsonl"
