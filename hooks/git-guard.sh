@@ -107,4 +107,35 @@ EOF
   fi
 fi
 
+# ─────────────────────────────────────────────
+# 3) commit message trailer 차단 (Claude/Codex trailer 금지)
+#    반복 실패 방지 규칙 4: 커밋 메시지에 Co-Authored-By / Generated with Claude 등 금지
+# ─────────────────────────────────────────────
+if echo "$COMMAND" | grep -qE '(^|[^[:alnum:]_])git[[:space:]]+commit([[:space:]]|$)'; then
+  if echo "$COMMAND" | grep -qiE 'Co-Authored-By:[[:space:]]*.*(Claude|Codex|Anthropic)|Generated with[[:space:]]*.*Claude|Claude Code'; then
+    cat >&2 <<EOF
+[git-guard] 커밋 메시지에 Claude/Codex trailer가 감지되었습니다.
+
+차단된 명령:
+  $COMMAND
+
+정책(반복 실패 방지 규칙 4): 커밋 메시지에 Co-Authored-By / Generated with Claude 등 trailer를 넣지 않습니다.
+trailer를 제거하고 다시 시도하세요.
+EOF
+    exit 2
+  fi
+
+  # ───────────────────────────────────────────
+  # 4) code/docs 혼합 commit 경고 (warn-only, 차단 안 함)
+  # ───────────────────────────────────────────
+  STAGED_MIX=$(cd "$CWD" 2>/dev/null && git diff --cached --name-only 2>/dev/null || true)
+  if [ -n "${STAGED_MIX:-}" ]; then
+    DOCS_PART=$(echo "$STAGED_MIX" | grep -E '(^docs/|README|CHANGELOG|HISTORY|LICENSE|\.md$)' || true)
+    CODE_PART=$(echo "$STAGED_MIX" | grep -vE '(^docs/|README|CHANGELOG|HISTORY|LICENSE|\.md$|^$)' || true)
+    if [ -n "$DOCS_PART" ] && [ -n "$CODE_PART" ]; then
+      echo "[git-guard] 경고: 한 커밋에 code와 docs가 함께 staged 되어 있습니다 (스코프 보존 규칙 4). 의도된 것이 아니면 분리를 검토하세요. (차단 아님)" >&2
+    fi
+  fi
+fi
+
 exit 0

@@ -30,8 +30,11 @@ Claude Code가 즉흥적으로 코드를 만지지 않고, **계획 → 합의 �
 |------|-------|------|
 | `prompt-guard.sh` | UserPromptSubmit | 매 프롬프트 제출 시 모드별 리마인더 표시 (구현: 파이프라인 단계, 토론: 간단 표시) |
 | `stage-transition.sh` | (수동 호출) | 모드/단계 전환 유틸리티 (`discuss`, `1`~`5`) |
-| `git-guard.sh` | PreToolUse(Bash) | `git push` / docs-only `git commit`을 사용자 명시 요청 키워드(`push/푸시/배포`, `docs 커밋/문서 커밋`) 시에만 통과 |
+| `git-guard.sh` | PreToolUse(Bash) | `git push` / docs-only `git commit`을 명시 요청 키워드 시에만 통과 + **Claude/Codex trailer 차단** + code/docs 혼합 commit **경고** |
+| `scope-guard.sh` | PostToolUse(Edit\|Write) | **warn-only** — 작업 트리에 docs+code 변경이 함께 있으면 스코프 보존 경고 (세션당 1회) |
 | `session-context-loader.sh` | SessionStart | 세션 시작 시 cwd의 `docs/plans/<최근 날짜>/<최근 작업>/` plan/context/checklist 요약 자동 출력 |
+
+> 훅이 막거나 환경 마찰(codex stdin·token limit·rate limit) 발생 시 해석 절차: `docs/runbooks/hook-failure.md`.
 
 ### 템플릿 (templates/)
 | 파일 | 용도 |
