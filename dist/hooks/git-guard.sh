@@ -32,32 +32,38 @@ if [ -z "$CWD" ] || [ ! -d "$CWD" ]; then
 fi
 
 # ─────────────────────────────────────────────
-# 사용자의 마지막 입력 메시지 추출
+# 사용자의 최근 입력 메시지 추출
 # ─────────────────────────────────────────────
-get_last_user_message() {
-  local slug latest
-  # Claude Code slug 규칙: 경로 구분자(/), 언더스코어(_), 점(.) 모두 하이픈(-)으로 변환
-  slug="$(echo "$CWD" | tr '/_.' '---')"
-  # session_id로 우선 매칭
-  if [ -n "$SESSION_ID" ] && [ -f "$HOME/.claude/projects/$slug/$SESSION_ID.jsonl" ]; then
-    latest="$HOME/.claude/projects/$slug/$SESSION_ID.jsonl"
-  else
+# ★ 버그 수정(2026-06-05): cwd가 세션 프로젝트와 다르면(예: was-server 세션에서
+#   claude_study로 cd 후 작업), cwd-slug 폴더에 세션 jsonl이 없어서 ls -t 폴백이
+#   엉뚱한 옛 세션 jsonl을 읽고 빈 메시지를 반환 → 명시적 "푸시해줘"도 false-block.
+#   해결: session_id로 전체 projects 트리를 전역 검색해 정확한 jsonl을 찾는다.
+#   또한 직전 1개가 아닌 최근 5개 메시지를 스캔해(훅 리마인더 끼어듦·재시도 대비)
+#   사용자 의도 키워드를 놓치지 않는다.
+get_recent_user_messages() {
+  local latest slug
+  # 1순위: session_id로 전역 검색 (cwd 무관)
+  if [ -n "$SESSION_ID" ]; then
+    latest=$(find "$HOME/.claude/projects" -name "$SESSION_ID.jsonl" -type f 2>/dev/null | head -1 || true)
+  fi
+  # 2순위 폴백: cwd 기반 slug + 최근 jsonl
+  if [ -z "${latest:-}" ] || [ ! -f "${latest:-}" ]; then
+    slug="$(echo "$CWD" | tr '/_.' '---')"
     latest=$(ls -t "$HOME/.claude/projects/$slug"/*.jsonl 2>/dev/null | head -1 || true)
   fi
   if [ -z "${latest:-}" ] || [ ! -f "$latest" ]; then
     echo ""
     return
   fi
-  # type=user 의 마지막 메시지. content 가 string 이면 그대로,
-  # array 면 text 파트만 추출. (UserPromptSubmit 등 훅 출력이 붙으면 content 가 array 가 되어
-  #  string-only 필터로는 사용자 발화를 놓침 → push/커밋 키워드 매칭 실패하던 버그 수정.)
+  # type=user 메시지. content가 string이면 그대로, array면 text 파트만 추출.
+  # 최근 5개 사용자 발화를 반환 (다중 라인 — grep이 어느 라인이든 키워드 매칭).
   jq -r 'select(.type=="user") | .message.content
          | if type=="string" then .
            elif type=="array" then (map(select(.type=="text")|.text)|join(" "))
-           else empty end' "$latest" 2>/dev/null | grep -v '^$' | tail -1
+           else empty end' "$latest" 2>/dev/null | grep -v '^$' | tail -5
 }
 
-LAST_USER_MSG="$(get_last_user_message)"
+LAST_USER_MSG="$(get_recent_user_messages)"
 
 # ─────────────────────────────────────────────
 # 1) git push 가드
