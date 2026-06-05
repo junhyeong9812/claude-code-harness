@@ -44,3 +44,21 @@
 | 0.분석 | usage-improve/analysis/001 | (arg 직접전달, stdin 미사용) | 쟁점5건 전부 동의, 2·4번 강한 동의. 추가: 단일변경='중간검증가능단위' 정의, plan0번 완전참조 금지, dist가 실제 설치원본=canonical 위험, 2.5는 다파일 동시변경 위험. 우선순위 Claude와 일치 |
 | 0.감축 | usage-improve/reduce/002 | (arg 직접전달) | 감축은 '삭제'가 아닌 소/중/대+위험승격 모델. 후보 R1 소규모4문서·R2 learned10항목·R3 codex기록3중복·R4 추론금지4중반복·R5 전체읽기→범위기반. 불가침: D1 codex의무·추론금지 원칙·보안게이트·고위험 full path. D3 도입 시 R1~R2 자동해결 |
 | 0.페이즈 | usage-improve/phasegate/003 | (arg 직접전달) | 공통 페이즈 게이트 도입 찬성. 중/대+위험승격에만 강제, 소규모 면제. 문서구조=(다)master+phase plan. 페이즈게이트=로컬테스트, B5=codex검증 역할분리. 자동롤백 비추(승인 후). 위험: 절차과잉·페이즈=문서단위 함정·검증명령 모호시 가짜통과·의존성강하면 가짜green |
+| 4.검증 | usage-improve/review/004 | (arg 직접전달) | **편집 후 정합성 검수**. 치명 4건(B3/A3/C3 3문서 강제·B1.7 research.md·위험승격 중/대 모순·learned.md 전제) + 경미 다수(5.8 vs 13.2 임계, 셀프체크 10→11절, 깨진 2.5 참조, 템플릿 절참조 파일명). Claude opus 에이전트와 교차 — 둘 다 §8 모순 수렴. **전부 수정 완료** |
+
+---
+
+## 실행 완료 기록 (2026-06-05)
+
+| 페이즈 | 결과 | 커밋 |
+|--------|------|------|
+| Phase 0 — 14일자 베이스라인 | ✅ | `8ef5495` |
+| Phase 1 — canonical(hooks/settings root 동기화 + build.sh) D2 | ✅ | `91f28ad` |
+| Phase 2 — P1 콘텐츠(반복실패·2.4게이트·5.8페이즈게이트·6.6데이터·감축) + master/phase 템플릿 | ✅ | `8673074` |
+| Phase 4 — dual 검증(Claude opus 에이전트 + codex) → 치명 4·경미 다수 수정 | ✅ | (8673074에 포함) |
+| Phase 5 — `~/.claude/` 이설 (CLAUDE/orchestration/templates/hooks/settings/runbook) | ✅ | (백업 `~/.claude/.backup-2026-06-05`) |
+| P2 — git-guard 확장·scope-guard(warn-only)·hook-failure 런북 | ✅ | `54fa51f` |
+
+- 모든 결정 D1~D7 반영 완료. P2 훅은 **warn-only**로 시작(1~2주 로그 후 차단 전환 판단).
+- 잔여(pre-existing, 내 변경 아님): checklist/learned codex ledger `X.5` 표기 중복 — 표기 분리는 후속.
+- 재검토 예정일: **2026-06-13** (usage-data 기준 wrong_approach·excessive_changes 감소 측정).
