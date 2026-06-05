@@ -5,6 +5,21 @@
 
 ---
 
+## 0. 작업 기준
+
+> **⚠️ 생략하지 않는다.** 구현 시작 전 기준을 확정한다 (`orchestration.md` 2.4 게이트). 잘못 잡으면 이후 전부 틀어진다.
+
+| 항목 | 내용 |
+|------|------|
+| 대상 경로 | (repository / module / directory) |
+| 기준 소스 | DB / ES / CSV / branch / reference project / user-provided file 중 무엇이 canonical |
+| 산출물 유형 | code / docs / design / analysis |
+| 규모 | 소 / 중 / 대 (+ 위험 승격 해당 여부) |
+| 금지 영역 | (한 줄 요약 — 상세는 3.1) |
+| 완료 증명 | build / test / row count / sample validation / diff review |
+
+---
+
 ## 1. 목표
 
 (이 작업으로 달성하려는 것)

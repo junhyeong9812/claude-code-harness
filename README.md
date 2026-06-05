@@ -39,8 +39,10 @@ Claude Code가 즉흥적으로 코드를 만지지 않고, **계획 → 합의 �
 | `plan.md` | 구현 계획서 (변경 대상/금지 영역/참고 코드/트레이드오프/구현 순서) |
 | `context.md` | 프로젝트 맥락 + 결정 근거 + 금지 영역 |
 | `checklist.md` | 단계별 체크리스트 + 수정 기록 |
-| `learned.md` | 작업 후 학습 기록 (라이브러리/함수/패턴/테스트) |
+| `learned.md` | 작업 후 학습 기록 (라이브러리/함수/패턴/테스트) — 규모별 조건부(소규모 5줄) |
 | `learned-example.md` | learned.md 작성 기대 수준 예시 |
+| `master-plan.md` | 대규모 마스터 계획 (페이즈 분해 + 의존성 + acceptance) |
+| `phase-plan.md` | 페이즈별 계획 (목표/변경파일/검증명령/되돌릴 범위) |
 
 ---
 
@@ -189,6 +191,8 @@ claude_study/
 | 7 | 모드 분리 (라우터 + 구현/토론/에이전트 문서 분리) + 에이전트 운용 가이드 |
 | 8 | **스킬 시스템 폐기** — `skills/`·`dist/skills/` 트리 전체 제거(~94k줄/150+ 파일, 양쪽 복사본 합산), 보안 체크리스트는 `orchestration-impl.md` §11로 인라인 흡수. 이유: LLM이 아는 일반론을 외부 문서로 두는 비용 > 가치 |
 | 9 | **30일 사용 분석 + Tier 1 가드 시스템화** (2026-05-08) — `git-guard.sh`(push/docs commit 차단), `session-context-loader.sh`(SessionStart 자동 컨텍스트 로드), 외부 큐레이션 의무화(B1.5 신설). 30일 누적 자연어 가드를 시스템 가드로 영구 해결 |
+| 10 | **codex(GPT-5.5) 모델 교차 검증 통합** (2026-05-14) — 전 파이프라인 X.6 모델 교차 검증 + B3/B5 codex 검토 의무 + 5.7 보안 게이트 + `codex-prompt.md`/`research.md` 템플릿. 토론/설계도 codex 의무 |
+| 11 | **한달 usage report 반영 — 추가+감축+구조 균형** (2026-06-05) — CLAUDE.md 반복실패 방지 규칙 / orchestration 2.4 작업기준 게이트 / impl **5.8 페이즈 게이트**(중·대규모 master+phase 분리) + 위험 승격 + 소/중/대 문서강도(감축) + 6.6 데이터 특칙 / canonical(root=원본·dist=산출물·build.sh). over-scoping 1위 마찰 처방. 상세 `docs/plans/2026-06-05/usage-report-개선반영/` |
 
 상세는 `docs/HISTORY.md` 참조.
 이번 분석 보고서: `docs/analysis/2026-05-08-llm-usage-feedback.md`.

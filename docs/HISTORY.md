@@ -372,3 +372,27 @@ claude_study/
 cd /path/to/my-project
 claude
 ```
+
+---
+
+## Phase 11: 한 달 usage report 반영 — 추가 + 감축 + 구조 균형 (2026-06-05)
+
+### 배경
+`~/.claude/usage-data/`(139 세션-meta + 50 facets + report.html) 한 달치 분석. codex가 만든 개선안(12항목)을 실제 파일과 대조 검증 → 중복·충돌 5건 발견. 핵심 마찰: **over-scoping(Claude측 1위)**, 잘못된 기준 소스 고착, credential grep, 운영 마찰. report.html과 codex가 독립적으로 같은 규칙에 수렴. 사용자 방침: "무작정 추가보다 줄일 부분도 고려" + "페이즈별 검증 의무화·페이즈 분리".
+
+### 수행 내용 (3축 균형)
+
+**canonical 정착 (D2)**: `hooks/`·`settings.json` root 동기화, `build.sh`(root→dist) 신설. root=개발 원본, dist=배포 산출물 명문화. (이전엔 git-guard·session-context-loader가 dist에만 있는 desync = 반쪽 적용 위험)
+
+**추가 (P1)**:
+- `CLAUDE.md` "반복 실패 방지 규칙" 6개 (단일 변경·기준 소스·문서/구현 분리·커밋 스코프·포팅 보존·접속정보 수령+grep 금지).
+- `orchestration.md` 2.4 "작업 기준 확정 게이트" — 대상 경로/기준 소스/산출물/금지/검증 5기준.
+- `orchestration-impl.md` 5.8 **페이즈 게이트** (중·대규모+위험승격, master+phase 분리, 로컬테스트 게이트 vs B5 codex검증 역할분리, 자동롤백 금지), 6.6 데이터/마이그레이션 특칙.
+- 템플릿 `master-plan.md`·`phase-plan.md` 신설, plan 0.작업기준, checklist 단일변경/페이즈게이트, learned 마찰흡수.
+
+**감축 (사용자 지적)**: 규칙 삭제가 아니라 **소/중/대 + 위험 승격 모델**. 소규모(1~2파일)=경량 기록 1개, learned 5줄 요약, codex 기록 단일 ledger. 1.4 4문서 강제 → 규모별 조건부. (불가침: codex 의무·추론금지 원칙·보안게이트·고위험 full path)
+
+**MCP 제외**: DB 접근을 MCP 인프라 대신 "작업 시작 시 접속정보 사용자 수령" 규칙으로 해결.
+
+### 교차 검증
+codex 3회 호출(중복·감축·페이즈 설계) 전부 동의. report.html(Anthropic 분석)·codex·Claude 삼각 수렴. 상세: `docs/plans/2026-06-05/usage-report-개선반영/`.
