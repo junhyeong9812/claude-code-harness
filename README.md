@@ -106,10 +106,22 @@ docs/plans/YYYY-MM-DD/작업명/
 
 ---
 
+## canonical 정책 (root vs dist)
+
+- **root** = 개발 원본. `CLAUDE.md`, `orchestration*.md`, `templates/`, `hooks/`, `settings.json`을 여기서 수정한다.
+- **dist/** = 배포 산출물. root를 복사한 것이며 `install.sh`가 `dist/`를 `~/.claude/`로 설치한다.
+- root를 수정하면 **반드시 `./build.sh`를 실행**해 dist/를 갱신한다. (root↔dist desync가 "반쪽 적용"의 원인이었음 — 2026-06-05 확정)
+
+```bash
+# root 수정 후
+./build.sh        # root → dist 동기화
+```
+
 ## 설치
 
 ### 다른 프로젝트에 설치
 ```bash
+./build.sh                      # (root 수정했다면) dist 갱신
 ./install.sh /path/to/my-project
 ```
 

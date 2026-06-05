@@ -21,9 +21,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/dist"
 
 if [ ! -d "$DIST_DIR" ]; then
-    echo "오류: dist/ 디렉토리가 없습니다."
+    echo "오류: dist/ 디렉토리가 없습니다. 먼저 ./build.sh 를 실행하세요."
     exit 1
 fi
+
+# dist는 root의 빌드 산출물. root를 수정했다면 build.sh로 갱신 후 설치해야 한다.
+echo "참고: dist/는 root의 빌드 산출물입니다. root 수정 후라면 ./build.sh 를 먼저 실행하세요."
 
 CLAUDE_DIR="$TARGET/.claude"
 
