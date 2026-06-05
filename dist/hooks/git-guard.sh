@@ -48,8 +48,13 @@ get_last_user_message() {
     echo ""
     return
   fi
-  # type=user, content가 string인 마지막 메시지
-  jq -r 'select(.type=="user" and (.message.content | type == "string")) | .message.content' "$latest" 2>/dev/null | tail -1
+  # type=user 의 마지막 메시지. content 가 string 이면 그대로,
+  # array 면 text 파트만 추출. (UserPromptSubmit 등 훅 출력이 붙으면 content 가 array 가 되어
+  #  string-only 필터로는 사용자 발화를 놓침 → push/커밋 키워드 매칭 실패하던 버그 수정.)
+  jq -r 'select(.type=="user") | .message.content
+         | if type=="string" then .
+           elif type=="array" then (map(select(.type=="text")|.text)|join(" "))
+           else empty end' "$latest" 2>/dev/null | grep -v '^$' | tail -1
 }
 
 LAST_USER_MSG="$(get_last_user_message)"

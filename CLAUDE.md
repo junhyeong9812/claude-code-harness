@@ -14,6 +14,7 @@
    - 파일이 길어도 전체를 읽는다. 앞부분만 보고 뒷부분을 가정하지 않는다.
    - 추론으로 절약한 토큰보다 추론 오류로 인한 재작업 비용이 훨씬 크다.
 5. **외부 큐레이션을 게을리하지 않는다.** 새 라이브러리/패턴/최신 트렌드/학습 컷오프 이후 영역은 답변·구현 전에 `WebSearch`/`WebFetch`로 외부 정보를 가져온다. LLM의 다수결 편향을 사람의 큐레이션으로 보정하는 절차다. 상세는 `orchestration-impl.md` B1.5절, `orchestration-discuss.md` 3.6절 참조.
+6. **모델 교차 검증을 모든 단계에서 수행한다.** 분석·계획·검증 단계마다 `codex`(외부 LLM, GPT-5.5)를 호출하여 Claude 추론에 대한 second opinion을 받고, Claude 의견과 codex 의견을 사용자에게 교차 보고한다. WebSearch(사람 큐레이션)와는 **다른 신호원**으로 LLM 다수결 편향을 한 번 더 보정한다. 호출 실패 시 자동 스킵 + 사유 기록. 상세는 `orchestration-impl.md` B1.6/B3/B5절, `orchestration-discuss.md` 3.7절, `orchestration-agent.md` 11절, `templates/codex-prompt.md` 참조.
 
 ## 진입점
 - 모든 작업은 `orchestration.md`(라우터)에서 시작한다.
