@@ -215,6 +215,7 @@ claude_study/
 
 | 날짜 | 변경 | 비고 |
 |------|------|------|
+| 2026-06-08 | **페르소나 라이브러리 본구축** — Core 12 도메인 × 4 = 48 named-expert 렌즈를 멀티워커 Workflow(24에이전트)로 WebSearch 그라운딩 + 출처/편향 2단계 검증. 영어 canonical 원칙 + 한국어 요약/별칭. `templates/persona-library.md`. | 분류 체계 = 도메인(Core12/Ext5) + 캐스팅 메타데이터(역할/시점/산출물) + 편향완화 버킷. 비서구·비판·현대 렌즈 포함 |
 | 2026-06-08 | **멀티워커 오케스트레이션 반영** — impl 1.2 규모 사용자 오버라이드, 5.9 코드리뷰 게이트(X4.5), 6.7 테스트 설계 분리(X4-T), agent 12절 페르소나 캐스팅 디렉터·named-expert 렌즈·페르소나 라이브러리·opt-in 3단계, templates 4종(persona-contract/review-worker/test-design-worker/persona-library). README 갱신(템플릿 표·작업 흐름·Phase 12). | `docs/08-멀티워커-오케스트레이션-설계안.md` / analyze 시리즈 + codex 교차검증 |
 | 2026-06-05 | usage report 반영 — 페이즈 게이트(5.8)·위험 승격·소/중/대 문서강도·데이터 특칙(6.6)·canonical(root/dist/build.sh) | Phase 11 |
 | 2026-05-14 | codex(GPT-5.5) 모델 교차 검증 통합 — 전 파이프라인 X.6 + plan/테스트 검토 + 보안 게이트(5.7) | Phase 10 |
