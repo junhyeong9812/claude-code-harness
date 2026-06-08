@@ -49,15 +49,18 @@
 8. Cindy Sridharan region/bucket → 출신 추정 철회, 기술 축 정당화로 재작성
 9. Cindy Sridharan 도메인7 blind-spot → 출신 기반 정당화 철회 반영
 
-## 4. 후속 라운드 (이번 미적용 — grounded 재리서치 필요)
+## 4. 후속 라운드 (보강) — ✅ 2026-06-08 완료
 
-> 단순 패치가 아니라 인물 교체/추가라 외부 큐레이션 그라운딩 필요. 12.4 규칙(실제 작업서 성장)에 따라 별도 라운드로.
+> Workflow `persona-augment-research`(8에이전트, grounded) + codex 슬롯 검증으로 수행.
 
-- **중복 dedup + 공백 교체**: Kleppmann ×2(데이터·분산 + DB) 중 한 슬롯, Newman ×2, 도메인6/7 Murphy·Majors 중복 → 공백 인물로.
-- **누락 핵심 인물 보강** (두 모델 제안): Vaughn Vernon·Alberto Brandolini(DDD 실무), Jay Kreps·Tyler Akidau(데이터/스트리밍), Nicole Forsgren·Jez Humble·Ben Treynor Sloss·John Allspaw(DevOps/SRE), Gary McGraw(보안 설계결함), Nancy Lynch·Jim Gray(분산 이론), Mark Nottingham(HTTP/API), Ross Anderson·Saltzer&Schroeder(보안 원전), Cem Kaner(테스트), Addy Osmani/Jake Archibald(FE 성능).
-- **과귀속 소프트닝**: Newman/Fowler/Janca 원칙을 "originated"가 아닌 "applies/popularizes"로.
-- **regional-alt 라벨 정책**: 기술 축 명명(functional-DDD / Vue-ecosystem / China-distributed-SQL / systems-performance)으로 전환 검토.
-- **도메인 6/7 경계** 재정의 또는 통합.
+- ✅ **중복 dedup**: Newman(설계서 제거→API 단일), Kleppmann(DB서 제거→데이터·분산 단일), Murphy·Majors(인프라DevOps서 제거→SRE 단일). 잔존 중복은 Dan North ×2뿐(BDD vs CUPID — 정당).
+- ✅ **신규 4인 grounded 추가**: Vaughn Vernon(설계, IDDD 레드북, evidence=strong) / Markus Winand(DB, SQL 인덱싱, 오스트리아) / Jez Humble(DevOps, Continuous Delivery) / Nicole Forsgren(DevOps, DORA/Accelerate 측정 — Gene Kim DORA 과귀속 동시 해소).
+- ✅ **과귀속 소프트닝**: Fowler 'campsite/Boy Scout rule' → R.C.Martin·Beck 귀속 명기. (Newman 'smart endpoints'는 라이브러리에 부재 — 불필요. Janca는 교육/대중화로 적절 프레이밍 — 유지.)
+- ✅ **regional-alt 라벨**: Geewax는 verify 단계서 이미 "US/Google AIP 대안 전통, 비서구 아님"으로 정직 재라벨 확인. Sridharan은 §3에서 기술 축 전환 완료.
+- ⏳ **미적용(다음 성장 대상)**: 도메인 6/7 경계 재정의, 추가 누락 인물(Brandolini·Kreps·Akidau·McGraw·Nancy Lynch·Mark Nottingham 등), Extended 5도메인. — 실제 작업서 외부 큐레이션으로 성장(12.4).
+
+### 보강 라운드 결과 (12 도메인 최종)
+- 설계: Evans/Vernon/Ousterhout/Wlaschin · API: Fielding/Newman/Helland/Geewax · DB: Codd/Stonebraker/Ed Huang/Winand · 인프라DevOps: Kim/Liz Rice/Humble/Forsgren · SRE: Murphy/Majors/Dekker/Sridharan · (나머지 동일). 총 48 슬롯 / 고유 47명(Dan North ×2).
 
 ## 5. 모델 교차 검증 기록 (이 검증 자체)
 - codex 1회(digest 21k토큰 압축본) + Opus 서브에이전트 1회(전문 정독 127k토큰, WebSearch 15회).
