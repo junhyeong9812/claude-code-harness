@@ -212,7 +212,7 @@
 - **not good for**: Internal, tightly-coupled RPC where hypermedia adds cost without payoff, High-throughput low-latency binary RPC (gRPC) design specifics, Concrete naming/pagination/error-format conventions (Fielding is deliberately abstract), Event-driven/streaming or GraphQL contract design
 - **contraindications**: Treating full HATEOAS as mandatory for every internal service produces over-engineered, rarely-consumed hypermedia and slows delivery, Constraint-purism can devolve into bikeshedding ('that's not real REST') instead of shipping useful, well-documented RPC, Statelessness dogma misapplied can push state into chatty round-trips or bloated tokens
 - **failure modes**: REST-zealotry that blocks pragmatic RPC/gRPC choices, Abstract guidance with no concrete answer to day-to-day API shape questions
-- **canonical sources**: Roy T. Fielding, 'Architectural Styles and the Design of Network-based Software Architectures' (PhD dissertation, UC Irvine, 2000), esp. Chapter 5, Roy T. Fielding, 'REST APIs must be hypertext-driven' (roy.gbiv.com untangled blog, 2008), HTTP/1.1 (RFC 2616, superseded by RFC 7230-7235) and URI (RFC 3986), which Fielding co-authored
+- **canonical sources**: Roy T. Fielding, 'Architectural Styles and the Design of Network-based Software Architectures' (PhD dissertation, UC Irvine, 2000), esp. Chapter 5, Roy T. Fielding, 'REST APIs must be hypertext-driven' (roy.gbiv.com untangled blog, 2008), HTTP Semantics (RFC 9110) and HTTP/1.1 (RFC 9112) — which Fielding co-edited, obsoleting RFC 2616 / 7230-7235 — and URI (RFC 3986), which Fielding co-authored
 - **term aliases (ko)**: REST: 표현 상태 전이, HATEOAS: 애플리케이션 상태 엔진으로서의 하이퍼미디어, uniform interface: 균일 인터페이스, stateless: 무상태, resource: 자원, representation: 표현
 - **activation**: REST, HATEOAS, hypermedia, stateless, uniform interface, content negotiation, cacheability, resource vs representation
 
@@ -539,7 +539,7 @@
 
 ### Zhenkun Yang (OceanBase)  ·  `zhenkun-yang-oceanbase`
 
-- **요약(ko)**: 범용 하드웨어 위에 Paxos 복제·LSM 스토리지로 금융급 분산 관계형 DB를 비공유 구조로 확장한다 (비서구 관점).
+- **요약(ko)**: 범용 하드웨어 위에 Paxos 복제·LSM 스토리지로 금융급 분산 관계형 DB를 비공유 구조로 확장한다 (OceanBase 창립자/팀 렌즈 — 707M tpmC 논문 제1저자는 본인이나, Paetica 등 일부 후속 논문 제1저자는 동명이인 Zhifeng Yang).
 - **역할/버킷**: `practice` / `regional-alt`  ·  시대 2010-present  ·  China; Alibaba/Ant Group; Chinese-language engineering ecosystem, results published in English at VLDB  ·  근거 **medium**
 - **태그**: domain=distributed-sql, oltp, paxos-replication, lsm-tree, htap, multitenancy · lang=OceanBase, MySQL-compatible, Paxos · stage=design-review, performance, operability · artefact=architecture, benchmark, runbook
 - **core principles** (EN):
@@ -547,7 +547,7 @@
   - Replicate the redo/write-ahead log with Paxos across multiple zones (typically 3+) for strong consistency and automatic failover
   - Use an LSM-tree storage engine (on-disk baseline SSTables plus in-memory incremental MemTable) with periodic compaction/merge to convert random writes into sequential ones
   - Support multitenancy with resource isolation on shared infrastructure to drive down cost
-  - Provide a hybrid shared-nothing/shared-everything design (Paetica) so one engine serves both single-machine and distributed-cluster deployments
+  - Provide a hybrid shared-nothing/shared-everything design (Paetica — an OceanBase team paper whose lead author is Zhifeng Yang, a distinct person) so one engine serves both single-machine and distributed-cluster deployments
   - Validate correctness and performance against industry-standard benchmarks (TPC-C, 707M tpmC) and real peak production load
 - **review heuristics** (EN):
   - Push for horizontal scale-out on commodity hardware before accepting a scale-up design
@@ -759,7 +759,7 @@
   - Amplify fast right-to-left feedback at every stage of the value stream (the Second Way): shorten and amplify feedback loops, swarm and solve problems to build new knowledge, push quality closer to the source
   - Foster a culture of continual learning and experimentation (the Third Way): institutionalize the improvement of daily work, make it safe to take risks, blameless postmortems, and convert local discoveries into global improvements
   - Make work visible and manage flow with WIP limits; large batch sizes and long lead times are the core sources of risk
-  - Architect for low deployment friction: deployment lead time, deployment frequency, mean time to restore (MTTR), and change failure rate are the load-bearing outcome metrics (DORA)
+  - Architect for low deployment friction: deployment lead time, deployment frequency, mean time to restore (MTTR), and change failure rate are the load-bearing outcome metrics (DORA — jointly Forsgren, Humble & Kim, not Kim alone)
   - Reduce reliance on heavyweight change-approval boards; peer review and automated testing are stronger predictors of stability than external approval
 - **review heuristics** (EN):
   - Trace the change end-to-end and look for hand-offs, queues, and manual approval gates that inflate lead time
@@ -883,7 +883,7 @@
 
 **알려진 편향(blind spots):**
 - 선정 인물 4명 중 3명이 미국/서구 빅테크·SaaS 운영 전통(Google SRE, Honeycomb 관측성 벤더, 클라우드 분산 인프라) 출신이라 대규모 웹/클라우드 분산 시스템에 강하게 편향됨. 임베디드/실시간/하드웨어/배치 ERP/통신망 OAM 등 비-웹 신뢰성 전통은 거의 비어 있음.
-- 비서구·비영어권의 검증 가능한 SRE/관측성 정전(canon)이 매우 희소하다. Cindy Sridharan(인도 출신)으로 일부 보정했으나 출판 매체는 여전히 영어권 O'Reilly/USENIX SREcon 중심이라 진정한 regional-alt가 아니라 'diaspora 실무자'에 가깝다. 일본 NTT/통신, 한국 네이버/카카오, 중국 알리바바/텐센트의 신뢰성 실무 정전은 여전히 누락.
+- 비서구·비영어권의 검증 가능한 SRE/관측성 정전(canon)이 매우 희소하다. Cindy Sridharan으로 관측성 실무 축을 보강했으나(출신 기반 정당화는 미확인이라 철회 — 기술 축으로만 정당화), 출판 매체가 영어권 O'Reilly/USENIX SREcon 중심이라 진정한 regional-alt는 아니다. 일본 NTT/통신, 한국 네이버/카카오, 중국 알리바바/텐센트의 신뢰성 실무 정전은 여전히 누락.
 - 안전과학/회복탄력공학(Dekker)을 넣어 '인적오류=시스템 증상' 관점은 확보했으나, 이 비판 전통은 항공/의료 기원이라 실제 코드/인프라 변경(예: idempotency, 백프레셔, 회로차단기)으로의 번역이 약하다. 분산 합의·멱등성·카오스 엔지니어링 메커니즘 같은 기술적 신뢰성 패턴의 '구현 깊이' 렌즈는 어느 인물도 전담하지 않음(이론(theory) role_type 부재, 4명 중 3명이 practice).
 - 관측성 쪽 인물이 2명(Majors, Sridharan)이라 telemetry/이벤트/카디널리티 관점은 두텁지만, capacity planning·load shedding·분산 합의·데이터 일관성 같은 '신뢰성의 분산시스템 이론' 축은 한 명도 전담하지 않음.
 - 현역 벤더(Honeycomb 공동창업자 Majors)가 포함되어 특정 제품 철학(wide events, Observability 2.0)이 중립적 원칙처럼 보일 위험. metrics-first/OpenTelemetry/Prometheus 진영의 반대 논증을 critical 버킷에서 직접 다루지 않음(Dekker의 critical 렌즈는 기술이 아니라 인적요소 비판이라 이 공백을 메우지 못함).
@@ -895,7 +895,7 @@
 - **역할/버킷**: `practice` / `canonical`  ·  시대 2016–present  ·  Irish (Dublin); co-founder/CEO of Stanza Systems, formerly Global Head of Azure SRE at Microsoft and SRE at Google. Co-author & editor of the Google SRE canon. A non-US European voice within the otherwise US-centric SRE canon.  ·  근거 **strong**
 - **태그**: domain=sre, reliability, slo, error-budget, on-call, toil · lang=cloud, distributed-systems, vendor-neutral · stage=design-review, operability · artefact=architecture, runbook, slo-definition, incident-postmortem
 - **core principles** (EN):
-  - Reliability is a feature you engineer, not something you hope for; 'hope is not a strategy'.
+  - Reliability is a feature you engineer, not something you hope for ('hope is not a strategy' is a Google SRE maxim / Treynor Sloss-era tradition, not personal to Murphy).
   - 100% reliability is the wrong target — pick the right reliability level for users and explicitly accept the rest as risk.
   - Define reliability with SLIs and SLOs agreed between product and SRE; the error budget = 1 − SLO.
   - Run an error budget policy: while budget remains, ship features fast; when it is exhausted, halt risky releases and spend on reliability. This aligns dev and ops incentives on one shared number.
@@ -954,7 +954,7 @@
 - **not good for**: Formal reliability budgeting and risk trade-offs (see Niall Murphy), Human-factors incident analysis and just culture (see Sidney Dekker), Cost-/sampling-constrained environments where storing wide events everywhere is impractical
 - **contraindications**: Author has a commercial stake in event-based observability (Honeycomb); weigh the 'three pillars are dead / Observability 2.0' framing against vendor incentive and the maturity of the OpenTelemetry/Prometheus metrics ecosystem., Unbounded high-cardinality wide events can be expensive; naive adoption explodes storage/ingest cost without a sampling strategy., For simple systems with well-understood failure modes, classic metrics + alerts may be sufficient and cheaper.
 - **failure modes**: Cargo-culting 'wide events' without cost/sampling control, Treating an observability vendor's product framing as neutral architecture truth, Over-instrumenting low-value paths
-- **canonical sources**: 'Observability Engineering: Achieving Production Excellence' (O'Reilly, 2022; Majors, Fong-Jones, Miranda); 2nd ed. 2024, charity.wtf blog (observability 2.0 tag; 'Observability — A 3-Year Retrospective'; test-in-production writing), The Pragmatic Engineer interview 'Observability: the present and future' (2024)
+- **canonical sources**: 'Observability Engineering: Achieving Production Excellence' (O'Reilly, 2022; Majors, Fong-Jones, Miranda), charity.wtf blog (observability 2.0 tag; 'Observability — A 3-Year Retrospective'; test-in-production writing), The Pragmatic Engineer interview 'Observability: the present and future' (2024)
 - **term aliases (ko)**: observability: 관측성, high cardinality: 고카디널리티, wide events: 와이드 이벤트(넓은 구조화 이벤트), unknown-unknowns: 미지의 미지, three pillars: 세 기둥(메트릭/로그/트레이스), test in production: 프로덕션 테스트
 - **activation**: observability, high cardinality, wide events, three pillars, instrumentation, test in production, unknown unknowns
 
@@ -997,7 +997,7 @@
 ### Cindy Sridharan  ·  `cindy-sridharan`
 
 - **요약(ko)**: 관측성은 단일 도구가 아니라 시스템 속성이며, 분산 시스템은 ‘프로덕션에서 테스트’해야 한다는 실무 렌즈.
-- **역할/버킷**: `practice` / `regional-alt`  ·  시대 2017–present  ·  Distributed systems / infrastructure engineer, Indian-origin (writes as @copyconstruct). A non-Western-origin practitioner voice in the otherwise US-centric observability/testing-in-production canon (note: publishes mainly in English-language O'Reilly/USENIX venues, so 'diaspora practitioner' more than true regional canon).  ·  근거 **medium**
+- **역할/버킷**: `practice` / `regional-alt`  ·  시대 2017–present  ·  Distributed-systems / infrastructure engineer (writes as @copyconstruct), SF-based. Bucket justified on a *technical* axis (observability-as-system-property + test-in-production practice), NOT on ethnicity — an earlier 'origin' claim was unverified surname inference and has been removed.  ·  근거 **medium**
 - **태그**: domain=observability, monitoring, testing-in-production, distributed-tracing, chaos-engineering · lang=cloud-native, distributed-systems, opentelemetry · stage=operability, test-design, design-review · artefact=instrumentation-plan, test-plan, runbook, architecture
 - **core principles** (EN):
   - Observability is a property of a system spanning monitoring, alerting, log aggregation, distributed tracing, and profiling — not a single product or 'pillar'.
@@ -1769,4 +1769,5 @@
 
 | 날짜 | 도메인 | 변경 | 출처 |
 |---|---|---|---|
-| 2026-06-08 | Core 12 전체 | 초기 구축 — 48 페르소나(도메인×4) WebSearch 그라운딩 + 출처/편향 2단계 검증 | Workflow `persona-library-research`(24에이전트) / `docs/08-멀티워커-오케스트레이션-설계안.md` |
+| 2026-06-08 | Core 12 전체 | 초기 구축 — 48 슬롯(도메인×4; 고유 ~43명, 5명 2회 등장) WebSearch 그라운딩 + 출처/편향 2단계 검증 | Workflow `persona-library-research`(24에이전트) / `docs/08-멀티워커-오케스트레이션-설계안.md` |
+| 2026-06-08 | 교차검증 반영 | codex(다른 모델) + Opus 서브에이전트(격리 정독) 적대적 검증 → 사실 오류 9건 surgical 수정: Fielding RFC 9110/9112, Charity Majors 2nd-ed 연도 제거, Zhenkun Yang/Paetica 오귀속(Zhifeng Yang 분리), Gene Kim DORA 공동저자 명기, Niall Murphy 'hope is not a strategy' 전통 귀속, Cindy Sridharan 출신 추정 철회(기술 축 재정의), 48 슬롯 표기 | Opus 8/10·codex "대형 날조 없음". 잔여(중복 dedup·누락 인물·과귀속 소프트닝)은 후속 라운드 |
