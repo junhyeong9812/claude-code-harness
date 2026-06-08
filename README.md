@@ -46,6 +46,12 @@ Claude Code가 즉흥적으로 코드를 만지지 않고, **계획 → 합의 �
 | `learned-example.md` | learned.md 작성 기대 수준 예시 |
 | `master-plan.md` | 대규모 마스터 계획 (페이즈 분해 + 의존성 + acceptance) |
 | `phase-plan.md` | 페이즈별 계획 (목표/변경파일/검증명령/되돌릴 범위) |
+| `codex-prompt.md` | codex 교차 검증 표준 프롬프트 5종 + 보안 게이트 |
+| `research.md` | 리서치 산출물 (Claude 분석 + 외부 큐레이션 + codex 교차) |
+| `persona-contract.md` | 멀티워커 페르소나 계약 (볼것/안볼것/산출물 형식) |
+| `review-worker.md` | 코드리뷰 게이트(X4.5) 리뷰 워커 프롬프트 (spec compliance) |
+| `test-design-worker.md` | 테스트 설계 워커(X4-T) 프롬프트 (impl diff 미열람) |
+| `persona-library.md` | 도메인별 named-expert 렌즈 라이브러리 (성장형) |
 
 ---
 
@@ -67,6 +73,8 @@ orchestration.md (라우터)
     └── "어떻게 생각해?/설명해줘/설계하자"  →  orchestration-discuss.md
         └── 자유 대화 흐름
 ```
+
+> **멀티워커 (중/대·고위험)**: `[구현] ∥ [테스트 설계(impl 미열람)]` → `[리뷰 게이트 X4.5]` → `[테스트]` 로 역할 분리(별도 워커). 메인 = **페르소나 캐스팅 디렉터**(역할형 + named-expert 렌즈). 페르소나=커버리지 / codex=독립성. 규모(사용자 지정 최우선)가 캐스팅 깊이를 결정(opt-in 3단계). 상세: `orchestration-agent.md` 12절 / `orchestration-impl.md` 5.9·6.7·1.2.
 
 ### 모든 구현 작업의 산출물 (모든 규모)
 ```
@@ -196,6 +204,20 @@ claude_study/
 | 9 | **30일 사용 분석 + Tier 1 가드 시스템화** (2026-05-08) — `git-guard.sh`(push/docs commit 차단), `session-context-loader.sh`(SessionStart 자동 컨텍스트 로드), 외부 큐레이션 의무화(B1.5 신설). 30일 누적 자연어 가드를 시스템 가드로 영구 해결 |
 | 10 | **codex(GPT-5.5) 모델 교차 검증 통합** (2026-05-14) — 전 파이프라인 X.6 모델 교차 검증 + B3/B5 codex 검토 의무 + 5.7 보안 게이트 + `codex-prompt.md`/`research.md` 템플릿. 토론/설계도 codex 의무 |
 | 11 | **한달 usage report 반영 — 추가+감축+구조 균형** (2026-06-05) — CLAUDE.md 반복실패 방지 규칙 / orchestration 2.4 작업기준 게이트 / impl **5.8 페이즈 게이트**(중·대규모 master+phase 분리) + 위험 승격 + 소/중/대 문서강도(감축) + 6.6 데이터 특칙 / canonical(root=원본·dist=산출물·build.sh). over-scoping 1위 마찰 처방. 상세 `docs/plans/2026-06-05/usage-report-개선반영/` |
+| 12 | **멀티워커 오케스트레이션 — 코드리뷰 가이드레일 확장** (2026-06-08) — impl 1.2 규모 사용자 오버라이드+위험 하한 / **5.9 코드리뷰 게이트(X4.5)** spec compliance / **6.7 테스트 설계 분리(X4-T)** impl 미열람 / agent **12절** 페르소나 캐스팅 디렉터·소유권 절단선·named-expert 렌즈·페르소나 라이브러리·opt-in 3단계 + templates 4종. 메인=캐스팅 디렉터, 페르소나=커버리지/codex=독립성. analyze 시리즈(open-code-review 분석)에서 도출 + codex 교차검증. 상세 `docs/08-멀티워커-오케스트레이션-설계안.md` |
 
 상세는 `docs/HISTORY.md` 참조.
 이번 분석 보고서: `docs/analysis/2026-05-08-llm-usage-feedback.md`.
+
+---
+
+## 변경 이력 (업데이트 로그)
+
+| 날짜 | 변경 | 비고 |
+|------|------|------|
+| 2026-06-08 | **멀티워커 오케스트레이션 반영** — impl 1.2 규모 사용자 오버라이드, 5.9 코드리뷰 게이트(X4.5), 6.7 테스트 설계 분리(X4-T), agent 12절 페르소나 캐스팅 디렉터·named-expert 렌즈·페르소나 라이브러리·opt-in 3단계, templates 4종(persona-contract/review-worker/test-design-worker/persona-library). README 갱신(템플릿 표·작업 흐름·Phase 12). | `docs/08-멀티워커-오케스트레이션-설계안.md` / analyze 시리즈 + codex 교차검증 |
+| 2026-06-05 | usage report 반영 — 페이즈 게이트(5.8)·위험 승격·소/중/대 문서강도·데이터 특칙(6.6)·canonical(root/dist/build.sh) | Phase 11 |
+| 2026-05-14 | codex(GPT-5.5) 모델 교차 검증 통합 — 전 파이프라인 X.6 + plan/테스트 검토 + 보안 게이트(5.7) | Phase 10 |
+| 2026-05-08 | Tier 1 가드 시스템화 — git-guard·session-context-loader + 외부 큐레이션 의무화(B1.5) | Phase 9 |
+
+> 세부 변경은 각 문서 하단의 `## 변경 이력` 표(`orchestration-impl.md` / `orchestration-agent.md` 등)와 `docs/HISTORY.md`를 함께 참조한다.
