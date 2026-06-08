@@ -32,6 +32,12 @@
 
 - **요약(ko)**: 복잡한 비즈니스 도메인을 유비쿼터스 언어와 경계 컨텍스트로 모델링하는 DDD의 원전 저자.
 - **역할/버킷**: `theory` / `canonical`  ·  시대 2003–present  ·  US / English; DDD 용어의 원전 정의자  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 유비쿼터스 언어를 대화/모델/코드에서 동일하게 표현 — 시대·언어 무관 불변 원칙 / 모델과 구현을 상호 구속(model-driven design): 코드가 반영 못 하는 모델은 무가치 / 명시적 경계 컨텍스트 — 모델의 유효성은 경계 안에서만 성립 / 컨텍스트 맵으로 컨텍스트 간 관계 노출(ACL, OHS, Published Language 등) / 핵심 도메인 증류 후 최선의 노력을 거기 집중 / 통합 경계에서 부패 방지 계층(ACL)으로 모델 무결성 보호 / 선행 완성이 아니라 지속 리모델링으로 더 깊은 통찰을 향해 리팩토링
+  - trend(재확인): 2024년 입장: 경계 컨텍스트별 유비쿼터스 언어로 LLM을 파인튜닝하고 목적별 다중 모델을 두라는 권고 — 최신이라 향후 바뀔 시한부 항목 / 도메인 모델러가 자연어 입력 해석 작업을 서브도메인으로 슬롯팅하게 될 것이라는 예측
+  - dated/대체됨: 2003년 원전의 Repository/Factory + 4계층 아키텍처 중심 전술 패턴 프레이밍 — CQRS/이벤트소싱/헥사고날이 일반화된 현재엔 과잉 의례로 취급되는 경우가 많음(Evans 본인도 전술 패턴 과잉을 경계)
+  - ⚠ anachronism: 원전 예제가 가정한 Java/Hibernate 모놀리식 계층형 영속화 전제 — 현재 모듈러 모놀리스/이벤트드리븐 맥락과 충돌
+  - 입장 변화: 공개적으로 입장 진화: 경계 컨텍스트≠서브도메인임을 거듭 강조하고, 커뮤니티가 전술 패턴을 과대평가하고 전략적 설계를 경시했다고 비판. 2024년부터 LLM 실험을 적극 장려하며 stance를 확장.
 - **태그**: domain=domain-driven-design, strategic-design, modeling · lang=language-agnostic, java, oop · stage=design-review · artefact=architecture, api-contract
 - **core principles** (EN):
   - Cultivate a Ubiquitous Language shared by domain experts and developers, expressed identically in conversation, model, and code
@@ -67,6 +73,11 @@
 
 - **요약(ko)**: 복잡도 관리를 설계의 핵심으로 보고 '깊은 모듈'과 과잉 분해 비판으로 통념을 흔드는 비평가.
 - **역할/버킷**: `critique` / `critical`  ·  시대 2018–present  ·  US / English; Stanford 교수, 모듈 설계 관점에서 통념을 비판  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 소프트웨어 설계의 핵심 문제는 복잡도 관리 — 이해/변경을 어렵게 하는 모든 것 / 복잡도 증상: change amplification, 높은 인지 부하, unknown unknowns / 깊은 모듈(단순 인터페이스 + 강력한 구현) 추구, 분해 자체가 목표가 아님 / 얕은 모듈과 classitis 경계 — 잔클래스 남발이 오히려 인터페이스 복잡도 증가 / 정보 은닉이 핵심 기법, 정보 누출이 적 / 주석은 코드가 표현 못 하는 설계 의도/비자명 근거를 담아야 함 / Design it twice — 커밋 전 근본적으로 다른 설계 복수 검토
+  - trend(재확인): 2024.9~2025.2 Robert C. Martin과의 APOSD vs Clean Code 공개 토론 — 현재진행형 담론이라 정리/수렴 가능성 있음 / 'errors out of existence'(예외 케이스를 설계로 소거) — 실무 채택 논쟁 중인 비교적 최근 강조점
+  - ⚠ anachronism: 강한 TDD 회의론('TDD는 나쁜 설계로 이어질 가능성이 높다') — 테스트 우선과 AI 에이전트 보조 테스트 중심 워크플로가 표준화된 현재 실무와 정면 충돌하는 대표 입장 / 작은 메서드/세밀 분해에 대한 회의 — Clean Code식 소함수 규범 및 자동 리팩토링 도구 생태계와 충돌
+  - 입장 변화: 2024-2025 Uncle Bob과 공개 대담으로 TDD·추상화 선행·소함수에서의 견해차를 명문화. 핵심 입장(특히 anti-TDD)은 철회하지 않고 유지.
 - **태그**: domain=software-design, complexity, module-design, code-quality · lang=language-agnostic, c, java, oop · stage=design-review, code-review · artefact=code-diff, architecture
 - **core principles** (EN):
   - The central problem of software design is managing complexity; complexity is anything that makes a system hard to understand or modify
@@ -102,6 +113,11 @@
 
 - **요약(ko)**: 타입으로 '불가능한 상태를 표현 불가능하게' 만들어 함수형 전통에서 DDD를 구현하는 실무가.
 - **역할/버킷**: `practice` / `regional-alt`  ·  시대 2013–present  ·  UK / English; 함수형(FP)·정적타입 전통 — 주류 OOP DDD와 다른 패러다임 계보  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 대수적 자료형으로 도메인 모델링: AND(레코드)와 OR(구별 합집합) / 불가능한 상태를 표현 불가능하게(make illegal states unrepresentable) — 타입으로 제약 인코딩 / 타입을 컴파일타임 단위테스트/실행 가능 명세로 사용 / 워크플로를 입력→출력 함수로, 효과와 오류를 명시적·타입화 / 오류/부재를 시그니처에 명시(Result/Option), null·은닉 예외 회피 / 도메인 코어는 불변·순수, 부수효과는 경계로 밀어냄 / 타입 시스템 자체를 살아있는 문서로 활용
+  - trend(재확인): F#를 주 매개체로 한 권고 — 2026년엔 동일 패턴이 TypeScript(branded types)·Rust(enum)·Kotlin로 주류 확산 중이라, F# 특정 처방은 생태계 변화에 종속된 시한부 측면
+  - ⚠ anachronism: 정적타입 FP 한정 전제 — '동적언어 생태계에선 타입 인코딩 효과 제한적'이라는 본인 단서가 있으나, Rust/TS가 산업 표준으로 부상한 현 상황에서 F# 일변도 프레이밍은 다소 시대적 잔재(원칙 자체는 이식 가능)
+  - 입장 변화: 공개적 입장 번복은 확인되지 않음(미확인). 2018년 저서 이후 개정판 없이 fsharpforfunandprofit로 활동 지속, 핵심 원칙 유지.
 - **태그**: domain=functional-programming, domain-driven-design, type-driven-design, modeling · lang=fsharp, haskell, typescript, functional, static-types · stage=design-review, code-review, test-design · artefact=architecture, api-contract, code-diff
 - **core principles** (EN):
   - Model the domain with algebraic data types: AND types (records) and OR types (discriminated unions) to mirror business reality
@@ -137,6 +153,12 @@
 
 - **요약(ko)**: 에반스(Evans)의 DDD 이론을 실제 코드로 옮기는 실무 렌즈로, 작은 애그리거트 설계 규칙과 도메인 이벤트 기반 결과적 일관성을 정립한 'Implementing DDD(레드북)' 저자.
 - **역할/버킷**: `practice` / `canonical`  ·  시대 2011-present (DDD implementation era; Effective Aggregate Design 2011, IDDD 2013, DDD Distilled 2016)  ·  US-based; English-language software architecture community; works across enterprise business domains, JVM/Scala/Akka and .NET ecosystems  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 단일 일관성 경계 안에 진짜 불변식만 — 트랜잭션 일관성이 필요한 데이터만 한 애그리거트에 / 작은 애그리거트 설계: 루트 + 최소 값 객체 / 다른 애그리거트는 객체 참조가 아니라 ID로 참조 / 트랜잭션당 한 애그리거트 인스턴스만 수정, 나머지는 결과적 일관성으로 조율 / 도메인 이벤트로 애그리거트·경계 컨텍스트 간 상태 변화 전파·디커플링 / 전략적 설계 선행(경계 컨텍스트·유비쿼터스 언어) 후 전술 모델링 / 데이터/영속화가 아니라 행위와 도메인에서 설계를 유도
+  - trend(재확인): 리액티브 시스템/액터 모델(Akka)·vlingo 플랫폼 옹호 — 기술 종속적이고 최근 실무라 변동 가능 / 'Strategic Monoliths and Microservices'(2021) 노선 — 2026 모듈러 모놀리스 회귀(조직 42%가 마이크로서비스 통합) 트렌드와 맞물려 재평가 중
+  - dated/대체됨: Reactive Messaging Patterns(2015)의 Scala/Akka 중심 처방 — Akka의 2022 BSL 상용 라이선스 전환 이후 생태계 채택 급감으로 낡음 / vlingo/PLATFORM 권고 — 산업 채택이 미미해 일반 처방으로는 시효 지남
+  - ⚠ anachronism: 동시성/확장성 해법으로 액터·리액티브 스택을 기본값처럼 권하는 프레이밍 — JVM 가상 스레드(Project Loom, JDK 21+ 정식)가 많은 사례에서 리액티브/논블로킹의 필요를 줄인 2026 환경과 충돌(pre-Loom 리액티브 일변도) / Scala/Akka를 DDD 구현의 표준 레퍼런스 스택으로 제시 — BSL 전환 후 JVM 현장에서 비표준화
+  - 입장 변화: stance 진화: 초기 마이크로서비스 열기에서 'Strategic Monoliths and Microservices'(2021, Jaskula 공저)로 목적 지향·모놀리스 우선의 균형 노선으로 이동 — 2026 모듈러 모놀리스 재부상과 정합. DDD 코어 규칙은 유지.
 - **태그**: domain=domain-driven-design, software-architecture, aggregate-design, domain-events, bounded-contexts, microservices · lang=java, scala, akka, csharp, jvm · stage=domain modeling, architecture design, implementation, code review · artefact=Aggregate boundary designs, Bounded context maps, Domain event definitions, Ubiquitous language glossaries, Reference implementation code (e.g., IDDD_Samples)
 - **core principles** (EN):
   - Model true invariants within a single consistency boundary: only data that must stay transactionally consistent belongs in the same aggregate.
@@ -191,6 +213,10 @@
 
 - **요약(ko)**: REST를 정의한 원전 — 자원·표현·무상태·하이퍼미디어(HATEOAS) 제약으로 웹 규모 진화 가능성을 평가하는 렌즈.
 - **역할/버킷**: `theory` / `canonical`  ·  시대 2000s-present  ·  US / English; UC Irvine, co-author of HTTP/1.1 and URI standards  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): REST는 'JSON over HTTP'가 아니라 제약(constraints)의 집합으로 정의되며 각 제약(client-server, stateless, cacheable, layered, uniform interface, code-on-demand)이 특정 아키텍처 속성을 산다 — 시대·프로토콜 무관한 불변 원리 / uniform interface의 네 하위 제약(자원 식별, 표현을 통한 조작, 자기서술적 메시지, HATEOAS) / 무상태성: 각 요청이 모든 컨텍스트를 담아 수평 확장·가시성·신뢰성을 가능케 한다 / 자원(URI)과 표현(협상 가능한 media type)의 분리 — 동일 자원을 여러 포맷으로 제공·진화 / 캐시 가능/불가능을 1급 제약으로 명시적으로 설계한다
+  - ⚠ anachronism: 'HATEOAS가 아니면 REST가 아니다'를 모든 API에 강제하는 입장 — 2026 산업 주류는 의도적으로 RPC-over-HTTP를 택하고 HATEOAS를 생략한다(REST/GraphQL/gRPC 하이브리드가 표준). 내부·고처리 API에 전면 HATEOAS는 over-engineering으로 평가됨 / 'URL에 버전 번호를 박지 말고 media type/link relation으로 진화하라' — 현실 주류는 URL 경로 버저닝(/v1)·헤더 버저닝을 광범위하게 사용하며 Fielding의 hypermedia-only 진화 모델은 거의 채택되지 않음 / 클라이언트가 응답의 링크/폼으로 다음 행동을 '발견'해야 한다는 hypertext-driven 요구 — 실무 클라이언트·SDK·codegen은 out-of-band OpenAPI 계약 기반으로 동작하는 것이 사실상 표준
+  - 입장 변화: Fielding은 2008년 'REST APIs must be hypertext-driven' 이래 'HATEOAS 없으면 REST 아니라 RPC다' 입장을 유지하며 입장을 바꾸지 않았다. 다만 산업계가 이 입장을 사실상 거부해, 그의 엄격한 정의와 통용되는 'REST' 사이 간극이 2025-26에도 활발한 논쟁점으로 남아 있다(라이브러리 canonical source는 이미 RFC 9110이 RFC 2616을 obsolete한 것을 반영, RFC 2616식 표기는 아님).
 - **태그**: domain=rest, http, hypermedia, web-architecture, api-design · lang=http, uri, protocol-agnostic · stage=design-review, code-review · artefact=api-contract, architecture
 - **core principles** (EN):
   - REST is defined by constraints, not by 'JSON over HTTP'; each constraint (client-server, stateless, cacheable, layered system, uniform interface, optional code-on-demand) buys a specific architectural property
@@ -225,6 +251,10 @@
 
 - **요약(ko)**: 마이크로서비스 실무 렌즈 — 독립 배포성·정보 은닉·명시적 계약·도메인 경계로 서비스 분해를 평가.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2015-present  ·  UK / English; independent consultant, O'Reilly author  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 독립 배포성(independent deployability)이 가장 중요한 속성 — 한 서비스를 다른 서비스의 lock-step 변경 없이 배포 가능해야 하며 이것이 느슨한 결합과 안정 계약을 강제한다 / 기술 계층이 아니라 비즈니스 도메인(수직 슬라이스) 중심으로 서비스를 모델링한다 / 정보 은닉 — 저장소·구현을 안정 인터페이스 뒤에 숨기고 서비스 경계 간 DB를 공유하지 않는다 / 스키마/계약을 명시화한다(명시적 계약이 없어도 암묵적·비관리 계약은 존재한다) / 조기 분해 금지 — 도메인 경계가 불명확하면 coarse-grained로 시작해 이해된 뒤 분리한다 / breaking vs non-breaking 변경을 구분하고 expand-and-contract로 마이그레이션한다
+  - trend(재확인): 마이크로서비스 채택 시 광범위 end-to-end 테스트 가치가 떨어지고 consumer-driven contract test·스키마 호환성 검사·카나리·parallel run을 선호 — 방향은 견고하나 구체 테스트 전략/도구(Pact 등)는 실무 트렌드성이 있어 변할 수 있음
+  - 입장 변화: Newman은 입장을 뒤집지는 않았으나 'monolith first / 조기 분해 금지'를 더 강하게 밀고, 2025 기준 modular monolith를 합리적 기본값으로 보는 흐름 및 '마이크로서비스에서 모놀리스로 회귀' 사례를 적극 논의한다. 핵심 원칙(독립 배포성·정보 은닉)은 유지하되 '대부분의 팀은 마이크로서비스가 필요 없다'는 신중론이 현재 stance의 특이점.
 - **태그**: domain=microservices, service-boundaries, api-contracts, decomposition, deployment · lang=polyglot, http, messaging, ddd · stage=design-review, operability, test-design · artefact=architecture, api-contract, runbook
 - **core principles** (EN):
   - Independent deployability is the single most important property: you should be able to deploy one service without lock-step changes to others; this forces loose coupling and stable contracts
@@ -261,6 +291,9 @@
 
 - **요약(ko)**: 분산 데이터 비판 렌즈 — 분산 트랜잭션을 거부하고 멱등성·불변성·엔티티 경계·내부/외부 데이터 구분으로 규모를 본다.
 - **역할/버킷**: `critique` / `critical`  ·  시대 2005-present  ·  US / English; distributed systems architect (Tandem, Microsoft, Amazon, Salesforce)  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 규모에서는 엔티티 간 분산 트랜잭션에 의존할 수 없다 — 각 엔티티를 자체 직렬화 범위로 두고 2PC가 아닌 메시지로 조율한다 / '내부 데이터'(private·mutable·transactional·current)와 '외부 데이터'(서비스 간 교환 메시지/문서: immutable·versioned·identity-bearing·시간적으로 분리)를 구분한다 / 메시징은 at-least-once이므로 상태를 바꾸는 모든 연산은 안정 식별자 기반으로 멱등하게 설계해야 한다 / 불변·고유식별 데이터는 'stable'하여 거리·시간을 넘어 안전하게 공유·캐시·추론 가능하다 — 조율을 강제하는 것은 변경(mutation)이다 / Identity가 load-bearing primitive — 멱등성·불변성·교환가능성이 모두 잘 정의된 식별자에 의존한다 / 서비스 간 시간적·일관성 격차를 전체를 한 트랜잭션처럼 가장하지 말고 받아들이고 설계한다
+  - 입장 변화: Helland는 입장을 바꾸지 않았고 이 원칙들은 2024-26에도 분산 시스템 설계의 토대로 그대로 통용된다. 최근에는 'Memories, Guesses, and Apologies'(불완전 지식 기반 로컬 결정 + 보상 트랜잭션)와 저장 비용 하락에 따른 immutability/'keep all the things' 논지를 더 강조하나 핵심 원칙과 모순되지 않는 연장선이다.
 - **태그**: domain=distributed-data, idempotency, immutability, consistency, service-data, scalability · lang=distributed-systems, messaging, databases, protocol-agnostic · stage=design-review, operability, performance · artefact=architecture, api-contract, threat-model
 - **core principles** (EN):
   - At scale you cannot rely on distributed transactions across entities; design each entity as its own serialization scope and coordinate between entities with messages, not 2PC
@@ -296,6 +329,11 @@
 
 - **요약(ko)**: 리소스 지향 설계(Google AIP 전통) 렌즈 — 표준 메서드·일관된 네이밍·부분 갱신·롱러닝 작업으로 API 일관성을 본다.
 - **역할/버킷**: `practice` / `regional-alt`  ·  시대 2021-present  ·  US / English — NOT a regional/non-western voice; occupies the regional-alt slot only as an ALTERNATIVE DESIGN TRADITION (Google resource-oriented / AIP) that diverges from the REST-hypermedia canon.  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 리소스 지향 설계 — 계층 구조의 개별 명명된 자원(명사)을 작고 고정된 표준 메서드(동사)로 조작한다 / API 전체에서 국소적으로 영리한 일회성 설계보다 일관성·예측가능성을 우선한다(균일성 자체가 소비자에게 기능이다) / 계층적·일관된 자원 이름(parent/collection/id)으로 자원이 예측가능하게 합성되고 도구가 균일하게 동작하게 한다
+  - trend(재확인): 표준 메서드를 Get/List/Create/Update/Delete로 표준화하고 정말 맞지 않을 때만 custom method 사용 — Google AIP 관행에 묶여 있어 컨벤션 세부는 진화 가능 / 부분 갱신/조회를 field mask로 명시적으로 표현 — JSON Merge Patch(RFC 7396) 등 대안과 경합하는 실무 컨벤션 / 장시간 연산을 long-running operation 핸들 + 균일 Operations 인터페이스로 모델링(AIP-151) / pagination·filtering·auth·error 포맷을 endpoint별 재발명 대신 재사용 표준 패턴으로 — AIP 표준 자체가 갱신되는 시한부 컨벤션 / gRPC/protobuf 및 resource-oriented HTTP-JSON 중심 — 2026 주류는 REST(공개)+gRPC(내부)+GraphQL(집계)+이벤트(디커플링) 하이브리드라 리소스 지향 단일 패러다임의 적용 범위는 한정적
+  - ⚠ anachronism: 모든 동작을 표준 CRUD 메서드로 'resourcify'하려는 압력 — 본질적으로 action/RPC지향이거나 이벤트·스트리밍·GraphQL이 더 맞는 인터랙션을 부자연스러운 자원으로 왜곡할 수 있음(2026 이벤트 기반·AsyncAPI 부상 맥락에서 충돌)
+  - 입장 변화: 미확인 — 2025-26 기준 Geewax 본인의 입장 변화를 보여주는 1차 자료를 검색으로 확인하지 못함(검색 결과가 2021-23 'API Design Patterns'/aip.dev에 집중). 핵심 원칙은 Google AIP 전통으로 견고하나 개인 stance의 최신성은 미확인이라 AIP 의존 항목을 trend로 분류.
 - **태그**: domain=api-design-patterns, resource-oriented-design, grpc, naming, pagination, long-running-operations · lang=grpc, protobuf, http-json, google-cloud · stage=design-review, code-review · artefact=api-contract, architecture
 - **core principles** (EN):
   - Resource-oriented design: the building blocks are individually-named resources (nouns) in a hierarchy, acted on by a small fixed set of standard methods (verbs)
@@ -344,6 +382,11 @@
 
 - **요약(ko)**: 반응형 웹 디자인의 창시자 — 유동 그리드·가변 이미지·미디어 쿼리로 하나의 코드가 모든 화면에 적응하게 하는 정전(canonical) 렌즈.
 - **역할/버킷**: `theory` / `canonical`  ·  시대 2010-present  ·  US, English; originated the term 'responsive web design' (An Event Apart / A List Apart, 2010)  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 콘텐츠 아웃(content-out) 설계 — 고정 기기 크기가 아니라 콘텐츠와 그것이 깨지는 지점이 레이아웃을 주도 / 비율 기반(상대) 단위 사용으로 화면에 유동적으로 적응 / 이미지/임베드를 유연하게(max-width:100%) 컨테이너 안에서 스케일 / 모든 기기에 하나의 웹을 제공 — 별도 m-dot/기기별 분기 사이트 회피 / 접근 가능한 기준선 위에 점진적 향상(progressive enhancement) 레이어로 반응형 적용 / 분기점은 인기 기기 폭이 아니라 콘텐츠/디자인이 깨지는 곳에 둔다
+  - dated/대체됨: RWD를 '유동 그리드 + 가변 이미지 + 미디어 쿼리' 3요소로 정의하는 원형 프레이밍 — 2026년에는 컨테이너 쿼리(2023 baseline, 90%+ 지원)·clamp()·CSS Grid intrinsic sizing이 더해진 다층 접근이 표준 / target/context=result 식 픽셀 산술로 비율 단위를 도출하는 원조 휴리스틱 — fr 단위·clamp()·intrinsic sizing으로 대체됨 / 뷰포트 기반 미디어 쿼리를 반응형의 주된 적응 메커니즘으로 보는 시각 — 재사용 컴포넌트에는 컨테이너 쿼리(@container)가 우선
+  - ⚠ anachronism: 미디어 쿼리 분기점을 '반응형 설계의 전부'로 취급하는 조언은 컨테이너 쿼리·intrinsic sizing이 baseline인 2026 CSS와 충돌(라이브러리의 failure-modes도 이를 명시) / 수작업 픽셀 비율 계산 휴리스틱은 fluid type(clamp())·CSS Grid fr·container query 시대에는 구체 조언으로서 시대착오적
+  - 입장 변화: Marcotte 본인이 입장을 갱신함 — 'On container queries.' 및 'Responsive design and container queries? Oh my!' 글에서 컨테이너 쿼리를 반응형 디자인의 확장으로 적극 수용. 원조 3요소 정의에 갇혀 있지 않고 현대 CSS를 포용하는 stance.
 - **태그**: domain=frontend, web, responsive, css, layout · lang=html, css, javascript · stage=design-review, code-review · artefact=architecture, code-diff
 - **core principles** (EN):
   - Responsive web design rests on three technical ingredients: fluid grids, flexible images, and media queries, delivered from one codebase
@@ -376,6 +419,11 @@
 
 - **요약(ko)**: Testing Library 창시자 — '테스트가 실제 사용 방식을 닮을수록 확신이 커진다'는 원칙과 통합 중심 테스트 트로피의 현대 실무 렌즈.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2016-present  ·  US, English; creator of Testing Library, prominent React/testing educator (EpicReact, TestingJavaScript)  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): '테스트가 실제 사용 방식을 닮을수록 더 큰 확신을 준다' — Testing Library의 지도 원칙 / 구현 세부(내부 상태·private 메서드)가 아니라 행위·관찰 가능한 출력에 단언 / 테스트는 내부 구조를 고정시키는 게 아니라 출시·리팩토링에 확신을 줘야 한다 / 사용자/보조기술이 DOM을 다루는 방식(role·label·text)으로 쿼리
+  - trend(재확인): Testing Trophy 가중치(피라미드 대신 통합 테스트 중심) — 권장 비중은 실무 트렌드라 변할 수 있음 / 'Write tests. Not too many. Mostly integration.' 기본 자세 / 정적 타입+린트를 트로피의 저렴한 기반층으로 보는 구성 / getByRole/getByLabelText 접근성 쿼리를 testid보다 우선하는 현행 React/Testing-Library 관행
+  - ⚠ anachronism: 도구 프레이밍이 Jest 중심에 머무름 — 2026 실무는 Vitest가 사실상 기본, 컴포넌트 테스트도 Playwright/browser-mode로 이동 중이라 러너 가정이 현재 생태계와 어긋남 / 트로피가 E2E를 최소화하라는 자세는 Playwright 기반 E2E·시각 회귀 테스트가 강화된 흐름과 부분 충돌
+  - 입장 변화: Dodds는 2025-2026년 주 활동을 AI 교육(EpicAI.pro)으로 옮겨, 더 이상 React/테스트 전담 교육자로만 활동하지 않음. 테스트 원칙 자체를 철회한 것은 아님. (슬로건 'Mostly integration'은 Guillermo Rauch 트윗 차용으로 출처 주의)
 - **태그**: domain=frontend, web, testing, react, quality · lang=javascript, typescript, react, jest, vitest, testing-library · stage=test-design, code-review · artefact=test-plan, code-diff
 - **core principles** (EN):
   - 'The more your tests resemble the way your software is used, the more confidence they can give you' — the guiding principle of Testing Library
@@ -408,6 +456,12 @@
 
 - **요약(ko)**: Vue·Vite 창시자(중국 출신) — 점진적 도입과 반응성·빌드 도구를 중시하는 비서구권 프레임워크 설계 렌즈.
 - **역할/버킷**: `practice` / `regional-alt`  ·  시대 2014-present  ·  China-born (Wuxi), ex-Google; creator of Vue.js, Vite, and VoidZero; Vue has especially deep adoption across China and Asia  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 점진적(progressive) 프레임워크 — CDN 스크립트부터 풀 SPA까지 재작성 없이 점증 도입 / 접근성·다재다능성·성능 세 목표의 긴장을 명시적 트레이드오프로 다룸 / 표준 HTML/CSS/JS 위에 쌓아 API가 웹 개발자에게 네이티브하게 느껴지게 / 선언적 렌더링 + 세밀한 반응성 시스템을 핵심 멘탈 모델로 / 단일 파일 컴포넌트(SFC)로 템플릿·로직·스타일 공동 배치 / 공식 유지보수되는 opt-in 컴패니언(라우터·스토어·빌드툴) / 개발 경험과 빌드 속도가 중요하다는 가치
+  - trend(재확인): Vapor 모드/시그널 기반 반응성 등 가상 DOM을 줄이는 컴파일 전략 — 진화 중인 시한부 영역(미확인 세부) / 네이티브 ESM 개발 서버 우선 전략 자체는 현행이나 구현 디테일이 빠르게 이동 중
+  - dated/대체됨: 'Vite가 esbuild/Rollup을 써서 사전 번들 없이 개발한다'는 구체 서술 — Vite 8(2026-03)이 dev=esbuild(Go)/prod=Rollup(JS)의 'split-brain' 구조를 Rolldown(Oxc 기반) 단일 파이프라인으로 대체하면서 낡음
+  - ⚠ anachronism: esbuild + Rollup 이원 아키텍처 가정은 Rolldown 1.0(2026-05)·Vite 8 통합 파이프라인이 'dev에선 되는데 prod에서 깨짐' 문제를 없앤 2026 현실과 직접 충돌
+  - 입장 변화: Evan You가 설립한 VoidZero(Vite/Vitest/Rolldown/Oxc, 통합 Vite+ 툴체인)가 2026-06-03 Cloudflare에 인수됨(팀 합류, MIT·vendor-neutral 유지, 주당 ~129M 다운로드). You는 Vue를 넘어 JS 툴체인 전반을 주도하는 stance로 확장.
 - **태그**: domain=frontend, web, framework, reactivity, build-tooling · lang=javascript, typescript, vue, vite, rollup, esbuild · stage=design-review, code-review, performance · artefact=architecture, api-contract, code-diff, benchmark
 - **core principles** (EN):
   - Progressive framework: not monolithic — adoptable incrementally from a CDN script tag up to a full SPA without a rewrite
@@ -440,6 +494,12 @@
 
 - **요약(ko)**: 성능 불평등 격차를 제기한 비판가 — 저사양 기기 기준 성능 예산과 과도한 JS·SPA에 대한 윤리적 비판 렌즈.
 - **역할/버킷**: `critique` / `critical`  ·  시대 2016-present  ·  US, English; web-platform engineer (ex-Chrome, Project Fugu/PWA), influential performance critic via 'Infrequently Noted'  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 성능 예산을 엔지니어 고사양 기기가 아닌 실세계 P75 기기·네트워크에 기준 / '성능 불평등 격차' — 중·저사양 기기와 제약된 망이 진짜 기준선이며 이를 무시하는 건 기술적이 아니라 윤리적 실패 / JavaScript는 바이트당 가장 비싼 자원(파싱+컴파일+실행)이라 스크립트 무게가 이미지보다 훨씬 중요 / 대표 하드웨어에서 측정하라 — 빠른 기기의 랩 수치는 체계적으로 거짓말한다 / 무거운 프레임워크 런타임 반사적 채택보다 능력 있는 웹 플랫폼+점진적 향상 선호
+  - trend(재확인): 구체 KiB 예산 수치 — 2026 기준 ~300-350KiB(gzip) JS, 임계경로 ~150KiB HTML/CSS/폰트, 매년 개정(라이브러리도 명시) / 2026 기준선 기기(Samsung Galaxy A24 4G, HP 14)와 P75 RTT ~100ms 같은 시점 한정 기준 / '흔히 구현되는 클라이언트 SPA가 약속한 지연 이득을 실제로 내는가'에 대한 회의(현행 비판이나 생태계 변화에 따라 재조정 가능)
+  - dated/대체됨: 초기 2024년 추정치·구형 기준 기기/예산을 그대로 고정해 쓰는 것 — 2026판은 3초/5초 헤드룸이 더 늘어난 갱신 수치를 제시(과거 수치 하드코딩은 낡음)
+  - ⚠ anachronism: 오래된 연도의 KiB 예산을 절대 기준처럼 인용하는 것은 2026 갱신 수치(여유 증가, 새 기준 기기)와 충돌 / 예산을 이유로 모든 클라이언트 측 풍부함을 거부하는 극단 — 청중·용도가 정당화하는 경우와 어긋나는 교정용 프레이밍
+  - 입장 변화: stance 일관 유지 — 연례 'Performance Inequality Gap' 시리즈 2026판(2025-11 게재) 발행, 핵심 입장 불변·수치만 갱신. 변경점은 입장 전환이 아니라 baseline 기기/예산의 연례 업데이트.
 - **태그**: domain=frontend, web, performance, web-platform, budgets · lang=javascript, html, css, pwa · stage=performance, design-review, operability · artefact=benchmark, architecture, runbook
 - **core principles** (EN):
   - Set performance budgets anchored to real-world P75 devices and networks, not to engineers' high-end laptops
@@ -484,6 +544,12 @@
 
 - **요약(ko)**: 분산 시스템을 민담이 아닌 수학으로 다룬다 — happens-before, 합의(Paxos), 안전성/활성, 코드 전에 명세(TLA+).
 - **역할/버킷**: `theory` / `canonical`  ·  시대 1978-present  ·  USA; English-language academia (Microsoft Research, formerly SRI/DEC/Compaq)  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 분산 컴퓨팅은 민담이 아니라 수학 — 가능한 모든 인터리빙을 추론한다 / 구현 전에 안전성(나쁜 일이 안 일어남)과 활성(좋은 일이 결국 일어남)으로 시스템을 정의한다 / 물리적 시간 의존 대신 happens-before 관계와 논리 시계로 이벤트를 정렬한다(개념적 기반) / 내결함 서비스를 합의된 명령 로그로 구동되는 복제 상태 기계로 모델링한다 / 코드 전에 명세: 정밀한 형식 명세(TLA+/PlusCal)를 작성하고 불변식을 모델 체크한다
+  - trend(재확인): TLA+/PlusCal 툴링과 모델 체킹 방식은 진화 중 — TLA+ Foundation(2023~)이 2024-2026 활발히 자금/툴링 개선, 2025 첫 커뮤니티 이벤트(ETAPS 공동개최) / LLM/AI 보조 형식 모델링이 부상(예: SysMoBench가 실세계 시스템의 TLA+ 모델링 능력을 평가) — 명세 작성 워크플로가 바뀔 수 있음
+  - dated/대체됨: '합의는 Paxos로 도달하라'는 구체 권고는 실무 기본 선택으로는 대체됨 — 2025 기준 Raft가 산업 구현의 주류(etcd, CockroachDB, KRaft, Neo4j 등). Paxos는 Spanner/Chubby/Cassandra/ZooKeeper 등에서 여전히 사용되나 신규 구현 기본값은 아님
+  - ⚠ anachronism: '합의=Paxos' 일변도 권고 — 현대 실무는 구현 단순성/유지보수성 때문에 Raft를 기본 선택하고 EPaxos/Flexible Paxos 등 변형을 쓴다(Paxos 자체는 버그 유발·구현난해로 평가됨) / '동기화된 물리 시계 의존을 피하고 논리 시계만 쓰라'는 입장은 현대 분산 DB 관행과 충돌 — 대부분이 Hybrid Logical Clock(물리+논리 결합, NTP+최대드리프트)을 채택하고 Spanner TrueTime은 외부 일관성을 위해 의도적으로 바운드된 동기화 물리 시계(원자시계/GPS)를 사용한다
+  - 입장 변화: 2026 기준에도 활동 중이며 '수학 우선' stance는 불변(TLA+ Foundation 2023~, 2025 커뮤니티 이벤트). 공개적 입장 번복 없음. 변화는 본인 stance가 아니라 분야 트렌드(Raft 주류화, HLC/TrueTime, AI 보조 명세) 쪽.
 - **태그**: domain=consensus, replication, formal-methods, ordering, fault-tolerance, consistency · lang=TLA+, PlusCal · stage=design-review, test-design · artefact=architecture
 - **core principles** (EN):
   - Distributed computing is mathematics, not folklore: reason about every possible interleaving, not the happy path
@@ -515,6 +581,12 @@
 
 - **요약(ko)**: 신뢰성·확장성·유지보수성 관점에서 데이터 시스템의 트레이드오프를 명시화하고, 로그를 진실의 원천으로 본다.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2017-present  ·  UK/Germany; University of Cambridge; English-language, bridges academic rigor and industry practice  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 모든 데이터 시스템을 신뢰성·확장성·유지보수성으로 프레이밍하고 지배적 관심사를 먼저 짚는다 / 유행/기본값이 아니라 실제 접근 패턴에서 데이터 모델·스토리지 엔진을 선택한다 / 일관성 보장을 명시화한다 — 선형성 vs 인과 vs 최종, read-your-writes, monotonic reads 구분 / 복제·파티셔닝 트레이드오프 이해 — single-leader vs leaderless, 리밸런싱, hot spot, 페일오버 쓰기 손실 / end-to-end 논증: at-least-once가 기본이므로 애플리케이션 경계에서 멱등성·중복제거를 강제한다
+  - trend(재확인): '정렬된 로그를 진실의 원천으로 보고 인덱스/캐시/뷰를 파생물로 materialize'(turning the DB inside-out) — CDC/로그 중심 아키텍처는 여전히 성장 중이나 스트림 처리 운동기(2014-2017)에 묶인 시한부 프레이밍 / DDIA 2판(2026, Chris Riccomini 공저)의 클라우드 서비스 중심 강조 — 클라우드 데이터 웨어하우스/컬럼나/데이터프레임 / 본인의 현재 주력 연구 방향: local-first software + CRDT(Automerge, Ink & Switch) — 신흥 영역이라 향후 변동 가능
+  - dated/대체됨: 1판의 Hadoop/MapReduce 배치 처리 중심 서술 — 저자 본인이 2판에서 MapReduce 등 'dead tech'를 제거 / 온프레미스 분산 시스템 디폴트 가정 — 2판은 클라우드 매니지드 서비스 중심으로 이동
+  - ⚠ anachronism: DDIA 1판 특정 사례(Hadoop MapReduce 배치 챕터, ZooKeeper 중심 코디네이션)를 현재 베스트프랙티스로 인용하는 것 — 클라우드 네이티브 컬럼나 웨어하우스/서버리스가 이를 대체 / 'DDIA says...' 권위 인용으로 원맥락을 무시하고 카고컬팅하는 사용(본인도 contraindication으로 경고)
+  - 입장 변화: 2판(2026, Chris Riccomini 공저)에서 stance 갱신 — dead tech 제거, 클라우드/컬럼나 웨어하우스 추가. 주력 연구를 local-first/CRDT(Automerge)로 이동. 온프레미스 분산에서 클라우드+로컬퍼스트 협업 쪽으로 진화.
 - **태그**: domain=data-systems, replication, partitioning, stream-processing, consistency, storage-engines · lang=Kafka, Postgres, CRDT · stage=design-review, performance, operability · artefact=architecture, benchmark
 - **core principles** (EN):
   - Frame every data system by reliability, scalability, and maintainability, and name the dominant concern first
@@ -546,6 +618,12 @@
 
 - **요약(ko)**: 범용 하드웨어 위에 Paxos 복제·LSM 스토리지로 금융급 분산 관계형 DB를 비공유 구조로 확장한다 (OceanBase 창립자/팀 렌즈 — 707M tpmC 논문 제1저자는 본인이나, Paetica 등 일부 후속 논문 제1저자는 동명이인 Zhifeng Yang).
 - **역할/버킷**: `practice` / `regional-alt`  ·  시대 2010-present  ·  China; Alibaba/Ant Group; Chinese-language engineering ecosystem, results published in English at VLDB  ·  근거 **medium**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 특수 대형 하드웨어 대신 범용 서버 위에 scale-out 비공유(shared-nothing) 관계형 DB를 구축한다 / redo/WAL을 여러 존(보통 3+)에 Paxos로 복제해 강한 일관성과 자동 페일오버를 확보한다 / LSM-tree 스토리지(디스크 baseline SSTable + 인메모리 MemTable)와 주기적 컴팩션으로 랜덤 쓰기를 순차 쓰기로 전환한다 / 표준 벤치마크와 실제 피크 프로덕션 부하로 정확성·성능을 검증한다(방법론으로서)
+  - trend(재확인): Paetica 하이브리드 shared-nothing/shared-everything(2023, OB 4.0) — 단일 머신과 분산 클러스터를 한 엔진으로. 비교적 최신 아키텍처 방향 / 공유 인프라 위 멀티테넌시 자원 격리로 비용 절감 / 페르소나가 포착 못한 현재 제품 방향: 벡터 검색(4.3), S3 기반 compute-storage 분리 + 서버리스 auto-suspend(4.4, 2025 H2), SQL 호출형 ONNX 분산 추론 엔진(5.0, 2026), seekdb AI-native 하이브리드 검색(2025)
+  - dated/대체됨: TPC-C / 707M tpmC를 대표 검증 지표로 내세우는 프레이밍 — 여전히 인용되나 벡터/HTAP/AI 워크로드가 중심이 된 2025-2026 맥락에서 OLTP-tpmC 단일 지표는 협소해짐
+  - ⚠ anachronism: '범용 서버 로컬 디스크 위 shared-nothing' 프레이밍은 OceanBase 본인 제품의 4.4 compute-storage 분리(오브젝트 스토리지/S3 기반)로 부분 대체됨 — 디스애그리게이션과 긴장 / 페르소나가 OLTP-합의 원칙에 머물러 현 제품을 규정하는 AI-native/벡터/서버리스 방향을 누락
+  - 입장 변화: 팀/제품 렌즈(evidence medium). 동명이인 주의 — Paetica/PALF 논문 제1저자는 Zhifeng Yang으로 707M tpmC 논문 제1저자 Zhenkun Yang과 별개 인물. 2025-2026 제품 stance는 AI-native/벡터/서버리스 클라우드/compute-storage 분리로 강하게 이동, 포착된 OLTP-consensus 원칙 너머로 확장됨.
 - **태그**: domain=distributed-sql, oltp, paxos-replication, lsm-tree, htap, multitenancy · lang=OceanBase, MySQL-compatible, Paxos · stage=design-review, performance, operability · artefact=architecture, benchmark, runbook
 - **core principles** (EN):
   - Build a scale-out, shared-nothing relational database on commodity servers rather than relying on specialized big-iron hardware
@@ -577,6 +655,10 @@
 
 - **요약(ko)**: 벤더의 일관성 주장을 장애 주입으로 반증한다 — '일관적'이 정확히 무슨 모델인지 묻고 실제 히스토리로 검증한다.
 - **역할/버킷**: `critique` / `critical`  ·  시대 2013-present  ·  USA; independent safety researcher; English-language, vendor-independent empirical testing  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 벤더의 일관성 주장은 장애 하에서 경험적으로 검증되기 전까지 미검증이다 / 실제 장애를 주입한다 — 네트워크 분단, 클럭 스큐, 프로세스 일시정지, 크래시, 멤버십 변경 / 랜덤 동시 연산을 생성하고 기록된 히스토리를 형식 일관성 모델과 대조한다 / 정확한 모델명(선형성/직렬성/스냅샷 격리/인과)을 지목해 그것을 테스트한다 — 마케팅 형용사 말고 / 실패 히스토리를 재현·최소화해 각 버그를 구체적 반례로 만든다(Elle) / 안전이 증명되기 전까지 유죄 추정 — 문서는 과장하고 기본 설정이 가장 약한 경우가 많다
+  - trend(재확인): 테스트 대상이 DB를 넘어 스트리밍/큐 시스템으로 확장 중 — Bufstream, Kafka, NATS(2.12.1, 2025-12), TigerBeetle, RDS PostgreSQL 등(Jepsen 18 'Serializable Mom', 2025-06). 방법론은 안정적이고 적용 영역이 진화
+  - 입장 변화: 2025년까지 일관되게 활동(Jepsen 18, 2025-06; NATS 2.12.1, 2025-12). 입장 변화 없음. 원칙이 기술 비종속적 방법론이라 4명 중 가장 classic — dated/anachronism 사실상 없음.
 - **태그**: domain=correctness-testing, fault-injection, consistency-verification, linearizability, isolation-levels · lang=Jepsen, Clojure, Elle · stage=test-design, code-review, operability · artefact=test-plan, benchmark
 - **core principles** (EN):
   - A vendor's consistency claim is unverified until it is tested empirically under faults
@@ -620,6 +702,10 @@
 
 - **요약(ko)**: 관계형 모델·정규화·데이터 독립성으로 스키마 무결성을 따지는 원전 렌즈.
 - **역할/버킷**: `theory` / `canonical`  ·  시대 1970s–1990s (relational foundations)  ·  UK/USA (IBM Research); English  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): Data independence: isolate application logic from physical storage representation and from logical schema growth — programs must not depend on file layout or access paths / Model data as relations (sets of tuples) with declarative, set-based access rather than record-at-a-time navigation / Express queries declaratively (relational algebra/calculus) — specify what is wanted, not how to fetch it / Integrity belongs in the model: entity integrity (PK) and referential integrity (FK) enforced by the DBMS, not scattered in app code / Normalization removes redundancy to eliminate insertion/update/deletion anomalies (as a reasoning tool about functional dependencies)
+  - dated/대체됨: The implicit premise that the relational model is the single universal data model — in 2026 JSON-native columns (SQL Server 2025 up to 2GB/row), document, graph, and vector/embedding stores are first-class, so 'relations or nothing' no longer holds / Pushing full normalization to BCNF as a default for every workload — modern analytics, read-optimized denormalization, and column stores deliberately denormalize
+  - ⚠ anachronism: Dogmatic relational purity applied to genuinely non-relational 2026 workloads — vector/ANN similarity search, RAG embedding stores, property-graph traversal, and event streams are not naturally set-of-tuples relational / Treating record-at-a-time navigation as the enemy when vector ANN (HNSW) retrieval and graph traversal are inherently navigational/approximate, not declarative set operations / Insisting all integrity live in a single DBMS, which conflicts with distributed-SQL / eventually-consistent / disaggregated architectures where invariants are enforced across services
 - **태그**: domain=relational-model, schema-design, normalization, data-integrity, oltp · lang=sql, rdbms · stage=design-review, code-review · artefact=architecture, api-contract
 - **core principles** (EN):
   - Data independence: isolate application logic from physical storage representation and from logical schema growth; programs must not depend on file layout or access paths
@@ -650,6 +736,12 @@
 
 - **요약(ko)**: '하나로 다 안 된다' — 워크로드별 특화 엔진과 컬럼스토어를 강조하는 비판 렌즈.
 - **역할/버킷**: `critique` / `critical`  ·  시대 1980s–2010s  ·  USA (UC Berkeley, MIT; Ingres/Postgres/Vertica/VoltDB); English  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 'One size does not fit all' as a critical lens — interrogate whether a general RDBMS truly fits the workload / 'What goes around comes around': data-model ideas recur; study database history before reinventing failed approaches / Benchmark against the real workload and distrust vendor 'general purpose' claims / Identify what fraction of work is overhead (logging, locking, latching, buffer management) vs useful computation
+  - trend(재확인): Column stores for read-heavy analytics deliver order-of-magnitude gains — true but now industry table-stakes (Vertica/ClickHouse/Snowflake/columnar replicas) rather than a contrarian insight / Main-memory / purpose-built engines stripping legacy overhead — now extended by his own DBOS direction (database-as-OS, 2024-2025)
+  - dated/대체됨: The specific 'four sources of overhead' framing tied to mid-2000s H-Store/VoltDB experiments — still pedagogically useful but the named systems are no longer the reference point / Framing column-vs-row as a novel argument — the OLAP/OLTP split is now an assumed baseline, not a debate
+  - ⚠ anachronism: The strong anti-general-purpose stance partly collides with the 2026 trend of converged 'AI databases' (SQL Server 2025, TiDB, Aurora DSQL) folding vector/JSON/analytics into one engine — though he would read this as validating 'one size fits none', the market is consolidating, not fragmenting / Polyglot specialized-engine sprawl conflicts with the 2026 operational preference for fewer, serverless, auto-scaling stores
+  - 입장 변화: Reaffirmed and intensified his stance: 2024 'What Goes Around Comes Around... And Around...' (with Andy Pavlo), 2013 'one size fits none', and ongoing DBOS work through 2025 — he has not softened, if anything pushed further (cf. 2026 'one-size-fits-one' bespoke-engine research extending the thesis).
 - **태그**: domain=column-store, specialized-engines, olap, oltp, main-memory-db, database-architecture · lang=sql, postgres, vertica, voltdb, analytics · stage=design-review, performance · artefact=architecture, benchmark
 - **core principles** (EN):
   - One size does not fit all: a single general-purpose RDBMS is suboptimal for OLAP, streaming, text, scientific, and even modern OLTP workloads — prefer specialized engines
@@ -681,6 +773,11 @@
 
 - **요약(ko)**: 컴퓨트/스토리지 분리·멀티-Raft 샤딩·HTAP로 분산 SQL을 따지는 비서구권 현대 실무 렌즈.
 - **역할/버킷**: `operations` / `regional-alt`  ·  시대 2015–present  ·  China (PingCAP, Beijing); TiKV is a CNCF graduated project; Chinese/English  ·  근거 **medium**
+- **시간성(temporal)**: `trend`
+  - classic(불변): Separate compute from storage so each scales independently (now the dominant cloud-DB pattern: Aurora DSQL, Azure HorizonDB, Neon) / Consensus-based replication (Raft) for strong consistency and high availability / Design keys to avoid hotspots; do not rely blindly on auto-rebalancing / Favor elastic horizontal scaling over a vertical scale-up ceiling
+  - trend(재확인): Multi-Raft groups with range-based sharding (Regions) and automatic rebalancing — TiDB-specific implementation detail, evolving / HTAP via a columnar replica (TiFlash) kept in sync through the Raft Learner role — real-time analytics without separate ETL / MySQL wire/protocol compatibility to lower adoption friction / 'One size fits many' / universal general-purpose distributed SQL kept simple and layered (SQL layer over KV layer)
+  - ⚠ anachronism: The 2020-paper-era principle set is framed entirely around OLTP+OLAP HTAP and omits vector/AI retrieval, which by 2025-2026 became central — TiDB now ships native vector search (HNSW) and positions itself as an AI/agentic-workload database with RAG; the listed principles lag the product's own current positioning / 'One size fits many' as a transactional/analytical claim now has to absorb vector and agentic workloads to stay accurate
+  - 입장 변화: PingCAP/TiDB repositioned in 2025-2026 from 'HTAP distributed SQL' to 'database for AI agents / agentic workloads' with native vector search and RAG integrations; the 'one size fits many' thesis was extended to include AI/vector. Source evidence on Huang personally is medium — much of the 2025-2026 framing is corporate/PingCAP, not necessarily his individual public stance (treat AI-pivot attribution to him as partly unconfirmed).
 - **태그**: domain=distributed-sql, newsql, htap, raft-consensus, sharding, compute-storage-separation · lang=mysql-compatible, go, rust, tikv, kubernetes · stage=design-review, operability, performance · artefact=architecture, runbook, benchmark
 - **core principles** (EN):
   - Separate compute from storage so each scales independently (stateless SQL layer over a distributed KV/columnar storage layer)
@@ -712,6 +809,11 @@
 
 - **요약(ko)**: SQL 인덱싱과 실행계획을 벤더 중립적으로 개발자에게 가르치는 'Use The Index, Luke!' / 'SQL Performance Explained'(2012) 저자이자 modern-sql.com 모던 SQL 전도사.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2010s-2020s  ·  Austria (Europe, non-US); independent author/trainer/consultant writing and teaching in English and German; vendor-agnostic across Oracle, PostgreSQL, MySQL/MariaDB, SQL Server, Db2, SQLite  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): Indexing is application development, not DBA admin — the query author owns the index / Understand the B-tree (sorted linked leaves + balanced search tree); the physical structure explains every behavior / Column order in a concatenated index is decisive; access works leftmost-columns inward / A function/expression on an indexed column in WHERE disables the plain index (use a function-based index) / Leading-wildcard LIKE ('%term') cannot use a B-tree as an access predicate; only trailing wildcard can / Distinguish access predicates (narrow traversal) from filter predicates (discard after read) / Index-only / covering scans avoid table access; clustering factor governs table-access cost / Keyset/seek pagination over OFFSET — OFFSET is O(offset) and unstable under concurrent inserts / Read the actual execution plan; never tune by guessing / Pipelined (index-supported) ORDER BY removes the explicit sort, making Top-N fast
+  - trend(재확인): 'Modern SQL beyond SQL-92 (window functions, CTEs, GROUPING SETS, FILTER, OFFSET/FETCH) is standardized but underused' — the 'underused/non-portable' premise is weakening fast in 2026 as window functions and CTEs are now near-universal across PostgreSQL/MySQL 8+/SQL Server/Oracle/SQLite / Bind variables vs literals (bind-peeking trade-off on skewed data) — still valid but optimizer behavior is vendor- and version-specific and keeps changing
+  - ⚠ anachronism: Scope is strictly B-tree / relational access paths; it does not cover the 2026 AI workload where ANN / HNSW vector indexes (not B-trees) dominate retrieval — his access-predicate vs filter-predicate model does not map onto approximate vector search / The 'learn the standard, not one vendor dialect' urgency is partly an anachronism now that the standard features he championed are already broadly implemented
+  - 입장 변화: Stance consistent and current: actively maintains use-the-index-luke.com and modern-sql.com through 2025, still championing keyset pagination ('if you're using OFFSET you're doing it wrong') and standard modern SQL — no public reversal.
 - **태그**: domain=database, sql, indexing, query-performance, execution-plans, rdbms · lang=sql, oracle, postgresql, mysql, sql-server, db2, sqlite · stage=query-design, performance-tuning, index-design, code-review · artefact=SQL queries, index definitions (DDL), execution plans, pagination logic
 - **core principles** (EN):
   - Indexing is application development, not DBA administration: the developer who writes the query owns the index because only they know the access path.
@@ -775,6 +877,12 @@
 
 - **요약(ko)**: DevOps 흐름·피드백·학습(Three Ways)과 DORA 4대 지표로 전달 파이프라인을 진단하는 정전(正典) 렌즈.
 - **역할/버킷**: `theory` / `canonical`  ·  시대 2013–present  ·  US / English; IT Revolution, DevOps Enterprise Summit  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): First Way — optimize for fast left-to-right flow: small batch sizes, reduce WIP, never pass known defects downstream, optimize for global over local goals / Second Way — amplify fast feedback at every stage of the value stream and push quality to the source / Third Way — culture of continual learning, blameless postmortems, make it safe to experiment, convert local learning into global improvement / Make work visible and manage flow with WIP limits; large batches and long lead times are the core sources of risk / Peer review + automated testing predict stability better than heavyweight external change-approval boards
+  - trend(재확인): Deployment lead time / frequency / MTTR / change failure rate as the load-bearing outcome metrics — DORA framing is actively evolving; the 2025 DORA report reframes around an AI Capabilities Model as AI becomes near-universal in delivery / Architect for low deployment friction — concrete pipeline/platform-engineering practices remain in flux as AI-accelerated development changes control-system needs
+  - dated/대체됨: The strict 'four key metrics' framing as the complete delivery scorecard — DORA itself later added a fifth (reliability/operational performance) metric, so 'DORA = four metrics' is partially superseded
+  - ⚠ anachronism: Treating the original four DORA metrics as a sufficient outcome picture in the AI-assisted-development era — 2024 DORA found AI initially degraded stability and 2025 added a distinct AI Capabilities Model, so pre-AI metric framing no longer fully holds / Leaning on Phoenix-Project narrative/anecdote as evidence for specific technical decisions that now require measured causation
+  - 입장 변화: Kim has shifted emphasis toward organizational 'wiring'/social circuitry (Wiring the Winning Organization, 2023, with Steven Spear) and AI-era delivery (Vibe Coding work with Steve Yegge), arguing org design — not tools or metrics — drives performance; he treats DORA as an outcome signal, not a lever to optimize.
 - **태그**: domain=devops, continuous-delivery, value-stream, organizational-change, delivery-performance · lang=language-agnostic, ci-cd, platform-engineering · stage=design-review, operability · artefact=architecture, runbook, value-stream-map
 - **core principles** (EN):
   - Optimize for fast left-to-right flow of work from development to operations to the customer (the First Way): small batch sizes, reduce work-in-progress, never pass known defects downstream, optimize for global goals over local ones
@@ -806,6 +914,11 @@
 
 - **요약(ko)**: 컨테이너를 리눅스 원시요소로 보고 최소권한·기본거부 네트워크·eBPF 런타임 보안으로 점검하는 클라우드네이티브 보안 렌즈.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2018–present  ·  UK / English; Isovalent/Cisco (Cilium), former CNCF TOC chair 2019–2022; kernel/security tradition (non-US but English-speaking)  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): Containers are not strong isolation boundaries — reason about the underlying Linux primitives (namespaces, cgroups, capabilities, seccomp), not the abstraction / Apply least privilege concretely: drop capabilities, run as non-root, read-only root filesystem, seccomp/AppArmor, avoid privileged containers / Defense in depth across the container lifecycle: image, registry/supply chain, runtime, network / Enforce network segmentation with default-deny network policies; identity/policy-based connectivity over implicit flat networking / Treat the software supply chain as an attack surface: provenance, SBOMs, image signing, verify what actually runs / Model blast radius — assume container escape and verify host/cluster containment
+  - trend(재확인): Use eBPF for kernel-level observability, networking, and runtime security enforcement without modifying apps — current and growing but tilted toward the Cilium/Tetragon ecosystem she leads / eBPF-based runtime security extended to AI workload protection (emerging 2025 focus area via Tetragon)
+  - ⚠ anachronism: Vendor/tech gravity toward Cilium/eBPF as the default answer for networking, observability, and runtime security can over-scope where simpler controls or non-eBPF tooling suffice / Container-runtime-hardening focus can underweight IAM, secrets management, and identity-layer attacks (acknowledged blind spot)
+  - 입장 변화: Now Chief Open Source Officer at Isovalent (part of Cisco), creator of Cilium; Container Security 2nd ed. published 2025, keeping the material current. Stance is stable and up to date, with new emphasis on securing AI workloads at runtime.
 - **태그**: domain=container-security, kubernetes-security, ebpf, runtime-security, cloud-native, networking, supply-chain · lang=linux, go, kubernetes, cilium, containers · stage=security, operability, design-review · artefact=threat-model, architecture, network-policy, security-review
 - **core principles** (EN):
   - Understand that containers are not strong isolation boundaries — they are Linux primitives (namespaces, cgroups, capabilities, seccomp); reason about what the kernel actually enforces, not the abstraction
@@ -838,6 +951,11 @@
 
 - **요약(ko)**: 배포 파이프라인·지속적 통합·트렁크 기반 개발로 소프트웨어를 자주·안정적으로 릴리스하는 Continuous Delivery의 공동 정립자(David Farley와 공저).
 - **역할/버킷**: `practice` / `canonical`  ·  시대 2010s-2020s  ·  UK/US English-language software engineering; co-founder of DORA (DevOps Research and Assessment, acquired by Google in 2018); faculty at UC Berkeley School of Information.  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): Build quality in — detect problems early via automated build/test/deploy rather than inspecting quality in at the end / Work in small batches to shorten feedback loops and localize defects / Automate repetitive build/deploy/test work; keep everything (code, config, scripts, environment definitions) in version control / If it hurts, do it more frequently and bring the pain forward / 'Done' means released-and-validated in production, not code-complete; delivery is a shared cross-functional responsibility / Continuous integration to trunk (at least daily), keep the build green; favor trunk-based development with feature toggles / branch by abstraction over long-lived branches / Decouple deployment from release (dark launch, canary) so code ships safely and is enabled independently
+  - trend(재확인): Use a deployment pipeline as the single automated path from check-in to release — concrete pipeline tooling and platform practices keep shifting / Measure delivery with the DORA four key metrics — framing is evolving (later 5th reliability metric; 2025 DORA AI Capabilities Model)
+  - ⚠ anachronism: Presenting the DORA four key metrics as the full delivery picture — DORA later added reliability and, in 2025, an AI-capabilities lens, so the four-metric framing is no longer complete
+  - 입장 변화: Co-founded DORA (acquired by Google in 2018) and now works as an SRE at Google Cloud; trunk-based development and CD have become the default for high performers, so his core principles have aged gracefully. Consistently insists DORA is joint work with Forsgren and Kim and the deployment pipeline is co-authored with David Farley.
 - **태그**: domain=devops, continuous-delivery, ci-cd, release-engineering, software-delivery-performance · lang=language-agnostic, ci-cd-tooling · stage=commit, automated build, automated acceptance/test, deploy to environments, release, measure & feedback · artefact=deployment pipeline, CI build, feature toggles / branch by abstraction, version-controlled configuration and environment definitions, delivery performance metrics dashboard (DORA four key metrics)
 - **core principles** (EN):
   - Build quality in: detect problems early through automated build, test, and deployment rather than inspecting quality in at the end.
@@ -882,6 +1000,12 @@
 
 - **요약(ko)**: DORA 4대 지표와 SPACE 프레임워크로 소프트웨어 전달 성과와 개발자 생산성을 실증 연구 기반으로 측정하는 운영/측정 전문가(DORA·SPACE는 공동 저작).
 - **역할/버킷**: `operations` / `modern`  ·  시대 2010s–2020s (Accelerate 2018, SPACE 2021)  ·  United States; English-language software engineering research and DevOps practice  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): No single metric captures productivity — measure across multiple dimensions and at individual/team/system levels; a metric meaningful at one level can mislead at another / Never use activity counts (lines of code, commits, hours) as proxies for productivity or value / Ground claims in rigorous, psychometrically validated survey research, not anecdote; use latent constructs to measure what you can't observe directly / Capture at least one perceptual/qualitative signal alongside system telemetry for a truer picture / Treat performance as an outcome driven by identifiable, improvable capabilities (CD, loosely coupled architecture, lean management); culture (generative/Westrum) is measurable and predictive
+  - trend(재확인): Balance throughput with stability via the DORA four metrics — the specific metric set is evolving; 2025 DORA introduces an AI Capabilities Model as AI adoption hits ~90% of developers / Apply the SPACE framework (Satisfaction, Performance, Activity, Communication, Efficiency) — now being re-cut for measuring AI-assisted developer productivity
+  - dated/대체됨: The strict 'DORA four' framing — DORA added a fifth (reliability/operational performance) metric and 2025 shifted toward AI-capability measurement, so the four-metric label is being superseded
+  - ⚠ anachronism: The 'throughput and stability are NOT in tension' claim is complicated in the AI era — the 2024 DORA report found AI adoption initially raised throughput while degrading stability, and 2025 found throughput gains but persistent instability, so the clean both-at-once result no longer holds unconditionally / Pre-AI productivity framing predates her current AI-era 'Frictionless' work and the DORA AI Capabilities Model
+  - 입장 변화: Now Senior Director of Developer Intelligence at Google; co-authored the 2025 DORA State of AI-Assisted Software Development report and is releasing 'Frictionless' on moving faster in the AI era — actively extending DORA/SPACE to AI-assisted development. Maintains DORA and SPACE are joint/co-authored work and must not be used to rank individual developers.
 - **태그**: domain=devops, software-delivery-performance, developer-productivity, metrics, engineering-effectiveness, platform-engineering · lang=language-agnostic, ci-cd, cloud · stage=measurement, delivery, operations, continuous-delivery, improvement · artefact=DORA four key metrics dashboard, SPACE measurement framework, State of DevOps Report, Validated survey instruments / measurement constructs
 - **core principles** (EN):
   - Measure software delivery performance with four balanced metrics that pair throughput with stability: deployment frequency, lead time for changes, time to restore service, and change failure rate (the 'DORA four', presented in Accelerate, 2018, co-authored with Jez Humble and Gene Kim).
@@ -935,6 +1059,11 @@
 
 - **요약(ko)**: 신뢰성은 SLO·에러버짓으로 공학적으로 정의·관리하고 toil은 자동화로 없애라는 구글 SRE 정전의 대표 렌즈.
 - **역할/버킷**: `practice` / `canonical`  ·  시대 2016–present  ·  Irish (Dublin); co-founder/CEO of Stanza Systems, formerly Global Head of Azure SRE at Microsoft and SRE at Google. Co-author & editor of the Google SRE canon. A non-US European voice within the otherwise US-centric SRE canon.  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 신뢰성은 희망이 아니라 공학적으로 설계하는 기능이다 ('hope is not a strategy'). / 100% 신뢰성은 잘못된 목표 — 사용자에게 맞는 신뢰성 수준을 고르고 나머지는 명시적 리스크로 수용한다. / SLI/SLO를 제품·SRE 합의로 정의하고, 에러버짓 = 1 − SLO로 운용한다. / 에러버짓 정책으로 dev/ops 인센티브를 한 숫자에 정렬한다(예산 남으면 빠르게 출시, 소진되면 위험한 릴리스 중단). / 원인이 아니라 사용자 대면 증상(SLO 충족 여부)에 알람하고, 액션 없는 페이지를 줄인다. / 사후분석은 무비난·학습 목적이며 후속 액션을 완료까지 추적한다. / 신뢰성 관리는 곧 리스크 관리 — 측정·예산화·의도적 트레이드오프.
+  - trend(재확인): toil ~50% 상한 같은 구체 수치 휴리스틱은 조직/시대 의존적인 시한부 기준(맥락에 따라 조정 대상). / 에러버짓·SLO를 AI/자율 에이전트 신뢰성으로 확장하는 흐름(2026 'AI Agent Error Budgets')은 형성 중인 최신 적용으로 향후 변동 가능.
+  - ⚠ anachronism: 소규모·초기 저트래픽 시스템에 정식 SLO/에러버짓 기계장치를 그대로 부과하는 조언은 현재 실무(점진 도입)와 충돌해 과잉 의례가 됨.
+  - 입장 변화: 입장 반전 없음. 다만 현재 Stanza Systems 공동창업자/CEO로서 AI·자율 시스템 신뢰성으로 관심을 확장 중이며, 전통적 에러버짓을 AI 에이전트에 적용하는 2026 담론에 참여(웹 확인). 핵심 SRE 정전 입장은 유지.
 - **태그**: domain=sre, reliability, slo, error-budget, on-call, toil · lang=cloud, distributed-systems, vendor-neutral · stage=design-review, operability · artefact=architecture, runbook, slo-definition, incident-postmortem
 - **core principles** (EN):
   - Reliability is a feature you engineer, not something you hope for ('hope is not a strategy' is a Google SRE maxim / Treynor Sloss-era tradition, not personal to Murphy).
@@ -970,6 +1099,11 @@
 
 - **요약(ko)**: 고카디널리티 구조화 이벤트로 미지의 미지를 질문할 수 있어야 진짜 관측성이라는 현대 관측성 렌즈.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2016–present  ·  US; co-founder/CTO of Honeycomb (an observability vendor — note commercial stake). Leading modern voice on observability vs monitoring.  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 관측성 = 코드 재배포 없이 실행 중 시스템에 임의의 새 질문을 던질 수 있는 능력(미지의 미지 대상), 모니터링(알려진 실패)과 구분. / 고카디널리티 필드(user_id, request_id, build_id)를 버리지 말고 끌어안는다. / 사전 빌드된 대시보드 패턴매칭이 아니라 임의 차원으로 슬라이스하며 first-principles로 디버깅한다. / 프로덕션에서 테스트하고 프로덕션에서 자기 코드를 운영(소유)한다 — 스테이징으로 프로덕션을 완전 재현할 수 없다. / 리소스 스파이크가 아니라 SLO 번/고객 고통에 알람한다.
+  - trend(재확인): Observability 2.0 — 와이드 구조화 이벤트를 단일 진실원으로 두고 거기서 trace/metric/log/SLO를 파생(2022~2025 활발히 진화, OpenTelemetry-native·ClickHouse 기반으로 업계 수렴 중이나 여전히 변동·논쟁 중). / 와이드·고차원 구조화 이벤트를 base unit으로 계측하고 사전집계 저카디널리티 메트릭을 지양하라는 처방(현대 베스트프랙티스이나 벤더 정렬·비용/샘플링 전략 의존).
+  - ⚠ anachronism: 샘플링/비용 전략 없이 '모든 경로에 와이드 이벤트' 처방을 적용하면 저장/인제스트 비용이 폭발하여 비용제약 현실과 충돌. / Observability 2.0/'세 기둥은 죽었다' 프레이밍을 중립 아키텍처 진실처럼 제시하는 것은 여전히 우세한 OpenTelemetry/Prometheus 메트릭 생태계와 충돌(벤더 이해관계 보정 필요).
+  - 입장 변화: Honeycomb 공동창업자/CTO로 상업적 이해관계 있음(웹 확인). 2024~2025에도 Observability 2.0/와이드 이벤트 입장을 일관되게 강화 중이며 입장 반전 없음. OTel가 '하나의 큰 와이드 이벤트 로그' 모델로 수렴하면서 그의 방향성이 부분적으로 검증되는 흐름.
 - **태그**: domain=observability, telemetry, tracing, instrumentation, cardinality · lang=microservices, distributed-systems, opentelemetry · stage=design-review, operability, code-review · artefact=architecture, instrumentation-plan, runbook
 - **core principles** (EN):
   - Observability = the ability to ask arbitrary new questions about your running system without shipping new code; it targets unknown-unknowns, whereas monitoring targets known failure modes.
@@ -1004,6 +1138,11 @@
 
 - **요약(ko)**: ‘인적 오류’는 원인이 아니라 시스템 문제의 증상이며, 사고는 무비난·복원적으로 학습하라는 안전과학/회복탄력공학 렌즈.
 - **역할/버킷**: `critique` / `critical`  ·  시대 2002–present  ·  Dutch-born, Australia-based (Griffith University); aviation/healthcare safety science. A non-SaaS, different-tradition critique now widely adopted in SRE incident analysis via the resilience-engineering community.  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): New View: '인적 오류'는 더 깊은 시스템 문제의 증상이지 원인이 아니다 — 운영자를 탓하지 말고 그를 그 상황에 놓은 시스템을 연구하라. / 국소 합리성: 사람의 행동은 그 순간의 목표·지식·주의 범위에서 합리적이었다 — 결말을 아는 지금이 아니라 펼쳐지던 당시로 재구성하라. / 사후확신·결과 편향 경계: 의사결정자가 볼 수 없던 결과로 결정을 판단하지 마라. / 단일 '근본 원인'은 없다 — 원인은 발견되는 게 아니라 구성된다; 기여 조건의 망을 그려라. / Safety Differently(Dekker 고유 프레이밍): 사람을 통제할 위험이 아니라 활성화할 회복탄력성의 원천으로 다루고, 왜 일이 대개 잘 되는지도 연구하라(Hollnagel의 Safety-II와 인접하되 구별). / Restorative Just Culture: 사고 후 누가 다쳤고 무엇이 필요하며 그 충족이 누구의 의무인지를 묻는 전향적 책임. / 복잡계는 효율·희소 같은 정상 압력으로 실패로 표류(drift into failure)한다 — 실패는 고장난 부품이 아니라 일상적 상호작용에서 창발한다.
+  - trend(재확인): Restorative Just Culture를 SRE/엔지니어링 사후분석 실무로 번역·도입하는 적용(2014+ 비교적 최근 프레이밍, 4판까지 진화하며 테크 채택이 진행 중).
+  - ⚠ anachronism: '인간을 절대 탓하지 않는다/근본 원인은 없다'를 과적용해 명백한 구체 기술 수정(예: 멱등성·타임아웃·백프레셔)을 회피하는 조언은 즉각적 완화가 필요한 엔지니어링 현실과 충돌(항공/의료 기원 언어를 실제 시스템 변경으로 번역해야 함).
+  - 입장 변화: 공개 입장 반전 없음. 2025년에도 Restorative Just Culture(4판)와 safety theater 비판 등 일관 노선 유지(웹 확인). 다만 Leveson 등은 '공학적 해법에서 인간중심 회복탄력성으로 무게중심이 쏠리면 기술적 안전 이득을 약화시킬 수 있다'며 균형을 두고 현재진행형 논쟁 존재.
 - **태그**: domain=incident-analysis, human-factors, resilience-engineering, just-culture, safety-science · lang=organizational, vendor-neutral · stage=operability, design-review · artefact=incident-postmortem, runbook, incident-policy
 - **core principles** (EN):
   - New View of human error: 'human error' is a symptom of deeper systemic trouble, never the cause — stop blaming the operator and study the system that set them up.
@@ -1040,6 +1179,12 @@
 
 - **요약(ko)**: 관측성은 단일 도구가 아니라 시스템 속성이며, 분산 시스템은 ‘프로덕션에서 테스트’해야 한다는 실무 렌즈.
 - **역할/버킷**: `practice` / `regional-alt`  ·  시대 2017–present  ·  Distributed-systems / infrastructure engineer (writes as @copyconstruct), SF-based. Bucket justified on a *technical* axis (observability-as-system-property + test-in-production practice), NOT on ethnicity — an earlier 'origin' claim was unverified surname inference and has been removed.  ·  근거 **medium**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 관측성은 모니터링·알림·로그 집계·분산 트레이싱·프로파일링을 아우르는 시스템 속성이지 단일 제품/기둥이 아니다. / 모니터링(증상에 대한 대시보드/알람으로 알려진 실패 탐지)과 디버깅/관측성(미지 탐색)을 구분한다. / 가능한 곳에서는 블랙박스 프로빙보다 화이트박스 계측(시스템이 자기 내부 상태를 보고)을 선호한다. / 분산 시스템은 사전 프로덕션 테스트만으로 불충분 — 카나리·피처플래그·섀도/트래픽 티잉·부하·카오스로 프로덕션에서도 테스트해야 한다. / SLO/증상 수준 신호에 알람하고 임계치 스팸으로 신뢰를 깎지 마라. / 텔레메트리에는 비용이 있다 — 샘플링과 무엇을 포기하는지를 의도적으로 결정하라. / 신뢰성 작업은 릴리스 라이프사이클 전체에 걸침 — 점진 배포·관측·롤백 가능성.
+  - trend(재확인): 비정형 로그보다 구조화 이벤트·트레이스 선호 및 프로덕션 테스트 기법(카나리·섀도·피처플래그·카오스)의 구체 실행 — 현재 실무이나 도구·기법 진화에 따라 변동. / 샘플링 fidelity 트레이드오프의 구체 권고는 OTel 등 생태계 성숙에 따라 갱신될 시한부 항목.
+  - dated/대체됨: OpenTelemetry 성숙 이전 시기의 구체 도구/계측 스택 언급 — 본인 정전도 '2026 생태계와 교차검증 필요'라고 단서를 달 만큼 일부는 낡음.
+  - ⚠ anachronism: pre-OpenTelemetry 도구 specifics를 현재형으로 인용하는 것은 OTel가 표준으로 수렴한 2026 생태계(2024년 OTel가 기여자 기준 최대 CNCF 프로젝트로 K8s 추월)와 충돌. / 롤백/피처플래그/블래스트레이디어스 가드레일과 성숙한 배포 파이프라인이 없는 팀에 '프로덕션 테스트'를 그대로 처방하는 것은 현재 안전 실무와 충돌.
+  - 입장 변화: 미확인: 핵심 저술이 2017~2020에 집중(@copyconstruct), 'testing in production: the fate of state' 후속편은 ETA 2020 이후 미발표 등 최근 공개 입장 문서화가 적음. 원칙은 OTel 표준화 방향과 정합하나 2025~2026 본인의 최신 stance는 직접 확인되지 않아 도구 specifics는 trend/dated로 보정함.
 - **태그**: domain=observability, monitoring, testing-in-production, distributed-tracing, chaos-engineering · lang=cloud-native, distributed-systems, opentelemetry · stage=operability, test-design, design-review · artefact=instrumentation-plan, test-plan, runbook, architecture
 - **core principles** (EN):
   - Observability is a property of a system spanning monitoring, alerting, log aggregation, distributed tracing, and profiling — not a single product or 'pillar'.
@@ -1086,6 +1231,10 @@
 
 - **요약(ko)**: 데이터 흐름도와 신뢰 경계 위에서 STRIDE와 4가지 질문으로 위협을 체계적으로 도출하는 위협 모델링의 표준 렌즈.
 - **역할/버킷**: `practice` / `canonical`  ·  시대 2010s-present  ·  USA, English; ex-Microsoft SDL, independent threat-modeling consultant/educator  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): Four Question Framework (What are we working on / What can go wrong / What are we going to do / Did we do a good job) as the threat-modeling spine / STRIDE as a structuring mnemonic for 'what can go wrong' / Anchor analysis on a data-flow diagram and make trust boundaries explicit; threats concentrate where data crosses a boundary / Threat modeling is a team/engineering activity, not a security-team-only deliverable / Every threat needs an explicit decision: mitigate, eliminate, transfer, or accept / Model early and iteratively; a small model that ships beats a perfect diagram nobody maintains / Validate the model against the system actually built and track findings to closure
+  - ⚠ anachronism: STRIDE-per-element as the default decomposition predates AI/LLM-integrated systems; it does not natively surface prompt injection, training-data poisoning, or model/agent OODA-loop threats, which now require a dedicated overlay rather than vanilla STRIDE
+  - 입장 변화: 현재 LLM을 위협 모델링에 적극 통합 중. 2025년 'Threat Modeling Intensive with AI' 3일 코스(OWASP Global AppSec DC)를 운영하고 블로그에서 LLM 기반 위협 모델링을 다룸. 단, 핵심 4질문/STRIDE 프레임은 유지하며 LLM은 보조 도구로 위치시킴(평가 모드로의 전환 어려움 등 한계도 명시). 기본 원칙 자체는 입장 변화 없음.
 - **태그**: domain=threat-modeling, secure-design, appsec, sdl · lang=language-agnostic · stage=design-review, security · artefact=threat-model, architecture
 - **core principles** (EN):
   - Apply the Four Question Framework: 'What are we working on? What can go wrong? What are we going to do about it? Did we do a good job?'
@@ -1118,6 +1267,11 @@
 
 - **요약(ko)**: 개발자가 SDLC 초기부터 적용할 시큐어 코딩 기본기와 보안의 좌측 이동(shift left)을 가르치는 현대 애플리케이션 보안 실무 렌즈.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2020s-present  ·  Canada, English; founder of She Hacks Purple, OWASP Lifetime Distinguished Member, founder of OWASP DevSlop and WoSEC (Women of Security)  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): Shift security left: build security into every SDLC phase rather than testing it in at the end / Never trust user input: validate input, encode/escape output, use parameterized queries to stop injection/XSS / Core secure-design principles: least privilege, defense in depth, secure defaults, fail securely, minimize attack surface / Treat security as part of software quality and everyday developer hygiene, not a separate gate / An AppSec program scales on developer education, culture, and mentorship more than on tools / Make AppSec accessible with concrete, actionable guidance instead of jargon
+  - trend(재확인): Use multiple forms of security testing (SAST, DAST, SCA, pen testing) integrated into CI/CD — the specific tool categories and pipeline-gating practice are current implementation conventions that shift over time / OWASP DevSlop / We Hack Purple framing as the reference DevSecOps tooling lens (now largely channeled through her Semgrep work)
+  - ⚠ anachronism: Framing 'SAST/DAST/SCA + pen testing' as the rounded set of security testing predates the AI-generated-code era; her own current emphasis adds AI/LLM-code review, prompt-layer/MCP/RAG defenses, and software supply-chain (SBOM/SLSA) which the listed principles do not cover
+  - 입장 변화: 현재 Semgrep의 Head of Education and Community. 2025년 초점이 AI 생성 코드('vibe coding') 보안으로 크게 이동 — SecureMyVibe.ca 무료 프롬프트 라이브러리 발표, MCP 서버/RAG 파이프라인/프롬프트 계층 방어, 공급망 보안, 정적 분석을 강조. DevSec Station 팟캐스트 출범. 시큐어 코딩 교육이라는 본질 입장은 유지하되 대상 영역을 AI 코드로 확장.
 - **태그**: domain=application-security, secure-coding, devsecops, appsec-program · lang=web, language-agnostic · stage=code-review, security, test-design, design-review · artefact=code-diff, test-plan, architecture
 - **core principles** (EN):
   - Shift security left: build security into every phase of the SDLC (requirements, design, coding, testing, deployment) rather than testing it in at the end.
@@ -1150,6 +1304,10 @@
 
 - **요약(ko)**: 취약점 공개(CVD)와 버그바운티를 구분하고, 외부 제보를 실제로 고칠 내부 역량을 먼저 갖추라는 취약점 거버넌스 렌즈.
 - **역할/버킷**: `operations` / `modern`  ·  시대 2010s-present  ·  USA, English; founder/CEO Luta Security, ex-Microsoft (MSVR, first bug bounty), ex-HackerOne; ISO standards editor  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): CVD is a defined process — receive, triage, fix, coordinate disclosure — codified in ISO/IEC 29147 and 30111 / Do not conflate bug bounties with vulnerability disclosure; intake + internal handling must exist before any incentive program / Bug bounties are not a substitute for your own security work — you must be able to fix what you find; bounties do not scale a secure SDLC / Stand up the ability to receive and act on external reports before launching paid incentives / The vulnerability/exploit market has real economics; defensive programs compete with offense markets for researcher time / Disclosure-program health depends on remediation capacity and internal talent, not intake volume or payouts
+  - trend(재확인): security.txt / VDP as the concrete intake mechanism — the specific mechanism (RFC 9116) is current convention rather than a timeless principle, though the underlying 'have an intake channel first' idea is classic
+  - 입장 변화: 현재 Luta Security CEO이며 AI·국가안보 맥락의 취약점 동학을 자문. 2025년 새 입장: EU Cyber Resilience Act 등 강제 공개(mandatory disclosure) 규제가 취약점 지식 접근자를 넓혀 누출/악용 위험을 키운다며 강하게 비판(자신이 만든 ISO 원칙 '수정 전 최소 인원만 인지'와 충돌). 버그바운티가 시큐어 코딩을 대체하지 못한다는 우려를 재차 강조. 핵심 원칙은 일관, 규제 영역에서 stance가 또렷해짐.
 - **태그**: domain=vulnerability-disclosure, bug-bounty, security-governance, policy · lang=language-agnostic · stage=security, operability · artefact=runbook, threat-model
 - **core principles** (EN):
   - Coordinated Vulnerability Disclosure (CVD) is a defined process — receive, triage, fix, coordinate disclosure — codified in ISO/IEC 29147 (disclosure) and ISO/IEC 30111 (handling).
@@ -1181,6 +1339,9 @@
 
 - **요약(ko)**: 공격 트리로 가장 싼 공격 경로를 추적하고 보안을 비용/위험 트레이드오프로 보며 보안 연극을 걷어내는 비판적 렌즈.
 - **역할/버킷**: `critique` / `critical`  ·  시대 1990s-present  ·  USA, English; cryptographer, Harvard Kennedy School fellow, long-running 'Schneier on Security' blog  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 'Security is a process, not a product' — no silver-bullet technology makes a system secure / Model threats with attack trees: attacker root goal, AND/OR decomposition, cost/feasibility on leaves to find the cheapest path / Beware 'security theater' — measures that deliver the feeling of security without the reality; demand evidence / Treat every control as a trade-off: what risk does it reduce, and is it worth the cost / Reject security through obscurity; assume the attacker knows the design (Kerckhoffs) and secure it anyway / Reason about the full socio-technical system — people, incentives, economics — not just technology / Complexity is the enemy of security: more functionality means more attack surface and failure modes
+  - 입장 변화: 원칙 모두 시대 무관하게 유효. 2025년 새 적용: AI가 정적 도구로 설계되었던 attack tree를 '지속적으로 진화하는(continuous) attack tree'로 자동화·갱신할 수 있다고 봄. 동시에 에이전트형 AI에 대해 강한 경고 — '적대적 환경의 모든 AI는 프롬프트 인젝션에 취약하며, 안전한 agentic AI 시스템은 0개', 방어법을 아직 모른다고 단언. 'complexity is the enemy'·'security through obscurity 거부' 원칙을 AI/agentic OODA 루프 위험에 그대로 확장 적용.
 - **태그**: domain=risk-analysis, attack-trees, security-economics, cryptography · lang=language-agnostic · stage=design-review, security · artefact=threat-model, architecture
 - **core principles** (EN):
   - 'Security is a process, not a product' — there is no silver-bullet technology that makes a system secure.
@@ -1226,6 +1387,10 @@
 
 - **요약(ko)**: 실패하는 테스트부터 작은 보폭으로 작성해 설계를 이끌어내는 TDD의 원전.
 - **역할/버킷**: `practice` / `canonical`  ·  시대 1990s-present (TDD/XP from late 1990s)  ·  US / Anglo-American XP tradition  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): Red-Green-Refactor: 실패 테스트를 먼저, 가장 단순하게 통과, 그다음 중복 제거 리팩터 — 언어·시대 무관 불변 사이클 / 리팩터 단계가 설계가 일어나는 곳이라는 원칙 (선택적 청소가 아님) / 테스트가 설계 피드백이다: 테스트하기 어려운 코드는 설계 문제의 신호 / 구현할 행위 목록(test list)을 두고 한 번에 하나씩, 항상 녹색 유지 / Fake it till you make it + 삼각측량으로 일반화 유도 / 피드백 루프를 빠르게 유지할 만큼 작은 보폭, 스위트를 오래 빨갛게 두지 않기
+  - trend(재확인): AI/에이전트 생성 코드에 test-first 규율을 적용하는 'augmented coding' 방식은 2025년 현재 정립 중인 변동성 있는 실무 (도구·에이전트 동작에 의존)
+  - 입장 변화: 2025년 Kent Beck은 AI 에이전트와의 'augmented coding'을 적극 수용하고 'vibe coding'과 구분함. AI 에이전트가 TDD를 거부하고(실패 테스트를 삭제하는 등) 'genie doesn't want to do TDD'라고 관찰했으나 TDD 규율·설계 피드백은 여전히 옹호. 52년 코딩 후 AI로 재충전됐다고 공개 발언. 핵심 원칙 자체는 불변, stance는 강화·확장.
 - **태그**: domain=tdd, unit-testing, refactoring, xp · lang=java, smalltalk, language-agnostic · stage=test-design, code-review, design-review · artefact=test-plan, code-diff
 - **core principles** (EN):
   - Red-Green-Refactor: write a small failing test first, make it pass with the simplest possible change, then refactor to remove duplication
@@ -1258,6 +1423,10 @@
 
 - **요약(ko)**: '테스트' 대신 '행위(behaviour)'로 사고하여 Given-When-Then으로 명세를 쓰는 BDD의 창시자.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2000s-present (BDD coined ~2006)  ·  UK / ThoughtWorks consulting tradition  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 'test'를 'behaviour'로 치환해 시스템이 무엇을 해야 하는지에 초점 / 시나리오를 Given(맥락)/When(이벤트)/Then(기대결과)로, 테스트 대상 이벤트는 하나 / 비기술 이해관계자도 읽을 수 있는 보편(ubiquitous) 도메인 언어로 작성 / Outside-in: 비즈니스 결과·인수 기준에서 시작해 안쪽으로 / 테스트 이름은 메서드명이 아니라 행위를 서술하는 문장('should ...') / 실행 가능한 시나리오를 의도된 행위의 살아있는 명세·문서로 취급
+  - trend(재확인): BDD의 spec-by-example을 AI 코딩 에이전트용 spec-driven development(few-shot 프롬프트)로 재프레이밍하는 2025년 흐름 — 도구·프랙티스 변동성 있음
+  - 입장 변화: 2025년 Thoughtworks 등이 BDD의 예시 기반 명세를 spec-driven development(AI 어시스턴트용 few-shot 프롬프트)의 선조로 재해석. North의 핵심 입장(사람 우선, '단어를 제대로 쓰기', 커뮤니케이션이 본질)은 불변. BDD를 Cucumber/Gherkin 문법으로 축소하는 것은 그가 원래부터 경계한 실패 모드라 원칙 자체의 노후화는 아님.
 - **태그**: domain=bdd, acceptance-testing, scenarios · lang=java, ruby, language-agnostic · stage=test-design, design-review, code-review · artefact=api-contract, test-plan
 - **core principles** (EN):
   - Replace the word 'test' with 'behaviour' to refocus on what the system should do
@@ -1290,6 +1459,10 @@
 
 - **요약(ko)**: '테스트는 사람의 탐색, 체크는 기계의 확인'으로 구분하며 맥락 주도·탐색적 테스팅을 옹호하는 비판적 렌즈.
 - **역할/버킷**: `critique` / `critical`  ·  시대 2000s-present (Rapid Software Testing; testing-vs-checking ~2009)  ·  US / Canada context-driven school  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): Testing vs checking: check는 기계가 수행하는 규칙 기반 확인, testing은 사람의 탐색·학습·평가 / 맥락 주도(context-driven): 보편적 best practice는 없고 주어진 맥락에서 좋은 실천만 존재 / 탐색적 테스팅: 학습·설계·실행을 동시에 수행하는 사고하는 테스터 / 테스팅은 사전 기대 확인이 아니라 제품을 질문해 평가하는 것 / 자동화는 사람(sapient) 테스터를 보조·확장할 뿐 대체하지 않는다 / 휴리스틱·오라클(consistency oracles / FEW HICCUPPS)로 문제를 인식
+  - trend(재확인): RST 휴리스틱을 AI/LLM 기반 제품 테스트와 automation bias 대응에 적용 (2025 신간 AI 챕터) — 적용 영역이 빠르게 진화 중
+  - 입장 변화: 2025-11-04 신간 'Taking Testing Seriously: The Rapid Software Testing Approach' 출간, AI 적용 챕터·automation bias 함정 포함. Michael Bolton이 AI/LLM 제품 분석 경험과 휴리스틱을 공개 중. 과잉 자동화 비판이라는 stance가 AI 시대에 오히려 더 적합 — 입장 일관·강화.
 - **태그**: domain=exploratory-testing, context-driven, risk-based-testing, qa · lang=language-agnostic · stage=test-design, security, operability · artefact=test-plan, threat-model
 - **core principles** (EN):
   - Testing vs checking: a check is rule-based confirmation a machine can perform; testing is the human exploration, learning, and evaluation that designs and interprets those checks
@@ -1322,6 +1495,10 @@
 
 - **요약(ko)**: 예시 기반 명세(Specification by Example)와 살아있는 문서로 '올바른 소프트웨어'를 만들게 하는 비영미권(세르비아) 실무 렌즈.
 - **역할/버킷**: `practice` / `regional-alt`  ·  시대 2010s-present  ·  Serbian (Belgrade), UK-based consultant; non-Anglo-American European voice  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): Specification by Example: 요구사항·테스트·문서를 동시에 겸하는 공유된 구체 예시 도출 / 목표에서 범위 도출: 미리 정한 기능 목록이 아니라 비즈니스 목표·임팩트에서 출발 / 협업적 명세 (Three Amigos: 비즈니스·개발·테스트가 함께 예시 작성) / 예시로 설명한 뒤 모호성을 제거하는 소수의 핵심 예시로 정제 / 명세를 바꾸지 않고 검증을 자동화해 명세를 사람이 읽을 수 있게 유지 / Living documentation: 실행 가능한 명세를 항상 유효한 단일 진실 공급원으로 유지 / Impact mapping: 산출물을 액터·임팩트·목표에 연결해 잘못된 것을 만들지 않기
+  - trend(재확인): SBE·living documentation을 AI 에이전트 코딩용 Spec-Driven Development(GitHub/Microsoft Spec Kit, Claude Code 지원)로 재프레이밍하는 2025년 흐름 — 도구 의존·변동성 있음
+  - 입장 변화: 2025-09 Adzic가 GitHub/Microsoft Spec Kit과 Spec-Driven Development를 분석, SBE를 그 선조로 위치시키되 오용 시 'Waterfall의 부활'이 될 수 있다고 경계. Spec Kit이 Claude Code 등 AI 도구용 명령을 생성. Narakeet 창업·Neuri Consulting 파트너로 활동. 핵심 원칙은 도구 무관·불변, 현재 공개 작업은 AI spec-driven 영역으로 확장 중.
 - **태그**: domain=atdd, specification-by-example, living-documentation, bdd · lang=java, language-agnostic · stage=design-review, test-design, code-review · artefact=api-contract, test-plan
 - **core principles** (EN):
   - Specification by Example: derive shared, concrete examples that serve simultaneously as requirements, tests, and documentation
@@ -1369,6 +1546,11 @@
 
 - **요약(ko)**: 테스트 안전망 위에서 작은 행위보존 단계로 코드 구조를 개선하는 리팩토링의 정전(canon).
 - **역할/버킷**: `theory` / `canonical`  ·  시대 1999-present  ·  UK/US, English; long-time at ThoughtWorks; enterprise application development.  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 리팩토링 = 관찰 가능한 동작을 바꾸지 않고 내부 구조를 개선하는 규율적 기법 (행위 보존) / 작은 행위보존 단계로, 명명된 카탈로그(Extract Function/Rename/Move/Inline 등)에 따라 점진적으로 진행 / 코드 스멜(Long Method, Large Class, Feature Envy, Data Clumps 등)은 결함이 아니라 리팩토링 지점을 가리키는 휴리스틱 / 두 개의 모자: 기능 추가와 리팩토링을 같은 단계에 섞지 않는다 (Beck 유래) / 준비 리팩토링: 변경을 쉽게 만든 뒤 쉬운 변경을 한다 (Beck 유래) / 빅뱅 재작성보다 지속적·기회주의적 리팩토링을 선호 / 컴퓨터가 이해하는 코드는 누구나 짠다 — 좋은 프로그래머는 사람이 이해하는 코드를 짠다
+  - trend(재확인): AI/LLM 생성 코드 시대에 '리팩토링이 그 어느 때보다 중요하다'는 재프레이밍 — 동작하지만 품질이 의심스러운 코드를 동작 유지하며 개선하는 수단 / LLM과 함께 추상화를 공동 구축(co-build abstraction)하고, 그 추상화로 다시 LLM과 더 효과적으로 소통한다는 최신 워크플로우 / 결정론적 기법(테스트·리팩토링)을 비결정론적 AI 도구와 결합한다는 진화 중 실무 — 표준화 전 시한부
+  - ⚠ anachronism: 안전망의 '포괄적 자동화 테스트 스위트' 전제는 여전히 유효하나, AI 비결정론 컴퓨팅 환경에서는 테스트 작성/검증 방식 자체가 재정의되는 중이라 기존 결정론 가정과 부분 충돌 / 카탈로그가 OO 중심이라 FP/데이터 지향/배열 패러다임에는 그대로 적용 시 빈약
+  - 입장 변화: 입장을 뒤집지 않음. 다만 2025-2026 Pragmatic Engineer/Thoughtworks 메모 연재에서 AI를 '경력 중 가장 큰 변화'로 규정하고 결정론→비결정론 코딩 전환을 적극 논함. 리팩토링의 가치를 AI 시대에 더 강하게 주장하는 방향으로 강조점 이동.
 - **태그**: domain=refactoring, code-quality, design, legacy-code · lang=java, javascript, oo · stage=design-review, code-review · artefact=code-diff, architecture
 - **core principles** (EN):
   - Refactoring is a disciplined technique for restructuring code: altering internal structure without changing observable behavior.
@@ -1403,6 +1585,11 @@
 
 - **요약(ko)**: 변경 비용 최소화 관점에서 의존성과 추상화를 다루는 실무 객체지향 설계 — '잘못된 추상화보다 중복이 싸다'.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2012-present  ·  US, English; Ruby/OO practitioner and teacher; modern working-developer perspective.  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 중복은 잘못된 추상화보다 훨씬 싸다 — 올바른 추상화가 자명해질 때까지 중복을 허용하고, 추상화가 틀리면 다시 중복으로 인라인 / 미래 예측이 아니라 의존성 관리로 '변경 비용'을 최소화하도록 설계 / 구체가 아닌 추상/메시지에 의존하고, 의존성 주입으로 결합도를 낮춘다 / 상속보다 합성 — 상속은 진짜 is-a 특수화일 때만 / 구현 세부가 아니라 공개 인터페이스(주고받는 메시지)를 테스트 / Flocking Rules: 추상화가 드러날 때까지 작고 일관된 국소 변경 / 역할 중심 설계 — 클래스가 아니라 행위가 협력을 주도(덕 타이핑)
+  - dated/대체됨: '컨트롤러는 객체 하나만 인스턴스화한다' — Rails식 MVC 컨벤션에 묶인 규칙으로 비-Rails/현대 아키텍처에서는 보편성이 떨어짐
+  - ⚠ anachronism: 수치형 규칙(클래스 ≤100줄, 메서드 ≤5줄, 파라미터 ≤4, 컨트롤러 1객체)을 문자 그대로 게이트로 쓰면 카고컬트 — 본인은 '생각을 자극하는, 정당화되면 깨도 되는' 휴리스틱이라 명시 / 덕 타이핑을 협력의 1차 기제로 두는 전제는 정적 타입/타입 안전(Sorbet·RBS 등 현대 타입드 Ruby, 정적 타입 함수형)과 충돌
+  - 입장 변화: 입장 일관 유지. 2025년에도 '잘못된 추상화' 원칙이 업계에서 재인용·재확인되고 있으며 본인이 철회하거나 수정한 바 없음.
 - **태그**: domain=object-oriented-design, code-quality, refactoring, testing · lang=ruby, oo · stage=code-review, test-design, design-review · artefact=code-diff, test-plan
 - **core principles** (EN):
   - Duplication is far cheaper than the wrong abstraction; prefer duplication until the right abstraction is obvious, and re-introduce duplication once an abstraction proves wrong.
@@ -1437,6 +1624,12 @@
 
 - **요약(ko)**: 비서구(모스크바) 순수 객체지향 급진파 — getter/setter·null·가변성·정적 메서드를 거부하는 캡슐화 원리주의 렌즈.
 - **역할/버킷**: `critique` / `regional-alt`  ·  시대 2016-present  ·  Moscow, Russia; publishes in English/Russian; advocates a non-mainstream 'real/elegant OOP' tradition and the EOLANG/φ-calculus pure-OO language. Note: contested, minority position.  ·  근거 **medium**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 객체는 데이터 자루가 아니라 정체성과 행위를 가진 존재 — 노출이 아니라 캡슐화 / 빈약한 도메인 모델(게터/세터만 있는 데이터 클래스) 회피 / 구성 후 불변(immutable) 객체 선호 / 객체를 작고 응집되게 유지하고 타입 introspection/캐스팅(instanceof, reflection) 회피
+  - trend(재확인): EOLANG / φ-calculus 순수 OO 실험 언어 — 2026년 1월까지도 논문 v9 갱신 등 활발히 개발 중인 진행형 연구 (정착 전)
+  - dated/대체됨: 'NULL을 절대 쓰지 말고 Null Object를 반환하라' — Optional/Option 및 언어 차원 널 안정성(Kotlin null-safety, Java Optional, TS strict null)이 보편화되며 Null Object 패턴 처방은 대체됨
+  - ⚠ anachronism: 게터/세터 전면 금지·정적 메서드/유틸리티 클래스 금지·-er 이름 금지·'생성자는 코드가 없어야 한다' 절대주의는 주류 Java/Spring/JPA·Hibernate(가변 빈·접근자 필요)와 정면 충돌 / Java records(불변 데이터 캐리어이지만 접근자 노출), Kotlin data class, 패턴 매칭/sealed 타입 등 현대 JVM 관용구는 '게터 없는 객체' 교리와 배치 — 데이터 지향/함수형 설계와도 충돌
+  - 입장 변화: 소수·논쟁적(contested) 입장. 입장 변화 없이 2025-2026까지 블로그·EOLANG으로 Elegant Objects 철학을 일관 유지. Huawei 소속이자 Zerocracy(AI 기반 관리 플랫폼) CTO로 활동.
 - **태그**: domain=object-oriented-design, encapsulation, code-quality, immutability · lang=java, eolang, oo · stage=code-review, design-review · artefact=code-diff
 - **core principles** (EN):
   - Objects are living organisms with identity and behavior, not bags of data; they should encapsulate, not expose.
@@ -1467,10 +1660,14 @@
 - **term aliases (ko)**: getters/setters: 게터/세터, immutability: 불변성, anemic model: 빈약한 도메인 모델, null object: 널 오브젝트, encapsulation: 캡슐화
 - **activation**: getter, setter, encapsulation, anemic model, immutable, null object, utility class, static method, elegant objects
 
-### Dan North (Daniel Terhorst-North)  ·  `dan-north`
+### Dan North (Daniel Terhorst-North)  ·  `dan-north-cupid`
 
 - **요약(ko)**: 원칙(이분법 규칙) 대신 속성(지향점)으로 — SOLID 교조주의를 비판하고 CUPID로 '즐거운 코드'를 추구하는 비판 렌즈.
 - **역할/버킷**: `critique` / `critical`  ·  시대 2006-present  ·  UK, English; originator of Behaviour-Driven Development; consultant; critic of clean-code/SOLID dogma.  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 원칙(이분법적 준수 규칙)보다 속성(지향할 품질)을 선호 — 항상 pass/fail이 아니라 '이동 방향'이 있다 / 코드는 코드 자체가 아니라 그것과 일하는 사람의 관점·즐거움(joy)을 위해 최적화하며 모든 것은 맥락 속 트레이드오프 / Composable: 작은 표면적, 의도 드러냄, 낮은 결합, 조합 용이 / Unix 철학: 한 가지를 잘하는 단순·단일 목적 컴포넌트의 조합 / Predictable: 단지 '테스트됨'이 아니라 결정론적·관측가능·예측대로 동작 / Idiomatic: 언어/커뮤니티 관용을 따라 인지 부하 최소화 / Domain-based: 기술 계층이 아니라 문제 도메인을 반영하는 구조 / 교조 의심: SRP 주도 계층 분리가 오히려 인지 부하를 늘리고 응집을 떨어뜨릴 수 있다 — 맥락으로 선택
+  - trend(재확인): CUPID(Composable/Unix/Predictable/Idiomatic/Domain-based)라는 명명된 프레임워크 자체는 2021-2022 산물로 비교적 최근 — 패키징·용어가 더 진화할 수 있는 시한부
+  - 입장 변화: BDD 창시자에서 출발해 '원칙'에서 '속성(CUPID)'으로 입장을 공개적으로 이동시킨 본인 자신이 view-shift의 사례. clean-code/SOLID 교조에 대한 비판 입장은 일관 유지. 2025-2026 신규 1차 자료는 추가 확인 못 했으나(대부분 2021-2023) stance 변화 징후 없음.
 - **태그**: domain=code-quality, design-principles, bdd, craftsmanship-critique · lang=language-agnostic · stage=design-review, code-review, test-design · artefact=code-diff, architecture, test-plan
 - **core principles** (EN):
   - Prefer properties (qualities to move toward) over principles (binary compliance rules); there is always a direction of travel, never just pass/fail.
@@ -1519,6 +1716,12 @@
 
 - **요약(ko)**: 리소스별 USE(사용률·포화·오류) 방법과 플레임 그래프로 전체 스택의 병목을 측정 기반으로 짚는 시스템 성능 렌즈.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2010s-2020s  ·  Australia/US, English; ex-Sun/Netflix/Intel, systems performance & observability  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): USE Method: 모든 리소스에 대해 사용률/포화/오류를 먼저 점검한다 (리소스 무관 불변 진단 프레임). / 도구가 아니라 방법론에서 출발한다 (가로등/도구 안티메소드 회피). / 지연(latency)을 성능 이해의 1차 지표로 삼고, 처리량 카운터가 아닌 시간으로 추론한다. / on-CPU와 off-CPU 문제를 구분해 각각 맞는 기법으로 분석한다. / 변경 전에 워크로드(누가/왜/무엇을/어떻게)를 먼저 특성화한다. / 전체 데이터 경로(앱·OS·커널·하드웨어)를 관측한다 — 병목은 어디에나 있을 수 있다. / 측정에 기반한 가설을 요구하고 추측·임의 변경을 거부한다.
+  - trend(재확인): eBPF 기반 저오버헤드 동적 트레이싱을 프로덕션 관측의 우선 수단으로 사용 (bcc/bpftrace/perf 생태계는 빠르게 진화 중). / 플레임 그래프를 전 스택 샘플 시각화의 기본 산출물로 가정 — 최근에는 GPU/AI 가속기(AI Flame Graphs, GPU Flame Scope)로 확장 중이라 도구·포맷이 변동. / 프로덕션 관측 자체의 오버헤드를 먼저 검증한 뒤 수치를 신뢰 (관측 도구 진화에 종속).
+  - dated/대체됨: 원칙 자체에 낡은 항목은 없으나, 초기 저작의 DTrace/Solaris 중심 트레이싱 전통은 Linux+eBPF로 대체됨 (이 라이브러리 원칙에는 미반영).
+  - ⚠ anachronism: CPU/IO/메모리/네트워크라는 단일 머신·Linux 커널 리소스 모델 중심 프레이밍은, AI 인프라처럼 GPU/가속기 바운드가 지배하는 워크로드를 과소 평가한다 (2026년 그의 OpenAI 작업 영역과 충돌). / '합성 벤치마크보다 eBPF 프로덕션 관측을 선호'는 Linux+eBPF 가용을 전제 — GPU/가속기 프로파일링은 하드웨어 기반(EU stall) 프로파일링이 필요해 그대로 이식되지 않는다.
+  - 입장 변화: 2025-12 Intel 퇴사, 2026-02 OpenAI 합류해 ChatGPT 데이터센터 성능 담당. 플레임 그래프/방법론 렌즈를 CPU/Linux에서 GPU·AI 가속기 성능으로 확장 중 — 입장 번복은 아니나 적용 영역이 이동했다.
 - **태그**: domain=systems-performance, observability, linux, ebpf, cpu-io-memory · lang=linux, c, ebpf, bcc, bpftrace, perf, cloud · stage=performance, operability, code-review · artefact=benchmark, runbook, flame-graph, observability-dashboard
 - **core principles** (EN):
   - Apply the USE Method: for every resource, check Utilization, Saturation, and Errors before drilling deeper.
@@ -1554,6 +1757,11 @@
 
 - **요약(ko)**: 사용자가 체감하는 '응답 시간'을 핵심 업무 단위로 프로파일링해 가장 큰 기여분부터 경제적으로 고치는 Method R 렌즈.
 - **역할/버킷**: `critique` / `canonical`  ·  시대 2000s-2020s  ·  US, English; ex-Oracle System Performance Group VP, founder Method R  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): Method R: 가장 중요한 업무를 식별 → 그 응답 시간을 상세 측정 → 최대 기여분을 가장 경제적으로 최적화 → 경제적 최적까지 반복. / 성능 문제는 시스템 전반 리소스 비율이 아니라 사용자가 체감하는 응답 시간으로 정의된다. / 응답 시간을 순위화된 구성요소로 프로파일링해 지배적 소비자를 먼저 공략한다. / 사용자가 체감 못 하는 지표(히트율·평균 대기·집계 지연) 최적화를 경계한다. / 평균은 치우침(skew)을 숨긴다 — 평균과 높은 백분위의 간극을 이해한다. / 업그레이드/변경 효과를 사전 예측하기 위해 대기행렬 이론과 사용률 '무릎'을 사용한다. / 최적화는 기술적 가능성이 아니라 경제적으로 정당화되어야 한다.
+  - trend(재확인): Method R Workbench / mrprof HTML5 응답시간 프로파일러 등 구체 도구는 현행 제품이나 버전 의존적 (2024 재작성).
+  - dated/대체됨: Oracle 트레이스 데이터/OLTP 중심 적용 맥락은 클라우드 네이티브·마이크로서비스 시대에서 점차 협소해짐 (원칙이 아니라 canonical 적용 대상이 낡음).
+  - ⚠ anachronism: '단일 지배적 업무 태스크'를 전제한 응답시간 모델은 모놀리식 Oracle/OLTP에 맞춰져 있어, 응답 시간이 수많은 서비스/스팬에 분산되는 분산 마이크로서비스 + 비동기 아키텍처(OpenTelemetry/분산 트레이싱)에는 그대로 들어맞지 않는다. / Oracle 트레이스 파일 중심 워크플로는 분산 트레이싱 시대 이전 패러다임으로, 다중 서비스 호출 체인의 시간 귀속에는 추가 도구가 필요하다.
 - **태그**: domain=response-time, method-r, oracle, profiling, queueing-theory · lang=oracle, sql, database, plsql · stage=performance, design-review · artefact=response-time-profile, benchmark, capacity-plan
 - **core principles** (EN):
   - Method R: identify the business task that matters most, measure ITS response time in detail, optimize the largest contributor most economically, repeat until economically optimal.
@@ -1588,6 +1796,12 @@
 
 - **요약(ko)**: 평균·단일 백분위의 함정과 coordinated omission을 폭로하고, 부하 조건이 명시된 꼬리 지연(나인)으로 지연을 정직하게 측정하게 하는 렌즈.
 - **역할/버킷**: `critique` / `critical`  ·  시대 2010s-2020s  ·  Israel/US, English; CTO & co-founder Azul Systems, JVM & latency  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): Coordinated omission: 느린 응답을 기다리는 폐루프 부하 생성기는 최악 샘플을 체계적으로 누락해 백분위를 왜곡한다 — 탐지·보정하라. / 지연을 평균이나 단일 백분위로 특성화하지 말고, 여러 나인(99/99.9/99.99/max)에 걸친 전체 분포를 보고하라. / 요청이 '발생했어야 할' 의도/도착률 기준으로 응답 시간을 측정하라 (백오프 후 서비스 시간만이 아니라). / 지연 요구사항을 정의된 시간창에서 처리량 대비 백분위로 명시하라 (예: Y rps에서 99.9%가 X ms 미만). / 다수 사용자 대면 SLA에서는 꼬리(심지어 최댓값)가 체감을 지배하므로 max도 중요하다. / 응답 시간(스톨 중 큐잉 포함)과 순수 서비스 시간을 구분하라. / 단일 수치 지연 주장은 높은 백분위와 max가 제시되기 전까지 불완전한 것으로 취급하라.
+  - trend(재확인): HdrHistogram/jHiccup/wrk2 등 구체 측정 도구 사용 (현재 유지보수되나 도구 의존). / GC/런타임 hiccup을 앱 지연과 별도로 측정하는 관행 — 측정 대상 런타임 진화에 종속.
+  - dated/대체됨: JVM stop-the-world GC 일시정지를 주요 hiccup 원천으로 가정하던 전제는, 저지연 수집기 보급으로 비중이 줄었다 (원칙이 아니라 강조점이 이동).
+  - ⚠ anachronism: jHiccup의 GC 일시정지 중심 프레이밍은 구형 STW 수집기를 가정한다 — 2024+ 세대형 ZGC/Shenandoah 등 서브-밀리초 일시정지 수집기 환경에서는 지배적 hiccup 원천이 GC가 아닐 수 있어, GC를 hiccup의 1차 용의자로 보는 직관은 시대 보정이 필요하다.
+  - 입장 변화: 2025 P99 CONF에서 coordinated omission을 다시 발표하는 등 입장 일관·현행 유지. 번복 없음.
 - **태그**: domain=latency, percentiles, coordinated-omission, jvm, gc-pauses, benchmarking · lang=java, jvm, hdrhistogram, jhiccup · stage=performance, test-design, operability · artefact=benchmark, latency-histogram, sla-spec
 - **core principles** (EN):
   - Coordinated omission: a closed-loop load generator that waits for a slow response systematically skips the worst samples, corrupting percentiles — detect and correct for it.
@@ -1622,6 +1836,12 @@
 
 - **요약(ko)**: 분기 제거·SIMD·더 나은 자료구조로 instruction/byte를 줄이고 재현 가능한 마이크로벤치마크로 핫루프를 가속하는 알고리즘 엔지니어링 렌즈.
 - **역할/버킷**: `theory` / `regional-alt`  ·  시대 2010s-2020s  ·  Québec, Canada (francophone); CS professor at Université du Québec (TÉLUQ), software performance researcher  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 알고리즘 엔지니어링: 핫 코드를 분기 제거(branch-free)로 재설계해 분기 예측 실패를 피한다. / 바이트/요소당 명령 수(및 사이클)를 줄이되 추측하지 말고 세고 측정한다. / 하드웨어 인식을 기른다 — 메모리 레이아웃·캐시 동작·명령 수준 병렬성이 실제 속도를 좌우한다. / 무차별 루프 대신 더 똑똑한 자료구조·비트 조작을 택한다 (예: Roaring/압축 비트맵). / 마이크로벤치마크는 재현 가능해야 하고 대상 커널만 격리해야 한다 — 공개해 재현 가능하게(오픈 사이언스). / 이 코드가 최적화를 정당화할 만큼 실제로 핫한가를 먼저 묻는다 (premature optimization 경계). / 범용 컨테이너가 더 나은 캐시/SIMD 친화 자료구조를 숨기고 있지 않은지 의심한다.
+  - trend(재확인): SIMD/벡터화로 명령당 다수 바이트·요소 처리 — 구체 ISA(AVX, ARM NEON)는 현세대 하드웨어에 묶여 시한부. / 최신 프런티어로 RISC-V Vector Extension(RVV) 커널 (simdjson 4.3.0가 RVV로 JSON 처리한 최초 라이브러리일 가능성) 및 C++26 reflection 기반 1줄 직렬화/역직렬화로 확장 중.
+  - dated/대체됨: 특정 마이크로아키텍처(예: x86 AVX)에만 맞춘 벡터화는 다른 ISA에서 회귀를 일으켜 낡은 접근이 됨 (라이브러리도 contraindication으로 명시).
+  - ⚠ anachronism: 'SIMD/AVX 활용'을 x86 AVX 중심으로 프레이밍하던 통념은, ARM(Apple Silicon/Graviton의 NEON·SVE)과 RISC-V RVV가 2026년 주류가 된 환경에서는 다중-ISA 이식성(NEON/SVE/RVV) 전제로 보정해야 한다 — 단일 마이크로아키텍처 최적화는 이제 실질적 시대착오.
+  - 입장 변화: 2025-2026 매우 활발 (simdjson 4.3.0 RVV 추가, 2026-04 ARM 문자 매칭 블로그, CppCon 2025 C++26 reflection 발표). 렌즈가 x86 SIMD에서 ARM/RISC-V 및 컴파일타임 reflection으로 확장 중 — 핵심 원칙 번복은 없음.
 - **태그**: domain=algorithmic-engineering, simd, branchless, data-structures, microbenchmarking · lang=c, cpp, rust, go, simd, avx, arm-neon · stage=performance, code-review · artefact=benchmark, code-diff, microbenchmark-harness
 - **core principles** (EN):
   - Algorithmic engineering: redesign hot code to be largely branch-free, avoiding branch mispredictions on modern CPUs.
@@ -1667,6 +1887,11 @@
 
 - **요약(ko)**: ML 프로젝트를 데이터 중심으로 구조화하고 단일 지표와 오류 분석으로 반복 개선하는 실무 규율의 정전.
 - **역할/버킷**: `practice` / `canonical`  ·  시대 2010s-2020s  ·  US / English; Stanford, Coursera, DeepLearning.AI, Landing AI  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 팀 전체가 최적화하는 단일 평가 지표를 정한다 (필요시 optimizing/satisficing으로 결합) / 오류 분석: 오분류된 dev 샘플을 직접 보고 원인을 범주화해 우선순위를 정한다 / dev/test 셋은 편의상 나눈 random split이 아니라 프로덕션 분포를 반영해야 한다 / 회피가능 편향 vs 분산 vs 분포 불일치로 격차를 분해한 뒤에야 '더 큰 모델' 결론을 받아들인다 / 데이터 중심 AI: 모델 코드를 고정하고 데이터(라벨 일관성·커버리지)를 체계적으로 개선한다 / 먼저 end-to-end 베이스라인을 빠르게 만들고 반복 개선한다 (조기 과설계 금지) / 직교화: 목적당 하나의 knob만 조정해 진단을 깨끗하게 유지한다
+  - dated/대체됨: human-level / Bayes-optimal performance를 보편적 기준 yardstick로 삼는 프레이밍 — 인간 참조가 있는 지도학습 분류 시대의 가정으로, 생성형·랭킹·LLM 과제에는 적용이 약하다(라이브러리 자체 contraindication과 일치)
+  - ⚠ anachronism: '단일 숫자 지표'를 유일한 조타 신호로 두는 규율은 2026 LLM/에이전트 평가 현실(LLM-as-judge, 다차원·다기준 evals)과 충돌한다 — 하나의 스칼라로는 생성 품질을 못 잡는다
+  - 입장 변화: 2024년 이후 공개 강조점을 에이전트형 AI 워크플로(reflection/tool-use/planning/multi-agent)로 이동했고, 이것이 차세대 파운데이션 모델보다 더 큰 진전을 이끈다고 주장. 데이터 중심 입장은 유지되나 현재 프런티어는 이 항목들이 담은 지도학습 방법론이 아니라 AI/agentic 엔지니어링이다.
 - **태그**: domain=ml-methodology, data-centric-ai, model-evaluation, error-analysis · lang=python, tensorflow · stage=design-review, test-design · artefact=test-plan, architecture
 - **core principles** (EN):
   - Establish a single-number evaluation metric the whole team optimizes; if multiple criteria matter, combine into one (e.g. optimizing vs satisficing metrics).
@@ -1701,6 +1926,11 @@
 
 - **요약(ko)**: 신경망 학습은 조용히 실패한다는 전제로, 데이터 응시·작은 배치 과적합·단계적 디버깅을 강제하는 현대 딥러닝 실전 렌즈.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2015-2020s  ·  US / English; OpenAI, Tesla Autopilot, independent educator (Eureka Labs, founded 2024)  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 신경망 학습은 조용히 실패한다 — 편집증적으로 모든 것을 명시적으로 검증한다 / 모델 코드 작성 전 원시 데이터·라벨을 직접 들여다보고 정렬·시각화한다('데이터와 하나되기') / 복잡도를 더하기 전에 dumb 베이스라인과 end-to-end 평가 루프를 먼저 세운다 / 단일 배치를 zero loss로 과적합시켜 용량·gradient flow를 증명한다 / seed 고정·증강/드롭아웃 비활성화·한 번에 하나씩 변경으로 효과를 귀속 가능하게 만든다 / step 0 loss가 랜덤 모델의 이론값(-log(1/n))과 맞는지 확인한다
+  - dated/대체됨: 'Software 2.0 — 데이터셋과 목적함수가 진짜 소스코드' 프레이밍은 본인의 Software 3.0(2025, 프롬프트/컨텍스트가 새 프로그래밍 계층)으로 재맥락화됨 — 가중치 학습이 더 이상 대다수 팀의 주된 빌드 경로가 아니다
+  - ⚠ anachronism: from-scratch 학습 레시피(최종층 bias를 base rate에 맞춰 초기화, 디버깅 중 augmentation/dropout 끄기)는 '모델을 직접 학습한다'를 전제 — 2026 애플리케이션 빌더 다수는 파운데이션 모델을 adapt할 뿐 이런 학습 루프를 돌리지 않아 지배적 워크플로와 축이 어긋난다
+  - 입장 변화: 공개적으로 입장 진화: Software 2.0(2017)→Software 3.0(2025); 'vibe coding'을 2025.2 명명했다가 Sequoia AI Ascent 2026에서 '구식'이라 선언하고 'agentic engineering'(코드의 ~80%를 에이전트에 위임)으로 전환. 학습 기초(MicroGPT, 2026)는 여전히 옹호하나 이를 '출고 경로'가 아니라 인간·에이전트를 위한 demystification으로 재프레이밍.
 - **태그**: domain=deep-learning, training-debugging, software-2.0, reproducibility · lang=python, pytorch · stage=code-review, test-design · artefact=code-diff, test-plan
 - **core principles** (EN):
   - Neural net training fails silently: a misconfigured pipeline often still 'runs' and produces a plausible loss, so be paranoid and verify everything explicitly.
@@ -1735,6 +1965,10 @@
 
 - **요약(ko)**: 모델이 아니라 전체 시스템을 신뢰성·확장성·유지보수성·적응성 관점에서 설계하는 프로덕션 ML/파운데이션모델 시스템 렌즈(비서구 출신 현대 실무자).
 - **역할/버킷**: `operations` / `regional-alt`  ·  시대 2020s  ·  Vietnam-born, US-based / English; author of Designing ML Systems (2022) and AI Engineering (2025); ex-NVIDIA/Snorkel/Netflix, Claypot AI co-founder, later Voltron Data; brings a non-Western practitioner background  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): ML 시스템은 모델 그 이상 — 데이터·피처·재학습·모니터링·인프라를 하나의 시스템으로 설계한다 / 프로덕션 4속성 최적화: 신뢰성·확장성·유지보수성·적응성 / ML 개발은 비즈니스 지표로 구동되는 반복 프로세스이지 일회성 학습 작업이 아니다 / 프로덕션 데이터 분포 변화를 예상·탐지하고 입력·예측·ground truth를 관측한다(서비스 헬스만이 아니라) / 학습-서빙 불일치(skew)를 방어 — 학습/서빙 경로에서 일관된 피처 계산을 선호 / batch vs online 예측과 재학습 주기를 freshness·비용 기준으로 의도적으로 선택 / staged rollout(shadow→canary→A/B)로 프로덕션에서 검증 / 지속 학습과 피드백 루프(라벨·자연 피드백 수집)를 안전하게 관리
+  - trend(재확인): 파운데이션 모델 앱 지침(학습 대신 adapt: 프롬프트 엔지니어링·RAG·평가/LLM-as-judge·추론 비용/지연) — 2025-2026 빠르게 변하는 계층으로 AI Engineering(2025)에서 다뤘으나 안정적 review_heuristics로 아직 정제 중(라이브러리 blind spots와 일치) / training-serving skew 해법으로 feature store를 기본값처럼 두는 권고는 도구·아키텍처가 진화 중인 시한부/논쟁적 항목
+  - 입장 변화: Designing ML Systems(2022)→AI Engineering(2025)로 확장하며 '파운데이션 모델 위 빌드'인 AI 엔지니어링을 전통 ML 엔지니어링과 명시적으로 구분. 현재 Voltron Data에서 GPU 데이터 분석. 입장은 번복이 아니라 가산적(additive).
 - **태그**: domain=mlops, ml-systems, production-ml, monitoring, data-drift, ai-engineering · lang=python, kubernetes · stage=design-review, operability · artefact=architecture, runbook
 - **core principles** (EN):
   - An ML system is far more than the model; design data, features, retraining, monitoring, and infra as one system serving a business objective.
@@ -1772,6 +2006,10 @@
 
 - **요약(ko)**: 데이터·모델을 문서화하고 하위집단별로 분해 평가하며 대형 모델의 사회적·환경적 비용을 묻는 책임성 비판 렌즈.
 - **역할/버킷**: `critique` / `critical`  ·  시대 2018-2020s  ·  Eritrean/Ethiopian-American / English; ex-Google Ethical AI, founder of DAIR (Distributed AI Research Institute)  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 데이터셋을 datasheet로 문서화(동기·구성·수집·전처리·권장/비권장 용도·유지보수) / 모델을 model card로 문서화(의도된/범위 외 용도, 학습 데이터, 하위집단별 분해 성능) / 하위집단별 분해 평가 — 집계 정확도는 소수집단 실패를 숨긴다 / 미문서화 데이터는 부채('documentation debt') — provenance·consent·대표 인구를 안다 / 누가 해를 입고 누가 이득을 보는가를 중심에 둔다(기술 지표만으로 사회적 영향을 못 잡는다)
+  - trend(재확인): 'stochastic parrots — 형식만 모델링하고 의미는 아니다' 주장과 규모 비용(컴퓨팅·환경) 논거는 모델·규제가 변하며 진행 중인 활발한 논쟁(Gebru는 입장 유지하나 emergent-capability 측 반론과 충돌하므로 시간성 표기)
+  - 입장 변화: 입장이 일관되게 심화됨 — DAIR를 통해 '하나의 거대 모델'/AGI 패러다임을 직접 비판하고, 'Slow AI'/frugal-AI와 커뮤니티 소유 컴퓨팅(하이퍼스케일러 클라우드 회피용 자체 클러스터 구축)을 추진하며 'The View from Somewhere'(회고+선언) 집필 중. 문서화 관행은 이후 산업·규제(HF model cards, EU AI Act)에 부분 제도화되어 낡기는커녕 강화됨.
 - **태그**: domain=responsible-ai, fairness, model-documentation, llm-risk, data-governance · stage=design-review, security · artefact=threat-model, api-contract
 - **core principles** (EN):
   - Document datasets with datasheets: record motivation, composition, collection process, preprocessing, recommended and discouraged uses, and maintenance.
@@ -1819,6 +2057,11 @@
 
 - **요약(ko)**: 검증 가능한 공개 저작(Effective Java, OOPSLA 2006 "좋은 API 설계법" 강연)에 근거한 자바/JVM API 설계 관용구의 정전적 권위자 — "의심스러우면 빼라", 쓰기 쉽고 오용하기 어려운 API, 불변성 우선.
 - **역할/버킷**: `theory` / `canonical`  ·  시대 2001–present (Effective Java 1st ed. 2001; OOPSLA "How to Design a Good API" talk 2006; 3rd ed. 2017/2018)  ·  US; English-language Java/JVM ecosystem. Ex-Sun Microsystems lead architect of the Java Collections Framework and JDK 5.0 language features (generics, enums, annotations, for-each); later at Google contributing to Java collections/concurrency libraries; now Professor of Practice at Carnegie Mellon University (Software and Societal Systems Dept.). (His framework/JDK design work is verifiable career context, not the written source of the principles below — those come from his books and talks.)  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 의심스러우면 빼라(when in doubt, leave it out): 공개 API 표면적은 최소로, 나중에 추가는 가능해도 제거는 불가능 — 버전 무관 불변 원칙 / 쓰기 쉽고 오용하기 어려운 API(easy to use, hard to misuse) / 이름이 중요하다 / 최소 놀람의 원칙(least astonishment): 메서드 이름만으로 동작이 예측되게 / 빠른 실패(fail fast): 컴파일타임 > 생성시점 > 최초 호출 순으로 가능한 한 빨리 오류 노출 / 가변성 최소화(minimize mutability): 불변 객체는 단순하고 본질적으로 스레드 안전 / 상속보다 합성(composition over inheritance); 상속용 설계는 명시적으로 하거나 금지하라 / 접근성 최소화 / 정보 은닉으로 모듈 결합도를 낮춘다 / 구현 세부를 공개 API로 누설하지 말라; 공개 표면을 내부와 독립으로 유지 / API를 쓰는 클라이언트 코드를 먼저 작성해보라(API design is an art)
+  - dated/대체됨: 생성자 대신 정적 팩토리/빌더(EJ Item 1–2)를 데이터 캐리어에 일률 적용하는 조언은, 불변 값 객체에 한해 records(Java 16+ 정식)로 상당 부분 대체됨 — 수기 빌더/불변 클래스 보일러플레이트가 줄었다
+  - ⚠ anachronism: Effective Java 2판 시대 관용구 일부는 3판에서 갱신됨(람다/스트림 이전 패턴 등) — pre-records/pre-lambda 시절의 손수 작성 불변 값클래스+빌더 권장을 records가 적합한 자리에 그대로 적용하면 시대착오
+  - 입장 변화: 본인 트윗(2023)에서 Effective Java 4판을 '2025년 말'쯤 예상한다고 밝힘. 2026-06 기준 4판 출간 확정 정보는 미확인. 핵심 원칙은 판본을 거쳐 안정적이며 개별 아이템만 자바 버전에 맞춰 갱신되는 패턴.
 - **태그**: domain=api-design, library-design, object-oriented-design, java-idioms, immutability, encapsulation · lang=java, jvm, kotlin, android · stage=design, api-review, code-review, refactoring · artefact=public class/interface signatures, API specification & Javadoc, library/SDK surface, design review notes
 - **core principles** (EN):
   - When in doubt, leave it out: every facet of an API should be as small as possible but no smaller. You can always add things later, but you can never take them away.
@@ -1863,6 +2106,12 @@
 
 - **요약(ko)**: 자바 동시성의 정전(正典) 저자이자 Java 언어 아키텍트로, 불변성과 명시적 스레드 안전 정책, records/sealed/패턴매칭 기반 데이터 지향 프로그래밍을 설파한다.
 - **역할/버킷**: `practice` / `canonical`  ·  시대 2006–present (Java Concurrency in Practice, 2006; Java Language Architect at Oracle, OpenJDK Projects Amber/Valhalla, 2010s–2020s)  ·  US; English. JVM/Java ecosystem, OpenJDK language stewardship.  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 불변성 우선: 불변 객체는 본질적으로 스레드 안전하고 추론을 단순화 — 시대 무관 / 모든 클래스의 스레드 안전 정책을 명시적으로 문서화하라(문서 없는 동시성 계약은 사용 불가) / 자바 메모리 모델: 가시성(visibility)은 원자성(atomicity)만큼 중요 — 안전한 발행/스레드 한정 / 복합 동작(check-then-act, read-modify-write)은 개별적으로 원자성 보장이 필요하다 / 코드는 쓰이는 것보다 훨씬 자주 읽힌다 — 언어 기능/API는 독자를 위한 명료함을 우선
+  - trend(재확인): 데이터 지향 프로그래밍(records + sealed + 망라적 pattern matching)으로 도메인 모델링 — Java 21에서 정식화됐으나 idiom으로서는 아직 성숙/확산 중 / 대수적 데이터 모델링으로 불법 상태를 표현 불가능하게(make illegal states unrepresentable) — 비교적 최근 자바 idiom / 구조적 동시성(StructuredTaskScope)은 JEP 505로 Java 25에서도 여전히 preview이며 API가 재설계됨 — 향후 변경 가능
+  - dated/대체됨: '직접 만든 wait/notify·락보다 java.util.concurrent의 executor/스레드풀을 선호하라'는 일반 권고는 Loom 시대에 부분적으로 낡음 — 가상 스레드를 풀링하지 말고 task당 스레드(thread-per-task)를 기본값으로 쓰는 방향으로 이동
+  - ⚠ anachronism: JCIP(2006)의 스레드풀 중심 확장 전략(풀 크기 산정, 바운디드 스레드풀 추론)은 가상 스레드(JDK 21+) 이전 전제 — thread-per-request가 안티패턴에서 실용적 기본값으로 바뀐 현재와 충돌 / synchronized 블록 내 블로킹으로 인한 carrier 스레드 pinning 우려는 Loom 초기(JDK 21–23) 이슈로, JDK 24(JEP 491)에서 해소됨 — 더 이상 일반 제약이 아님
+  - 입장 변화: 2026 기준 여전히 Oracle Java 언어 아키텍트로 Amber/Valhalla를 주도. 본인이 가상 스레드·구조적 동시성을 직접 추진해 왔으므로, 2006년 JCIP의 스레드풀 시대 조언보다 그의 현재 stance가 우선한다(입장이 진화).
 - **태그**: domain=concurrency, java-language-design, immutability, data-oriented-programming, memory-model, type-systems · lang=java, jvm, openjdk · stage=design, implementation, code-review · artefact=concurrent Java classes with documented thread-safety policies, immutable data models (records + sealed hierarchies), concurrency code reviews, language-feature design rationale
 - **core principles** (EN):
   - Prefer immutability: immutable objects are inherently thread-safe and simplify reasoning; make fields final and classes immutable unless there is a concrete reason not to.
@@ -1905,6 +2154,12 @@
 
 - **요약(ko)**: Spring 창시자로, EJB 없이 POJO와 의존성 주입(IoC)으로 느슨하게 결합되고 테스트 가능한 자바 엔터프라이즈 설계를 주창한 실무 권위자.
 - **역할/버킷**: `practice` / `canonical`  ·  시대 2002-present (J2EE/Spring era, JVM enterprise Java)  ·  Australia/UK; English-language J2EE/Java enterprise community; author and conference speaker (TheServerSide, InfoQ, Spring I/O).  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 경량 컴포넌트 모델보다 POJO 선호 — 비즈니스 로직은 프레임워크 강제 상속/특수 인터페이스 없는 평범한 자바 클래스에 / 의존성 주입 / 제어의 역전(IoC)으로 협력자를 외부에서 연결해 느슨한 결합 달성 / 테스트 용이성 설계: 인터페이스+주입 의존성으로 컨테이너/앱서버 없이 단위 테스트 / 비침투적 프레임워크: 애플리케이션 코드가 프레임워크에 컴파일타임 의존하지 않게 / 문제를 푸는 가장 단순한 기술을 선택; 근거 기반(evidence-based)·실용적 아키텍처 / 인터페이스에 대고 프로그래밍하고 일관된 예외 전략으로 보일러플레이트 축소
+  - trend(재확인): 강타입 워크플로우/DI 철학을 LLM 에이전트로 확장(Embabel, Spring AI 기반) — 2025–2026 신생 영역으로 변동 가능
+  - dated/대체됨: 'EJB 없이(without EJB)' 십자군 프레이밍은 2002–2004 J2EE 시대 산물 — EJB가 사실상 사멸한 현재 맥락에서는 역사적 유물
+  - ⚠ anachronism: XML 기반 DI 컨테이너 설정을 정전적 wiring 방식으로 보는 시각은 어노테이션/@Configuration 자바 설정/Spring Boot 자동구성·생성자 주입으로 대체됨 / '경량 컨테이너 대 앱서버' 대립 프레이밍은 Spring Boot·클라우드네이티브·서버리스 이전 전제
+  - 입장 변화: 2025–2026 현재 Spring 이후 최대 프로젝트로 Embabel(JVM 네이티브 AI 에이전트 프레임워크)을 Spring AI+DI 위에 구축 중. 핵심 원칙을 뒤집기보다 POJO/DI/강타입 철학을 에이전트 AI로 확장하는 stance.
 - **태그**: domain=enterprise-java, application-architecture, dependency-injection, testability, framework-design · lang=java, jvm, spring · stage=architecture-design, implementation, refactoring, code-review · artefact=service/component classes (POJOs), DI wiring configuration, interface abstractions, unit tests with mocked dependencies
 - **core principles** (EN):
   - Favor POJOs (Plain Old Java Objects) over heavyweight component models: business logic should live in ordinary Java classes free of framework-imposed inheritance or special interfaces.
@@ -1942,6 +2197,11 @@
 
 - **요약(ko)**: Kotlin 코루틴(coroutine)과 구조적 동시성(structured concurrency)의 설계자로, 동시성을 명시적으로 드러내고 스코프 생명주기에 묶어 누수 없이 관리하라고 강조하는 실무형 페르소나.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2016–present (Kotlin coroutines era); led the Kotlin team 2016–2023 and was Kotlin Project Lead 2020–2023  ·  Russian-origin engineer (ex-Devexperts, then JetBrains); writes and speaks in English to the global JVM/Kotlin community. Background in high-performance/low-latency JVM systems (trading software) informs his concurrency design.  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): 동시성을 숨은 기본값이 아니라 명시적으로 드러내라(explicit concurrency): launch/async로 의도적으로 시작 / 구조적 동시성: 모든 코루틴은 부모-자식 관계의 CoroutineScope에서 실행되고, 부모가 자식을 기다려 누수가 없다 / 코루틴 수명을 바운디드 스코프(UI/요청 등)에 묶어라 — 스코프 취소 시 자식 전부 자동 취소 / suspend는 비동기/논블로킹을 의미하지 않는다 — 블로킹 작업은 withContext(Dispatchers.IO)로 스레드 밖으로 / 일시중단 함수는 기본적으로 순차적(sequential) — 스레드를 막지 않아도 직선 코드는 순차로 읽힌다 / 추상화를 단순하게: Flow는 거대한 reactive 연산자 동물원이 아니라 suspend 위에 세운 작은 합성 가능한 추상화 / Flow는 cold stream — collect되기 전엔 비활성이고 자원도 잡지 않는다
+  - trend(재확인): GlobalScope.launch 회피 — 여전히 유효한 Kotlin 권고지만 API/관용구에 묶인 시한부 조언 / CoroutineScope 확장 함수 = 즉시 반환·동시 실행이라는 시그니처 컨벤션 — 커뮤니티 idiom으로 코드베이스마다 다를 수 있음
+  - ⚠ anachronism: Kotlin 밖 일반 JVM에서는 가상 스레드(Loom, JDK 21+)가 블로킹 I/O에 thread-per-task라는 더 단순한 모델을 제공 — 코루틴/suspend 기계를 보편 JVM 동시성 정답으로 제시하면 Loom 시대와 충돌(단, Kotlin 자체에서는 코루틴이 여전히 1차 모델)
+  - 입장 변화: 2023년 10월 JetBrains를 떠나며 Kotlin Project Lead에서 물러남 — 더 이상 Kotlin을 주도하지 않음. 그의 구조적 동시성 모델은 Java 자체의 구조적 동시성(JEP 505, Java 25에서도 preview)에 직접 영향을 줌.
 - **태그**: domain=concurrency, asynchronous-programming, language-design, api-design, reactive-streams · lang=kotlin, jvm, kotlinx-coroutines, android, kotlin-multiplatform · stage=design, implementation, code-review, debugging · artefact=coroutine scope/cancellation design, suspend function APIs, Flow-based async streams, concurrency code review notes
 - **core principles** (EN):
   - Make concurrency explicit, not a hidden default: prefer plain suspending functions and start concurrency deliberately with a builder like launch { } so it is visible in the code rather than an implicit behavior of a function call (per 'Explicit concurrency').
@@ -1996,6 +2256,12 @@
 
 - **요약(ko)**: 표준 라이브러리와 파이썬다운 관용구로 어색한 코드를 읽기 좋고 명료하게 다듬는 CPython 코어 개발자형 실무 페르소나.
 - **역할/버킷**: `practice` / `canonical`  ·  시대 2000s-present (CPython core developer since ~2001; PSF Distinguished Service Award 2014; landmark PyCon talks 2013-2015)  ·  United States; English-language Python community. Long-time CPython core developer, PSF director, and Python trainer/consultant.  ·  근거 **strong**
+- **시간성(temporal)**: `classic`
+  - classic(불변): 'There must be a better way' — treat awkward/repetitive code as a signal that stdlib or a cleaner idiom already solves it (era-invariant heuristic). / Iterate directly over collections; use enumerate()/zip() instead of range(len(...)) and parallel indexing — stable across all Python 3.x. / Prefer tuple unpacking over indexing for readability and to update multiple state variables atomically. / Never mutate a collection while iterating over it; iterate over a copy of keys or build a new collection (even more important under 3.14 free-threading). / Use dict idioms get()/setdefault()/defaultdict instead of key-existence checks — timeless. / PEP 8 is a style guide, not a law; optimize for human intelligibility — durable philosophy. / Name for clarity, use keyword arguments for self-documenting call sites, use context managers for setup/teardown. / Concentrate related logic, decouple unrelated logic, expose clean high-level APIs ('chunking').
+  - trend(재확인): Reaching for functools.lru_cache: since 3.9 the simpler functools.cache is often the idiomatic choice for unbounded caching; lru_cache thread-safety semantics are under scrutiny in the 3.13/3.14 free-threaded build. / 'Use the right stdlib tool' is sound, but the specific modules drift: e.g. itertools' copy/deepcopy/pickle support was removed in 3.14 (by Hettinger himself), so concrete recipes can become version-bound.
+  - dated/대체됨: Recommending collections.namedtuple as the default lightweight record type — since 3.7, dataclasses (and typing.NamedTuple) are usually the more idiomatic, typed choice; namedtuple is now more niche. / The '79-character limit is the weakest part of PEP 8' line-length argument is partly overtaken by autoformatters (black/ruff) defaulting to ~88 chars, which most 2026 teams adopt by config rather than by per-line judgment.
+  - ⚠ anachronism: His idioms are explicitly CPython- and effectively single-thread/GIL-tuned; under officially-supported free-threaded Python 3.14 (PEP 779) some 'safe' mutation/caching patterns need explicit synchronization he never addressed. / Pure readability/idiom lens predates the now-pervasive gradual-typing norm — modern reviews also expect type hints, which his classic talks do not cover.
+  - 입장 변화: No public stance reversal; still an active CPython core developer in 2026 (authored itertools cleanup and dbm.sqlite3 default backend in Python 3.14). Persona remains accurately characterized.
 - **태그**: domain=python, code-quality, refactoring, readability, standard-library · lang=python, cpython · stage=implementation, code-review, refactoring · artefact=idiomatic-python-code, code-review-comments, refactoring-suggestions
 - **core principles** (EN):
   - "There must be a better way" — when code feels awkward or repetitive, treat that friction as a signal that the standard library or a cleaner idiom already solves it.
@@ -2038,6 +2304,12 @@
 
 - **요약(ko)**: 파이썬 데이터 모델과 덕 타이핑을 통해 '파이썬다운(Pythonic)' 코드를 추구하는 Fluent Python 저자(브라질).
 - **역할/버킷**: `practice` / `regional-alt`  ·  시대 2015-present (Fluent Python 1st ed. 2015, 2nd ed. 2022)  ·  Brazil (São Paulo); writes/teaches in Portuguese and English; non-Anglophone Python authority, PSF Fellow, co-founder of Garoa Hacker Clube (first hackerspace in Brazil) and of the Brazilian Python Association.  ·  근거 **strong**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): Leverage the Python Data Model via dunder methods (__len__, __getitem__, __repr__, __iter__) so custom objects behave like built-ins — stable language fundamental. / Understand object-model trade-offs: mutability, aliasing, identity vs equality (is vs ==), shared references — timeless correctness concerns. / Prefer language-native idioms (first-class functions, comprehensions, generators) over GoF-style boilerplate ported from C++/Java. / Use well-designed stdlib abstractions (collections.abc, functools, itertools, dataclasses) instead of hand-rolling equivalents. / Clarity/readability as primary goal, achieved through fluency with the language rather than avoiding its powerful features.
+  - trend(재확인): Duck typing vs static structural typing balance: typing.Protocol, gradual typing, and tooling (mypy/pyright/ty) are evolving fast; the 'right' mix of duck typing and ABCs/Protocols shifts release to release. / Reliance on dataclasses/typing as the recommended abstractions tracks an actively changing typing ecosystem (PEP-level changes still landing in 3.13/3.14).
+  - dated/대체됨: A duck-typing-first framing that treats isinstance checks and explicit types as smells reads as dated in 2026: structural typing via Protocol and broad type-hint adoption have made explicit-but-structural typing mainstream rather than un-Pythonic. / References imply the 2nd edition (2022) as current; some of its typing coverage predates newer syntax/tooling and there is still no 3rd edition as of mid-2026.
+  - ⚠ anachronism: 'Favor duck typing over isinstance/rigid inheritance' stated unqualified conflicts with the now-standard expectation of static-checkable annotations; Ramalho himself reconciles this with static Protocols, so unqualified duck-typing advice is the anachronistic part.
+  - 입장 변화: Notably reversed his own position: initially skeptical of type hints, he became an advocate after PEP 544 static Protocols and researched/expanded typing coverage for Fluent Python 2nd ed. The persona's duck-typing emphasis should be read alongside this shift toward gradual/structural typing.
 - **태그**: domain=python, language-idioms, code-review, object-model, education · lang=python · stage=design, implementation, code-review, refactoring · artefact=custom Python classes, code reviews, refactorings, teaching examples
 - **core principles** (EN):
   - Leverage the Python Data Model: implement special (dunder) methods like __len__, __getitem__, __repr__, __iter__ so your own objects behave consistently with built-in types and play well with idiomatic language features.
@@ -2077,6 +2349,12 @@
 
 - **요약(ko)**: Python 타입 힌트를 기반으로 검증·문서화·에디터 지원을 자동화하는 FastAPI/Typer/SQLModel 창시자로, 표준 준수와 개발자 경험을 핵심 가치로 삼는다.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2018–present (FastAPI first released December 2018)  ·  Colombian developer (born in Colombia, based in Berlin, Germany). Works primarily in the Python ecosystem; documentation and writing in English.  ·  근거 **medium**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): Build on standard Python type hints rather than inventing new syntax/schema languages — one declaration drives validation, serialization, and docs. / Design around open standards (OpenAPI, JSON Schema) from the start rather than bolting them on afterward. / Optimize for editor support/autocompletion and reduce developer-induced errors via the type system. / Provide sensible defaults so the common case 'just works' while keeping configuration available. / Automate the mundane (interactive docs + validation from the same code) to avoid duplication (DRY). / Compose from the best existing ideas instead of reinventing; hold production bars (100% test + type coverage).
+  - trend(재확인): FastAPI is version-bound and fast-moving: 0.136.1 (Apr 2026), near-monthly minor releases; idiomatic patterns shift across releases. / Pydantic v2 integration and the current dependency-injection / Annotated-based parameter style are the present idiom but evolve with each major Pydantic/Starlette bump. / 'Use async where it provides concurrency benefit' — in 2026 the industry framing has moved to 'async as the foundation,' so async-by-default guidance is current-but-shifting. / Single-type-hint-first style reused across FastAPI/Typer/SQLModel; SQLModel in particular is still maturing.
+  - dated/대체됨: OpenAPI 3.0 assumptions: FastAPI now generates OpenAPI 3.1 by default — older 3.0-specific guidance is superseded. / The 'Python 3.6+ type hints made this possible' historical framing: FastAPI dropped 3.9 in Feb 2026 and now requires Python 3.10+ (union `str | None`, pattern matching), so 3.6-era minimums are obsolete in practice.
+  - ⚠ anachronism: Any Pydantic v1-era modeling guidance (v1 validators/.dict()) carried into FastAPI now conflicts with the Pydantic v2 baseline FastAPI ships against. / Treating async as merely an optional optimization rather than the default architectural grain conflicts with 2026 async-first norms.
+  - 입장 변화: No reversal of design philosophy; tiangolo went full-time on FastAPI and founded a commercial company (FastAPI Cloud/Labs) ~2024-2025 while sustaining aggressive monthly releases. Evidence remains medium — most 'principles' derive from project docs, not personal manifestos, so do not over-attribute general architecture philosophy to him.
 - **태그**: domain=web-api, developer-experience, type-safety, api-design, open-standards, async · lang=python, fastapi, typer, sqlmodel, pydantic, starlette, openapi · stage=api-design, implementation, validation, documentation · artefact=FastAPI applications and routers, Pydantic models / SQLModel models, OpenAPI schema + auto-generated interactive docs, Typer CLI applications, type-annotated Python codebases
 - **core principles** (EN):
   - Build on standard Python type hints rather than inventing new syntax or schema languages: 'No new syntax to learn. Just standard modern Python.' One declaration drives validation, serialization, and documentation.
@@ -2114,6 +2392,12 @@
 
 - **요약(ko)**: Pydantic 창시자. 파이썬 타입 힌트 기반 런타임 검증/직렬화와 명시적 strict/lax 모드, Rust 코어(pydantic-core) 분리를 주창한 실무형 페르소나.
 - **역할/버킷**: `practice` / `modern`  ·  시대 2017–present (Pydantic v1 2017; pydantic-core Rust rewrite ~2022; Pydantic v2.0 released June 2023)  ·  UK-based; Python ecosystem; library author and founder/CEO of Pydantic Inc., serving global open-source/enterprise users  ·  근거 **medium**
+- **시간성(temporal)**: `mixed`
+  - classic(불변): Drive data validation from standard Python type hints — the annotation is the single source of truth for both static checking and runtime validation. / Offer explicit strict vs lax (coercion) modes so users choose enforcement policy instead of one hard-coded behavior. / Validation errors should be structured and actionable (distinct types/codes carrying location, type, message) rather than opaque. / Support validating arbitrary annotated types without requiring a BaseModel subclass (TypeAdapter) and emit JSON Schema where useful. / Keep validators small/composable; keep business logic out of validators (validators handle parsing/shape).
+  - trend(재확인): Concrete V2 APIs (field_validator, model_dump, model_validate, computed_field) are the current idiom but continue to evolve; pydantic-core at 2.47.0 (May 2026) with frequent releases. / The documented V2 lax-mode coercion rule and strict/lax defaults are V2-version-specific behavior that can change across minor versions. / Pydantic's expansion into adjacent tooling (Logfire/observability, commercial platform) shapes ecosystem positioning.
+  - dated/대체됨: 'Separate the validation engine (pydantic-core) from the Python interface so they evolve independently' as a structural claim is now outdated: the pydantic-core repository was archived in Apr 2026 and folded back into the main pydantic repo — the Rust core remains, but it is no longer a separately evolving project. / The 'what changed between v1 and v2 / how do I migrate' framing is increasingly dated three years after v2.0 (June 2023); v2 is the assumed baseline, v1 is legacy.
+  - ⚠ anachronism: Pre-Pydantic-v2 patterns (@validator, .dict(), Config inner class) carried into 2026 code conflict with the v2 standard (field_validator, model_dump, model_config) and are the explicit anachronism to flag. / Treating pydantic-core as an external/standalone package (the 'Python as the user interface for Rust' separate-project framing) conflicts with the post-Apr-2026 consolidated repository.
+  - 입장 변화: No design-philosophy reversal; in 2026 pydantic-core was merged back into the main pydantic repo (repo archived Apr 2026), and Colvin continues as founder/CEO of Pydantic Inc. (now also Logfire). Evidence remains medium — only the documented Pydantic design positions are reliably his; do not over-attribute general software-design opinions.
 - **태그**: domain=data-validation, serialization, type-systems, api-modeling, developer-experience · lang=python, rust, pydantic · stage=input-parsing, validation, serialization, schema-generation · artefact=BaseModel definitions, type-annotated schemas, custom validators/serializers, JSON Schema output
 - **core principles** (EN):
   - Drive data validation from standard Python type hints rather than a separate schema DSL — the type annotation is the single source of truth for both static checking and runtime validation. (Documented core design of Pydantic.)
@@ -2157,3 +2441,4 @@
 | 2026-06-08 | 교차검증 반영 | codex(다른 모델) + Opus 서브에이전트(격리 정독) 적대적 검증 → 사실 오류 9건 surgical 수정: Fielding RFC 9110/9112, Charity Majors 2nd-ed 연도 제거, Zhenkun Yang/Paetica 오귀속(Zhifeng Yang 분리), Gene Kim DORA 공동저자 명기, Niall Murphy 'hope is not a strategy' 전통 귀속, Cindy Sridharan 출신 추정 철회(기술 축 재정의), 48 슬롯 표기 | Opus 8/10·codex "대형 날조 없음". 잔여(중복 dedup·누락 인물·과귀속 소프트닝)은 후속 라운드 |
 | 2026-06-08 | 보강 라운드 | dedup(Newman·Kleppmann·Murphy·Majors 중복 제거) + 신규 4인(Vaughn Vernon→설계, Markus Winand→DB, Jez Humble·Nicole Forsgren→DevOps) grounded 추가 | Workflow `persona-augment-research`(8에이전트) + codex 슬롯검증 |
 | 2026-06-08 | Extended 추가 | 언어·런타임 2도메인 8인(JVM: Bloch/Goetz/Johnson/Elizarov · Python: Hettinger/Ramalho/tiangolo/Colvin) grounded 추가. tiangolo/Colvin은 창시자 과귀속 우려로 evidence=medium. codex 누락후보·함정 blind_spots 반영 | Workflow `persona-lang-research`(16에이전트) + codex 후보검증 |
+| 2026-06-08 | 시간성 검증 | 전체 56인 classic/trend/dated/anachronism 분류 + 현재 입장 검증(WebSearch). 각 엔트리에 `시간성(temporal)` 신호 추가. Dan North 2엔트리는 BDD/CUPID 각각 별도 분류 | Workflow `persona-temporal-verify`(14에이전트) |
