@@ -52,6 +52,9 @@ Claude Code가 즉흥적으로 코드를 만지지 않고, **계획 → 합의 �
 | `review-worker.md` | 코드리뷰 게이트(X4.5) 리뷰 워커 프롬프트 (spec compliance) |
 | `test-design-worker.md` | 테스트 설계 워커(X4-T) 프롬프트 (impl diff 미열람) |
 | `persona-library.md` | 도메인별 named-expert 렌즈 라이브러리 (성장형) |
+| `definition.md` | (B2.5) 경계×불변식·계약·실패의미론 정의 — 대/고위험·데이터 선택 산출물 |
+| `domain-contracts.md` | 반복 불변식 횡단 카탈로그 (대상 프로젝트, 승격 기준 통과분만) |
+| `measurement-log.md` | 작업당 측정 로그 (E축 — 1개월 뒤 P3 결정 데이터) |
 
 ---
 
@@ -205,6 +208,7 @@ claude_study/
 | 10 | **codex(GPT-5.5) 모델 교차 검증 통합** (2026-05-14) — 전 파이프라인 X.6 모델 교차 검증 + B3/B5 codex 검토 의무 + 5.7 보안 게이트 + `codex-prompt.md`/`research.md` 템플릿. 토론/설계도 codex 의무 |
 | 11 | **한달 usage report 반영 — 추가+감축+구조 균형** (2026-06-05) — CLAUDE.md 반복실패 방지 규칙 / orchestration 2.4 작업기준 게이트 / impl **5.8 페이즈 게이트**(중·대규모 master+phase 분리) + 위험 승격 + 소/중/대 문서강도(감축) + 6.6 데이터 특칙 / canonical(root=원본·dist=산출물·build.sh). over-scoping 1위 마찰 처방. 상세 `docs/plans/2026-06-05/usage-report-개선반영/` |
 | 12 | **멀티워커 오케스트레이션 — 코드리뷰 가이드레일 확장** (2026-06-08) — impl 1.2 규모 사용자 오버라이드+위험 하한 / **5.9 코드리뷰 게이트(X4.5)** spec compliance / **6.7 테스트 설계 분리(X4-T)** impl 미열람 / agent **12절** 페르소나 캐스팅 디렉터·소유권 절단선·named-expert 렌즈·페르소나 라이브러리·opt-in 3단계 + templates 4종. 메인=캐스팅 디렉터, 페르소나=커버리지/codex=독립성. analyze 시리즈(open-code-review 분석)에서 도출 + codex 교차검증. 상세 `docs/08-멀티워커-오케스트레이션-설계안.md` |
+| 13 | **실용성 재평가 → stakes 비례 재설계 착수** (2026-06-09) — `/insights` 토론에서 출발해 하네스 실용성을 codex 다회 교차 평가. 진단: 뼈대는 견고하나 상시 codex 의무·멀티워커 페르소나·페이즈 문서 폭발은 "솔로에 이식된 팀 프로세스"로 과조정. **B2.5 정의 게이트** 신설 + **재설계 P1+P2**(측정 E·stakes·승격 G·최소안전선 H) + **codex 리서치 역할 재정의**(검증→선택지 보강, 빈도 불변). A(codex 빈도↓)·C(페이즈문서↓)·D(페르소나 분리)는 **1달 측정 후** `docs/14`로 결정. 핵심 원칙: "학습 스캐폴드≠프로덕션 게이트", "하네스는 성장할수록 줄어드는 비계". codex 6회 교차검증. 상세 `docs/09`~`14` |
 
 상세는 `docs/HISTORY.md` 참조.
 이번 분석 보고서: `docs/analysis/2026-05-08-llm-usage-feedback.md`.
@@ -215,6 +219,10 @@ claude_study/
 
 | 날짜 | 변경 | 비고 |
 |------|------|------|
+| 2026-06-09 | **측정 기록(7.4) 배선** — 7.1 피드백 행동 목록 + 11 셀프체크에 "measurement-log 1행 기록" 연결(건너뛰기 방지) | Phase 13 |
+| 2026-06-09 | **리서치 codex 역할 재정의** — 검증 관문 → 선택지 보강·체크리스트 추출(빈도 불변, 소비 방식만). impl B1.6·agent 11.2·codex-prompt"2" | `docs/14` §6 |
+| 2026-06-09 | **재설계 P1+P2** — 측정(E)·stakes 분류·승격(G)·최소안전선(H) 추가. A축(codex 빈도↓)·C·D는 측정 후 | `docs/11`~`14` |
+| 2026-06-09 | **B2.5 정의 게이트 신설** + `definition.md`·`domain-contracts.md` 템플릿 (재설계상 추후 3문항 체크로 격하 예정 — 재귀 위험 실증) | `docs/09`·`10` |
 | 2026-06-08 | **페르소나 라이브러리 시간성 검증** — 전체 56인에 classic/trend/dated/anachronism + 현재 입장 분류(WebSearch ground). Evans 2024 LLM·Ousterhout anti-TDD·Vernon pre-Loom·Fielding HATEOAS 등. dan-north 중복 id 해소. | Workflow `persona-temporal-verify`(14). `docs/plans/2026-06-08/멀티워커-오케스트레이션-구축/persona-library-extension-temporal.md` |
 | 2026-06-08 | **페르소나 라이브러리 언어 Extended 추가** — JVM(Bloch/Goetz/Johnson/Elizarov)+Python(Hettinger/Ramalho/tiangolo/Colvin) 2도메인 8인. 창시자 tiangolo·Colvin evidence=medium. 총 56인/14도메인. | Workflow `persona-lang-research`(16) + codex 후보검증 |
 | 2026-06-08 | **페르소나 라이브러리 교차검증+보강** — codex+Opus 적대적 검증(사실오류 9건 수정) + dedup(중복 4인)+신규 4인(Vernon/Winand/Humble/Forsgren). | `persona-library-verification.md` |
