@@ -20,7 +20,7 @@ v2(2026-06-10, Fable 5)는 v1의 "절차를 촘촘히 강제하는 외골격"을
 ## 구성 요소
 
 ```
-claude_study/
+claude-code-harness/
 ├── CLAUDE.md                  # 부트스트랩 (상시 ①)
 ├── core.md                    # 규칙 본체 (상시 ②) — 기준·테스크 상태·파이프라인·stakes·매핑·불변 정책
 ├── dimensions.md              # 개발 차원 지도 (정의 게이트마다) — 14차원 트리아지 표 + 단계 질문(P/I/V) + stakes 도출 + 질문 보정 루프
