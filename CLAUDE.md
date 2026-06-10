@@ -8,4 +8,4 @@
 4. 산출물은 대상 프로젝트의 `docs/plans/YYYY-MM-DD/작업명/`에 저장한다. 기본 `task.md` 1파일.
 
 ## 경로 규칙
-- 이 파일·`core.md`·`templates/`는 같은 디렉토리에 있다. 실제 작업 대상은 Claude가 호출된 프로젝트 디렉토리다.
+- 이 파일·`core.md`·`dimensions*.md`·`templates/`·`playbooks/`는 같은 디렉토리에 있다. 실제 작업 대상은 Claude가 호출된 프로젝트 디렉토리다.
