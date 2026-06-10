@@ -1,194 +1,74 @@
-# Claude Code 오케스트레이션 시스템
+# Claude Code 작업 하네스 (v2)
 
-Claude Code가 즉흥적으로 코드를 만지지 않고, **계획 → 합의 → 구현 → 검증 → 학습**을 거치도록 강제하는 설정 패키지.
+Claude Code가 즉흥적으로 산출물을 만지지 않고, **정의 → 계획 → 개발 → 검증 → 기록**을 거치도록 하는 설정 패키지.
+v2(2026-06-10, Fable 5)는 v1의 "절차를 촘촘히 강제하는 외골격"을 **"판단 기준을 제공하는 단일 핵심 문서 + 강제가 필요한 곳만 훅/네이티브 도구"**로 전면 개편한 버전이다.
 
 ---
 
 ## 핵심 철학
 
-스킬 매뉴얼(언어/프레임워크별 코드 예시)을 외부 문서로 두는 방식은 폐기했다. 이유:
-
-- LLM이 이미 아는 일반론(Spring Boot, React, K8s 등의 표준 패턴)을 외부 문서로 다시 적어두면 토큰만 낭비된다.
-- 진짜 가치 있는 건 **이 프로젝트의 컨텍스트**(`docs/guide/`, 기존 코드 패턴)와 **이 작업의 산출물**(plan/context/checklist/learned)이다.
-- 그래서 시스템은 "언제, 어떤 산출물을, 어떤 순서로, 누구의 승인 하에 만드는가"만 강제한다. 코드 패턴 자체는 강제하지 않는다.
+1. **상시 선독은 core 하나.** 세션마다 읽는 규칙은 `CLAUDE.md`(11줄, 부트스트랩) + `core.md`(~200줄)뿐. 나머지는 트리거 시에만 읽는 조건부 문서다. (v1: 매 구현 세션 ~50k 토큰 선독)
+2. **모드가 아니라 테스크 상태.** 토론/구현 라우팅을 없애고, 작업은 [탐색 중] ↔ [정의됨] 두 상태만 가진다. 경계는 발화 동사가 아니라 **명확도 6칸**(목표·대상 / 경계·불변식 / 기준소스 / 금지영역 / 검증 방법 / stakes)의 충족 여부다.
+3. **검증은 stakes 비례.** stakes(틀렸을 때 손실·낯섦·모호성·불가역 — "변경 크기" 아님)가 외부 검색·codex 교차 검증·워커 분리·산출물 강도를 정한다. 균일 의무는 없되, 머지 전 최소 안전선은 stakes 무관 항상.
+4. **정책은 남기고 보상은 버린다.** 사용자 권한·책임 경계(승인 게이트·기준소스 확정·금지영역)는 모델 무관 유지. 구모델 약점 보상 규칙(전부 읽기 강제·단계 상태머신·페르소나 라이브러리)은 제거. 규칙 증감은 측정(`measurement-log`) 근거로만.
+5. **절단은 구조로.** 생성≠검증(테스트 설계는 구현 diff 미열람, 리뷰는 구현자와 분리)을 산문 규칙이 아니라 **네이티브 서브에이전트의 컨텍스트 격리**로 집행한다. 대규모 fan-out은 Workflow 도구(opt-in).
+6. **learned.md는 제품이다.** 사용자가 구현을 따라가지 못한 부분을 공부하는 학습 산출물 — 프로세스 기록이 아니므로 간소화 대상이 아니다. 트리거는 stakes가 아니라 학습 가치.
 
 ---
 
 ## 구성 요소
 
-### 핵심 파일 (5개)
-| 파일 | 역할 |
-|------|------|
-| `CLAUDE.md` | 진입점. 세션 시작 시 자동 로드, `orchestration.md`로 안내 |
-| `orchestration.md` | 라우터. 모드 판단 + 분기 + 공통 규칙 |
-| `orchestration-impl.md` | 구현 오케스트레이션. 서브 파이프라인(버그/기능/리팩토링) + 산출물 규칙 + 보안 체크리스트 |
-| `orchestration-discuss.md` | 토론/학습/설계 오케스트레이션. 자유 대화 + 서브 모드 |
-| `orchestration-agent.md` | 서브 에이전트 운용 가이드. 판단 기준 + 실행 규칙 |
-
-### 훅 (hooks/)
-| 파일 | 이벤트 | 역할 |
-|------|-------|------|
-| `prompt-guard.sh` | UserPromptSubmit | 매 프롬프트 제출 시 모드별 리마인더 표시 (구현: 파이프라인 단계, 토론: 간단 표시) |
-| `stage-transition.sh` | (수동 호출) | 모드/단계 전환 유틸리티 (`discuss`, `1`~`5`) |
-| `git-guard.sh` | PreToolUse(Bash) | `git push` / docs-only `git commit`을 명시 요청 키워드 시에만 통과 + **Claude/Codex trailer 차단** + code/docs 혼합 commit **경고** |
-| `scope-guard.sh` | PostToolUse(Edit\|Write) | **warn-only** — 작업 트리에 docs+code 변경이 함께 있으면 스코프 보존 경고 (세션당 1회) |
-| `session-context-loader.sh` | SessionStart | 세션 시작 시 cwd의 `docs/plans/<최근 날짜>/<최근 작업>/` plan/context/checklist 요약 자동 출력 |
-
-> 훅이 막거나 환경 마찰(codex stdin·token limit·rate limit) 발생 시 해석 절차: `docs/runbooks/hook-failure.md`.
-
-### 템플릿 (templates/)
-| 파일 | 용도 |
-|------|------|
-| `plan.md` | 구현 계획서 (변경 대상/금지 영역/참고 코드/트레이드오프/구현 순서) |
-| `context.md` | 프로젝트 맥락 + 결정 근거 + 금지 영역 |
-| `checklist.md` | 단계별 체크리스트 + 수정 기록 |
-| `learned.md` | 작업 후 학습 기록 (라이브러리/함수/패턴/테스트) — 규모별 조건부(소규모 5줄) |
-| `learned-example.md` | learned.md 작성 기대 수준 예시 |
-| `master-plan.md` | 대규모 마스터 계획 (페이즈 분해 + 의존성 + acceptance) |
-| `phase-plan.md` | 페이즈별 계획 (목표/변경파일/검증명령/되돌릴 범위) |
-| `codex-prompt.md` | codex 교차 검증 표준 프롬프트 5종 + 보안 게이트 |
-| `research.md` | 리서치 산출물 (Claude 분석 + 외부 큐레이션 + codex 교차) |
-| `persona-contract.md` | 멀티워커 페르소나 계약 (볼것/안볼것/산출물 형식) |
-| `review-worker.md` | 코드리뷰 게이트(X4.5) 리뷰 워커 프롬프트 (spec compliance) |
-| `test-design-worker.md` | 테스트 설계 워커(X4-T) 프롬프트 (impl diff 미열람) |
-| `persona-library.md` | 도메인별 named-expert 렌즈 라이브러리 (성장형) |
-| `definition.md` | (B2.5) 경계×불변식·계약·실패의미론 정의 — 대/고위험·데이터 선택 산출물 |
-| `domain-contracts.md` | 반복 불변식 횡단 카탈로그 (대상 프로젝트, 승격 기준 통과분만) |
-| `measurement-log.md` | 작업당 측정 로그 (E축 — 1개월 뒤 P3 결정 데이터) |
-
----
+```
+claude_study/
+├── CLAUDE.md                  # 부트스트랩 (상시 ①)
+├── core.md                    # 규칙 본체 (상시 ②) — 기준·테스크 상태·파이프라인·stakes·매핑·불변 정책
+├── playbooks/                 # 조건부 (트리거 시만 읽음, 각 ≤80줄)
+│   ├── orchestration.md       #   메인=관리감독, 워커 위임·브리핑·절단 계약·렌즈·Workflow
+│   ├── implementation.md      #   읽기·범위 통제·예외처리 일관성·페이즈/커밋 규율
+│   └── verification.md        #   stakes 비례 회귀·예외 경로 테스트·플로우 디버깅(API/서비스 간/비동기)·데이터 특칙
+├── templates/
+│   ├── task.md                #   기본 산출물 1파일 (정의+계획+검증+기록)
+│   ├── definition.md          #   높은 stakes 정의 (경계×불변식×실패 의미론, 애매성 0)
+│   ├── master-plan.md         #   높은 stakes 다단계·대규모 (task.md 대체)
+│   ├── phase.md               #   페이즈 3파일 양식 (spec/changes/gate)
+│   ├── learned.md (+example)  #   학습 기록 풀 10항목 — 사용자 공부용 제품 산출물
+│   └── measurement-log.md     #   작업당 측정 1행 (규칙 증감의 근거 데이터)
+├── hooks/                     # git-guard(push·docs커밋 가드) + scope-guard(docs/code 혼합 경고)
+├── settings.json              # 훅 2종 배선
+├── archive/2026-06-10-opus-harness/   # v1 전체 보존 (4문서·템플릿 16종·훅 5종·build/install)
+└── docs/                      # 설계 이력 (08~14 + HISTORY + plans)
+```
 
 ## 작업 흐름
 
-### 모드 판단 (매 세션 시작)
 ```
 사용자 입력
-    │
-    ▼
-orchestration.md (라우터)
-    │
-    ├── "만들어줘/수정해줘/고쳐줘"  →  orchestration-impl.md
-    │   └── 유형 판단 (버그/기능/리팩토링) → 서브 파이프라인 진입
-    │       ├── 버그   : [조사]→[진단보고]→[수정계획]→[수정]→[테스트]→[피드백]
-    │       ├── 기능   : [리서치]→[이해확인]→[계획]→[구현]→[테스트]→[피드백]
-    │       └── 리팩토링: [현상분석]→[목표정의]→[계획]→[단계변환]→[회귀테스트]→[피드백]
-    │
-    └── "어떻게 생각해?/설명해줘/설계하자"  →  orchestration-discuss.md
-        └── 자유 대화 흐름
+  │
+  ├─ 산출물 변경 없음(토론·학습·설계) → 자유 진행 [탐색 중]
+  │    └─ 결론이 구현 입력이 되는 순간 실코드 재확인 / 고위험 결론은 확정 전 교차 검증
+  │
+  └─ 산출물 변경 → 정의 게이트(명확도 6칸 + 사용자 합의) [정의됨]
+       → 계획(사용자 승인) → 개발(절단: 구현 ∥ 테스트설계 → 리뷰) → 검증(stakes 비례) → 기록(측정 1행 + learned 판정)
 ```
 
-> **멀티워커 (중/대·고위험)**: `[구현] ∥ [테스트 설계(impl 미열람)]` → `[리뷰 게이트 X4.5]` → `[테스트]` 로 역할 분리(별도 워커). 메인 = **페르소나 캐스팅 디렉터**(역할형 + named-expert 렌즈). 페르소나=커버리지 / codex=독립성. 규모(사용자 지정 최우선)가 캐스팅 깊이를 결정(opt-in 3단계). 상세: `orchestration-agent.md` 12절 / `orchestration-impl.md` 5.9·6.7·1.2.
+| stakes | 외부 검색 | codex | 테스트설계/리뷰 | 산출물 |
+|--------|----------|-------|----------------|--------|
+| 낮음 | — | — | 셀프체크 | task.md (자명하면 채팅 대체 + 측정 1행) |
+| 중간 | 낯선 영역 | 반드시 1회 | 분리 패스 | task.md (+페이즈 절) |
+| 높음 | 의무 | 계획+최종 | 별도 워커 (diff 미열람 계약) | definition + task.md (다단계면 master-plan+phases) |
 
-### 모든 구현 작업의 산출물 (모든 규모)
-```
-docs/plans/YYYY-MM-DD/작업명/
-  ├── plan.md       # 변경 대상 + 금지 영역 + 트레이드오프
-  ├── context.md    # 결정 근거 + 시스템 구조 + 금지 영역
-  ├── checklist.md  # 단계별 체크리스트 + 수정 기록
-  └── learned.md    # 피드백 단계에서 작성
-```
+## 설치 / 배포
 
-### 패턴 참조 우선순위
-1. `docs/guide/` (프로젝트 가이드)
-2. 기존 코드 컨벤션 (일관성 우선)
-3. LLM 일반 지식 (사용자에게 선택지 제시)
-
----
-
-## 훅 동작 예시
-
-### 첫 프롬프트
-```
-╔══════════════════════════════════════════════════════════╗
-║  오케스트레이션 활성화                                     ║
-║  orchestration.md를 읽고 모드를 판단하세요                 ║
-║  [구현 모드] → orchestration-impl.md                      ║
-║  [토론 모드] → orchestration-discuss.md                   ║
-╚══════════════════════════════════════════════════════════╝
-```
-
-### 구현 모드 리마인더
-```
-── 파이프라인 [1.리서치] ── 다음: 분석 완료 → 2.계획으로 ──
->> 코드를 추론하지 마세요. 관련 파일을 전부 열어서 읽으세요.
-```
-
-### 단계/모드 전환
-```bash
-~/.claude/hooks/stage-transition.sh discuss  # 토론 모드
-~/.claude/hooks/stage-transition.sh 1        # 구현 1.리서치
-~/.claude/hooks/stage-transition.sh 2        # 구현 2.계획
-```
-
----
-
-## canonical 정책 (root vs dist)
-
-- **root** = 개발 원본. `CLAUDE.md`, `orchestration*.md`, `templates/`, `hooks/`, `settings.json`을 여기서 수정한다.
-- **dist/** = 배포 산출물. root를 복사한 것이며 `install.sh`가 `dist/`를 `~/.claude/`로 설치한다.
-- root를 수정하면 **반드시 `./build.sh`를 실행**해 dist/를 갱신한다. (root↔dist desync가 "반쪽 적용"의 원인이었음 — 2026-06-05 확정)
+배포 = repo 파일을 `~/.claude/`로 복사 (v1의 build.sh/dist 이중 구조 폐지):
 
 ```bash
-# root 수정 후
-./build.sh        # root → dist 동기화
+cp CLAUDE.md core.md ~/.claude/
+cp -r playbooks templates ~/.claude/
+cp hooks/*.sh ~/.claude/hooks/ && chmod +x ~/.claude/hooks/*.sh
+# settings.json은 기존 model 등 키를 보존하며 hooks 절만 반영
 ```
 
-## 설치
-
-### 다른 프로젝트에 설치
-```bash
-./build.sh                      # (root 수정했다면) dist 갱신
-./install.sh /path/to/my-project
-```
-
-### 수동 설치
-```bash
-# dist/ 내용을 대상 프로젝트의 .claude/ 에 복사
-cp -r dist/* /path/to/my-project/.claude/
-
-# 훅을 글로벌 위치에 복사
-cp dist/hooks/*.sh ~/.claude/hooks/
-chmod +x ~/.claude/hooks/*.sh
-
-# settings.json 에 훅 설정 추가
-cp dist/settings.json ~/.claude/settings.json
-```
-
----
-
-## 파일 구조
-
-```
-claude_study/
-├── README.md                       # 이 파일
-├── CLAUDE.md                       # 개발용 진입점
-├── orchestration.md                # 라우터
-├── orchestration-impl.md           # 구현 오케스트레이션
-├── orchestration-discuss.md        # 토론/학습/설계 오케스트레이션
-├── orchestration-agent.md          # 서브 에이전트 운용 가이드
-├── agent_orchestration.md          # 시스템 철학 가이드 (사람관리 = AI관리)
-├── install.sh                      # 설치 스크립트
-├── dist/                           # 배포 패키지 (install.sh가 복사하는 원본)
-│   ├── CLAUDE.md
-│   ├── orchestration*.md           # 4개 파일
-│   ├── settings.json               # 훅 설정 (UserPromptSubmit + PreToolUse + SessionStart)
-│   ├── hooks/
-│   │   ├── prompt-guard.sh         # 모드/단계 리마인더
-│   │   ├── stage-transition.sh     # 단계 수동 전환
-│   │   ├── git-guard.sh            # push/docs commit 가드 (Phase 9)
-│   │   └── session-context-loader.sh  # SessionStart 자동 컨텍스트 (Phase 9)
-│   └── templates/
-├── templates/                      # 원본 템플릿
-└── docs/
-    ├── HISTORY.md                  # 개발 히스토리
-    ├── phase1-structure.md
-    ├── phase2-bestpractices.md
-    ├── analysis/                   # 사용 패턴 분석 보고서 (Phase 9~)
-    │   └── 2026-05-08-llm-usage-feedback.md
-    └── plans/                      # 본 시스템 자체에 대한 작업 기록
-        └── YYYY-MM-DD/작업명/
-            ├── plan.md / context.md / checklist.md / learned.md
-```
+구 버전이 설치돼 있으면 먼저 `~/.claude/.backup-*/`로 이동한다 (2026-06-10 배포 시 수행됨).
 
 ---
 
@@ -196,40 +76,13 @@ claude_study/
 
 | Phase | 내용 |
 |-------|------|
-| 1 | 기본 구조 수립 (CLAUDE.md, orchestration.md, 템플릿) |
-| 2 | 스킬 문서 75개 작성 (5도메인 × 다중 스택 × 3규모) |
-| 3 | 보안 문서 작성 + 전체 검증 |
-| 4 | 오케스트레이션 고도화 (테스트 단계, 규모 통합, 프로젝트 진입 흐름) |
-| 5 | 배포 패키지 + install.sh |
-| 6 | 훅 시스템 (prompt-guard, stage-transition, settings.json) |
-| 7 | 모드 분리 (라우터 + 구현/토론/에이전트 문서 분리) + 에이전트 운용 가이드 |
-| 8 | **스킬 시스템 폐기** — `skills/`·`dist/skills/` 트리 전체 제거(~94k줄/150+ 파일, 양쪽 복사본 합산), 보안 체크리스트는 `orchestration-impl.md` §11로 인라인 흡수. 이유: LLM이 아는 일반론을 외부 문서로 두는 비용 > 가치 |
-| 9 | **30일 사용 분석 + Tier 1 가드 시스템화** (2026-05-08) — `git-guard.sh`(push/docs commit 차단), `session-context-loader.sh`(SessionStart 자동 컨텍스트 로드), 외부 큐레이션 의무화(B1.5 신설). 30일 누적 자연어 가드를 시스템 가드로 영구 해결 |
-| 10 | **codex(GPT-5.5) 모델 교차 검증 통합** (2026-05-14) — 전 파이프라인 X.6 모델 교차 검증 + B3/B5 codex 검토 의무 + 5.7 보안 게이트 + `codex-prompt.md`/`research.md` 템플릿. 토론/설계도 codex 의무 |
-| 11 | **한달 usage report 반영 — 추가+감축+구조 균형** (2026-06-05) — CLAUDE.md 반복실패 방지 규칙 / orchestration 2.4 작업기준 게이트 / impl **5.8 페이즈 게이트**(중·대규모 master+phase 분리) + 위험 승격 + 소/중/대 문서강도(감축) + 6.6 데이터 특칙 / canonical(root=원본·dist=산출물·build.sh). over-scoping 1위 마찰 처방. 상세 `docs/plans/2026-06-05/usage-report-개선반영/` |
-| 12 | **멀티워커 오케스트레이션 — 코드리뷰 가이드레일 확장** (2026-06-08) — impl 1.2 규모 사용자 오버라이드+위험 하한 / **5.9 코드리뷰 게이트(X4.5)** spec compliance / **6.7 테스트 설계 분리(X4-T)** impl 미열람 / agent **12절** 페르소나 캐스팅 디렉터·소유권 절단선·named-expert 렌즈·페르소나 라이브러리·opt-in 3단계 + templates 4종. 메인=캐스팅 디렉터, 페르소나=커버리지/codex=독립성. analyze 시리즈(open-code-review 분석)에서 도출 + codex 교차검증. 상세 `docs/08-멀티워커-오케스트레이션-설계안.md` |
-| 13 | **실용성 재평가 → stakes 비례 재설계 착수** (2026-06-09) — `/insights` 토론에서 출발해 하네스 실용성을 codex 다회 교차 평가. 진단: 뼈대는 견고하나 상시 codex 의무·멀티워커 페르소나·페이즈 문서 폭발은 "솔로에 이식된 팀 프로세스"로 과조정. **B2.5 정의 게이트** 신설 + **재설계 P1+P2**(측정 E·stakes·승격 G·최소안전선 H) + **codex 리서치 역할 재정의**(검증→선택지 보강, 빈도 불변). A(codex 빈도↓)·C(페이즈문서↓)·D(페르소나 분리)는 **1달 측정 후** `docs/14`로 결정. 핵심 원칙: "학습 스캐폴드≠프로덕션 게이트", "하네스는 성장할수록 줄어드는 비계". codex 6회 교차검증. 상세 `docs/09`~`14` |
+| 1~7 | 기본 구조 → 스킬 75종 → 훅 → 모드 분리 4문서 체계 (2026-04) |
+| 8 | 스킬 시스템 폐기 (~94k줄) — LLM이 아는 일반론의 외부 문서화는 비용>가치 |
+| 9 | 30일 사용 분석 → git-guard·session-loader·외부 큐레이션 의무화 (2026-05-08) |
+| 10 | codex(GPT-5.5) 교차 검증 전면 통합 — 전 단계 의무 (2026-05-14) |
+| 11 | usage report 반영 — 페이즈 게이트·위험 승격·규모별 문서강도·데이터 특칙 (2026-06-05) |
+| 12 | 멀티워커 — 리뷰 게이트(X4.5)·테스트설계 분리(X4-T)·페르소나 라이브러리 56인 (2026-06-08) |
+| 13 | 실용성 재평가 — stakes·승격·최소안전선·측정 레이어, "성장할수록 줄어드는 비계" 원칙 (2026-06-09) |
+| **14** | **v2 전면 개편 (2026-06-10, Fable 5 전환)** — 4문서+16템플릿+5훅 → core 1문서+조건부 playbook 3종+템플릿 7종+훅 2종. 모드 라우팅→테스크 상태 모델, codex 균일 의무→stakes 트리거, 산출물 7종→task.md 기본 1파일, 페르소나 라이브러리→렌즈 체크리스트 인라인(Workflow/Agent 네이티브 이관). learned.md는 제품 산출물로 보존. v1은 `archive/`로. **검증 4회**: codex 초안 12지적 + playbook 7지적 + 최종 8지적, Fable 에이전트 시나리오 검증 16지적 — 전부 반영(오탐 1건 기각). 글로벌 `~/.claude/` 배포 완료 |
 
-상세는 `docs/HISTORY.md` 참조.
-이번 분석 보고서: `docs/analysis/2026-05-08-llm-usage-feedback.md`.
-
----
-
-## 변경 이력 (업데이트 로그)
-
-| 날짜 | 변경 | 비고 |
-|------|------|------|
-| 2026-06-09 | **측정 기록(7.4) 배선** — 7.1 피드백 행동 목록 + 11 셀프체크에 "measurement-log 1행 기록" 연결(건너뛰기 방지) | Phase 13 |
-| 2026-06-09 | **리서치 codex 역할 재정의** — 검증 관문 → 선택지 보강·체크리스트 추출(빈도 불변, 소비 방식만). impl B1.6·agent 11.2·codex-prompt"2" | `docs/14` §6 |
-| 2026-06-09 | **재설계 P1+P2** — 측정(E)·stakes 분류·승격(G)·최소안전선(H) 추가. A축(codex 빈도↓)·C·D는 측정 후 | `docs/11`~`14` |
-| 2026-06-09 | **B2.5 정의 게이트 신설** + `definition.md`·`domain-contracts.md` 템플릿 (재설계상 추후 3문항 체크로 격하 예정 — 재귀 위험 실증) | `docs/09`·`10` |
-| 2026-06-08 | **페르소나 라이브러리 시간성 검증** — 전체 56인에 classic/trend/dated/anachronism + 현재 입장 분류(WebSearch ground). Evans 2024 LLM·Ousterhout anti-TDD·Vernon pre-Loom·Fielding HATEOAS 등. dan-north 중복 id 해소. | Workflow `persona-temporal-verify`(14). `docs/plans/2026-06-08/멀티워커-오케스트레이션-구축/persona-library-extension-temporal.md` |
-| 2026-06-08 | **페르소나 라이브러리 언어 Extended 추가** — JVM(Bloch/Goetz/Johnson/Elizarov)+Python(Hettinger/Ramalho/tiangolo/Colvin) 2도메인 8인. 창시자 tiangolo·Colvin evidence=medium. 총 56인/14도메인. | Workflow `persona-lang-research`(16) + codex 후보검증 |
-| 2026-06-08 | **페르소나 라이브러리 교차검증+보강** — codex+Opus 적대적 검증(사실오류 9건 수정) + dedup(중복 4인)+신규 4인(Vernon/Winand/Humble/Forsgren). | `persona-library-verification.md` |
-| 2026-06-08 | **페르소나 라이브러리 본구축** — Core 12 도메인 × 4 = 48 named-expert 렌즈를 멀티워커 Workflow(24에이전트)로 WebSearch 그라운딩 + 출처/편향 2단계 검증. 영어 canonical 원칙 + 한국어 요약/별칭. `templates/persona-library.md`. | 분류 체계 = 도메인(Core12/Ext5) + 캐스팅 메타데이터(역할/시점/산출물) + 편향완화 버킷. 비서구·비판·현대 렌즈 포함 |
-| 2026-06-08 | **멀티워커 오케스트레이션 반영** — impl 1.2 규모 사용자 오버라이드, 5.9 코드리뷰 게이트(X4.5), 6.7 테스트 설계 분리(X4-T), agent 12절 페르소나 캐스팅 디렉터·named-expert 렌즈·페르소나 라이브러리·opt-in 3단계, templates 4종(persona-contract/review-worker/test-design-worker/persona-library). README 갱신(템플릿 표·작업 흐름·Phase 12). | `docs/08-멀티워커-오케스트레이션-설계안.md` / analyze 시리즈 + codex 교차검증 |
-| 2026-06-05 | usage report 반영 — 페이즈 게이트(5.8)·위험 승격·소/중/대 문서강도·데이터 특칙(6.6)·canonical(root/dist/build.sh) | Phase 11 |
-| 2026-05-14 | codex(GPT-5.5) 모델 교차 검증 통합 — 전 파이프라인 X.6 + plan/테스트 검토 + 보안 게이트(5.7) | Phase 10 |
-| 2026-05-08 | Tier 1 가드 시스템화 — git-guard·session-context-loader + 외부 큐레이션 의무화(B1.5) | Phase 9 |
-
-> 세부 변경은 각 문서 하단의 `## 변경 이력` 표(`orchestration-impl.md` / `orchestration-agent.md` 등)와 `docs/HISTORY.md`를 함께 참조한다.
+상세: `docs/HISTORY.md`, v1 규칙 전문: `archive/2026-06-10-opus-harness/`, v2 설계 근거: `docs/11`~`14` + core.md 변경 이력.

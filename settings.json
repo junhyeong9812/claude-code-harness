@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/prompt-guard.sh"
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -29,17 +18,6 @@
           {
             "type": "command",
             "command": "bash ~/.claude/hooks/scope-guard.sh"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/session-context-loader.sh"
           }
         ]
       }
