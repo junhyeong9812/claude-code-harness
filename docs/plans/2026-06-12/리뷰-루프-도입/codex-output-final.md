@@ -1,0 +1,13 @@
+제공된 발췌 기준으로 보면, 이전 12개 지적은 대부분 반영됐습니다. 다만 아래 항목들은 아직 정책을 실제로 집행할 때 흔들릴 가능성이 큽니다.
+
+| # | 심각도 | 지적 | 구체 수정안 |
+|---|---|---|---|
+| 1 | 높음 | **`read-only`가 `packet-only`를 보장하지 않음.** review.md는 “동일 packet”과 “packet 안 근거만”을 요구하지만, codex 호출은 `read-only`라서 실행 위치가 repo이면 전체 파일을 읽을 수 있습니다. Opus Agent도 “입력은 packet만”이라고 쓰였지만 도구 접근 차단 방식이 없습니다. 입력 스코프가 절차상 닫히지 않았습니다. | review.md ①과 core §5 codex 호출에 추가: “리뷰어는 packet 외 파일시스템 접근 금지. codex는 repo 밖 임시 디렉터리에서 `packet.md`만 두고 실행한다. repo 접근이 불가피하면 비대칭 입력으로 표시하고 정상 종료 조건을 만족한 것으로 보지 않는다.” |
+| 2 | 높음 | **높음 stakes의 `최종 검증`과 `리뷰 루프` 관계가 아직 모호함.** core §5 codex 행은 “계획 검토 + 설계 검증 + 최종 검증”을 요구하고, 리뷰 행은 “페이즈 diff 검증은 review.md 루프”라고 합니다. `최종 검증`이 리뷰 루프의 codex 단계로 충족되는지, 별도 codex 패스인지 단일 출처가 아닙니다. | core §5 codex 행을 명시적으로 고정: “최종 검증 = `playbooks/review.md`의 병렬 codex 리뷰 + codex 종합 감사로 충족한다. 별도 codex 최종 패스 없음.” 별도 패스가 의도라면 verification.md에 트리거·입력·종료 조건을 따로 정의해야 합니다. |
+| 3 | 중간 | **병렬 실패 분기가 fail-closed와 단일 리뷰 진행을 동시에 말함.** review.md ①은 한쪽 실패 후 “fail-closed: 사용자 보고 후 단일 리뷰 진행 여부 결정”이라고 하지만, 높음 리뷰는 “병렬 듀얼 리뷰 루프”가 요구사항입니다. 사용자가 단일 리뷰를 허용하면 정상 gate 통과인지, degraded override인지 불명확합니다. | 실패 분기를 상태로 닫기: “재시도 후 한쪽 실패 시 `review blocked`. 정상 종료 불가. 단, 동등한 대체 독립 리뷰어를 같은 packet으로 실행하면 계속 가능. 사용자가 단일 리뷰 진행을 명시 승인하면 `user override`로 기록하고 잔여 리스크 보고 전 머지 불가/가능 여부를 사용자 결정으로 남긴다.” |
+| 4 | 중간 | **ledger가 종료 판정에 필요한 최소 필드를 보장하지 않음.** 종료 조건은 `이번 루프 신규 채택 finding 0`인데, ledger 규칙에는 loop 번호나 first-seen 정보가 없습니다. `open(채택·미수정)`도 계산 상태인데 명시 필드가 없습니다. 실제로 2~3루프에서 종료 판정이 흔들릴 수 있습니다. | finding ledger 필수 컬럼 추가: `id`, `first_seen_loop`, `source`, `file:line`, `disposition(채택/기각/범위밖/open question)`, `status(open/fixed/user-deferred/unresolved)`, `fixed_in_loop`, `verification`. 종료식도 “open = status=open인 채택 finding” / “신규 채택 = first_seen_loop == current_loop AND disposition == 채택”으로 정의합니다. |
+| 5 | 낮음~중간 | **`gate.md`가 산출물/트리거 표에 정의되지 않음.** review.md는 base SHA와 ledger 위치를 `task.md(또는 gate.md)`라고 하지만, core §7 산출물에는 `gate.md`가 없습니다. 문서 저장 위치가 프로젝트마다 갈릴 수 있습니다. | `gate.md`를 실제 표준 산출물로 쓸 의도라면 core §7/templates에 추가합니다. 아니라면 review.md를 “task.md 또는 해당 phase.md의 gate 절”처럼 이미 정의된 산출물명으로 바꿉니다. |
+
+이전 12지적 반영 상태는 대체로 양호합니다. 특히 누적 diff packet, 동일 packet 원칙, packet 내 근거 제한, 감사 입력 고정·1회, 감사≠독립 1표, finding 자격 조건, fix verification test 분류, 3루프 초과 unresolved는 반영됐습니다.
+
+부분 반영으로 봐야 할 것은 세 가지입니다: `동일 packet`은 선언됐지만 실행 격리가 부족하고, `fail-closed`는 단일 리뷰 분기 때문에 약해졌고, `ledger + 종료 조건`은 loop 판정 필드가 부족합니다.
