@@ -93,11 +93,12 @@
 
 ### 3.5 기록
 - `docs/measurement-log.md`에 1행 (<1분: 유형·stakes·총 소요·하네스 오버헤드·재작업·테스트 실패 후 수정·검증이 잡은 결함·오탐·생략 게이트·머지 후 결함은 발견 시 추가 기입). 이 데이터가 §0-3(규칙 증감은 측정 근거)의 입력이다.
-- **learned.md — 사용자의 학습용 제품 산출물 (프로세스 기록 아님).** 트리거는 stakes가 아니라 **학습 가치**: 새 라이브러리·패턴 / 비직관 버그 / 테스트 전략 변경이 나온 작업은 **풀 작성**(`templates/learned.md` 10항목, 코드 스니펫 포함), 그 외엔 task.md 안 5줄 요약. 사용자가 요청하면 언제든 풀로.
+- **learned.md — 사용자의 학습용 제품 산출물 (프로세스 기록 아님).** 트리거는 stakes가 아니라 **학습 가치**: 새 라이브러리·패턴 / 비직관 버그 / 테스트 전략 변경이 나온 작업은 **풀 작성**(`templates/learned.md` 10항목 — 코드 예시는 원칙적으로 changelog 항목 ID 참조, 독립 학습에 꼭 필요할 때만 대표 스니펫 1개를 실파일에서 재인용), 그 외엔 task.md 안 5줄 요약. 사용자가 요청하면 언제든 풀로.
+- **changelog.md — 사용자의 리뷰 훈련용 제품 산출물 (learned와 별개).** 코드 구현이 있는 작업마다(코드·스크립트·스키마 — 문서-only 제외, stakes 무관) 작업 폴더에 작성 — **검증 단계 종료 후·최종 응답 전**. 형식·커버리지 규칙(J/M/G 전수 분류)·근거 출처 필드는 `templates/changelog.md` 단일 출처. learned와 경계: changelog = 이번 diff의 의사결정 로그(스니펫은 여기에만) / learned = 전이 가능한 지식(changelog 항목 ID 참조).
 
 **문서 인용 규칙 (모든 산출물 공통)**: 코드 블록은 **실파일에서 복사**한다 — 메모리 재현 금지, placeholder·`...(생략)` 금지, 작성 직전 해당 파일 재읽기. 컨텍스트가 요약된 뒤의 기억은 신뢰하지 않는다.
 
-산출물은 기본 **`task.md` 1파일** (정의+계획+검증+기록 통합). 위치: 대상 프로젝트 `docs/plans/YYYY-MM-DD/작업명/`.
+프로세스 산출물의 기본은 **`task.md` 1파일** (정의+계획+검증+기록 통합) — 단 `changelog.md`(코드 구현 시)·`learned.md`(학습 가치 시)·측정 1행은 각 트리거 충족 시 별도 작성한다. 위치: 대상 프로젝트 `docs/plans/YYYY-MM-DD/작업명/`.
 
 **경량 경로 폐지 (2026-06-10 사용자 결정)**: 모든 정의됨 작업은 task.md를 작성한다. 전 차원 비활성이 자명한 작업(오타·주석 수준)의 트리아지 1행 축약만 허용 — 형식은 dimensions.md 사용법을 따른다.
 
@@ -181,10 +182,11 @@
 | `playbooks/orchestration.md` | **중간↑ stakes 진입 시 항상** (절단 계약은 orchestration §4) + 낮음이라도 대량 탐색 위임 시 |
 | `playbooks/implementation.md` | 개발 단계(§3.3) 진입 시 |
 | `playbooks/verification.md` | 검증 단계(§3.4) 진입 시 |
-| `playbooks/review.md` | **stakes 높음의 리뷰 시점(페이즈 구현 완료·커밋 후)** + 개발 단계 설계 자문 시 §3 렌즈만(implementation.md §0). 중간·낮음 리뷰·일반 검증에서는 로드하지 않음 |
+| `playbooks/review.md` | **stakes 높음의 리뷰 시점(페이즈 구현 완료·커밋 후)** + 개발 단계 설계 자문·changelog 리뷰 연습 포인트 작성 시 §3 렌즈·§4 체크리스트만. 중간·낮음 리뷰·일반 검증에서는 로드하지 않음 |
 | `templates/task.md` | 작업 산출물 작성 시 |
 | `templates/definition.md` | stakes 높음의 정의 단계 |
 | `templates/master-plan.md` + `templates/phase.md` | stakes 높음 **중 다단계·대규모**의 계획 단계 (단일 페이즈 높음은 definition+task.md) |
+| `templates/changelog.md` | 코드 구현이 있는 작업의 기록 단계 (문서-only 제외 — §3.5) |
 | `templates/learned.md` (+`learned-example.md`) | 학습 가치 트리거 충족 시 (§3.5) |
 | `templates/measurement-log.md` | 대상 프로젝트에 로그 파일 최초 생성 시 |
 
@@ -205,4 +207,5 @@
 | 2026-06-10 (4) | Fable 5 | playbook 확장에 대한 codex 검토 7지적 반영 — 높음 stakes 산출물 트리거 닫음(다단계·대규모만 phases), 페이즈 커밋 기준을 "변경 파일 집합"으로(파일 구조 무관 집행 가능), 회귀 범위 stakes 비례화(core §4.3과 충돌 해소), 테스트 설계 선작성 감사 필드(spec 고정·gate 절단 확인), 새 실패 경로의 diff 역산 오염 차단 절차, 비동기·백그라운드 플로우 디버깅 축, 예외 시 상태 보존(트랜잭션·idempotency·보상) | 트리거 미폐쇄·문서 간 정의 충돌·절단 계약의 집행 공백 7건 제거 |
 | 2026-06-10 (6) | Fable 5 | **차원 지도 도입**: `dimensions.md`(트리아지 표+단계 질문, 81줄) + 확장팩 3종(배치/프론트/인프라) 신설. 칸2 5축 → 14차원 전수 트리아지(전 stakes, 증거 인용, light 규칙), 칸6 stakes를 활성 차원에서 하한 도출(영향면 보정·누적 승격·면제 증거). 경량 경로 폐지(사용자 결정) — 전 차원 비활성 자명 작업의 1행 축약만 허용. 질문 보정 루프(부적합→제안→월 1회 승격) | 사용자의 개발 차원 18항목 정리(claude_study docs/16·17)를 하네스에 기준화 — "무엇을 보나" 공백 해소. codex 2회(분류 ~25건 채택 14 / 계획 검토 6절 반영: light 집행 규칙·소유 경계·공급망 누락·표 분리) |
 | 2026-06-12 | Fable 5 | **병렬 듀얼 리뷰 루프 도입** (높음 stakes 전용): `playbooks/review.md` 신설 — Opus 워커 ∥ codex 동시 리뷰 → 메인 종합(근거는 packet 내로 제한) → codex 종합 감사 → 수정·테스트 → 재리뷰, 종료 = open 0 AND 신규 0·최대 3루프(초과 시 unresolved). finding 자격 조건·상태 ledger·판단 렌즈 4레벨(API 예외 전파/메서드 내부 알고리즘·자원·속도/네이밍 도메인 직관성/ORM 쿼리·실행계획)·자원속도 체크 8문항. 설계 선적용(implementation.md §0: 설계 자문 4질문 + 높음은 설계 codex 검증 후 구현 진입). §5 리뷰·codex 행 교체, §7 트리거 등록 | 사용자 방향 제안(듀얼 리뷰 루프·판단 기준 4레벨·설계 선적용·설계 후 codex 검증) + codex 계획 검토 12지적 전부 채택(종료 조건 ledger·누적 diff packet·동일 입력·감사≠독립 1표·자격 조건·fail-closed·fix verification test 분류 등). 자원·속도 기준은 codex 논의로 정리 |
+| 2026-06-12 (2) | Fable 5 | **changelog.md 산출물 도입**: `templates/changelog.md` 신설 — 코드 구현 작업마다(문서-only 제외) 의사결정 로그 작성. J/M/G 전수 분류(diff 파일 전부 등장 의무), 스니펫은 실파일 복사+라인별 근거 표(블록 내 주석 삽입 금지), 대안 비교 표(실검토만·사후 창작 금지), 근거 출처 필드(없으면 "사후 추정"), 리뷰 연습 포인트(review.md §3·§4에서 선택), 검증 상태 헤더. §3.5·§7·task 템플릿 배선, learned와 경계 고정(스니펫은 changelog에만) | 사용자 요청: 구현 근거를 스니펫과 함께 남겨 코드 리뷰 능력 훈련. codex 계획 검토 8지적 전부 채택(주석 삽입↔인용 규칙 충돌→근거 표 / learned 중복→ID 참조 / 작성 시점 실패 경로→검증 상태 / J/M/G 기준선 / 사후 합리화 방지 / task 템플릿 체크 / 렌즈 트리거 폐쇄 / phase 중복) |
 | 2026-06-10 (3) | Fable 5 | **제품 산출물 복원 + playbook 분리**: learned.md를 학습용 제품 산출물로 복원(학습 가치 트리거, 풀 10항목 템플릿+예시), 문서 인용 규칙(실파일 복사·생략 금지·재읽기) 신설, 높은 stakes 산출물에 master-plan+phases(3파일: spec·changes·gate) 복원. playbooks/ 3종 신설(orchestration=메인 감독·절단 계약 / implementation=예외처리 일관성 / verification=예외 경로 테스트·플로우 디버깅·데이터 특칙 이관) | learned.md는 사용자 공부용 제품인데 프로세스 기록으로 오분류해 과축소했던 것을 교정. 검증에 "테스트 통과≠검증 완료"의 실행 플로우 축 추가. 워크플로우별 분리로 유지보수성 확보(playbook 가드 3종으로 재팽창 방지) |

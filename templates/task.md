@@ -66,6 +66,8 @@
 ## 5. 기록
 
 - 측정 1행 기입 완료 □ (`docs/measurement-log.md`)
+- **changelog 판정** (core §3.5): 코드 구현 있음 □ / 문서-only라 제외 □
+  - 있음 → `changelog.md` 작성 완료 □ / `git diff --name-only` 파일 전부 J·M·G 분류 확인 □
 - **learned 판정** (core §3.5 — 학습 가치 트리거): 새 라이브러리·패턴 / 비직관 버그 / 테스트 전략 변경 있었나?
-  - 있음 → 별도 `learned.md` 풀 작성 (`templates/learned.md`, 코드는 실파일에서 복사) □
+  - 있음 → 별도 `learned.md` 풀 작성 (`templates/learned.md` — 코드 예시는 원칙적으로 changelog 항목 ID 참조, 필요 시 대표 스니펫 1개만 실파일에서 재인용) □
   - 없음 → 아래 5줄 요약: 변경 / 검증 / 새로 안 것 / 지적받은 것 / 반복 금지:
