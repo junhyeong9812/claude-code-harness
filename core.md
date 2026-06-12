@@ -93,12 +93,13 @@
 
 ### 3.5 기록
 - `docs/measurement-log.md`에 1행 (<1분: 유형·stakes·총 소요·하네스 오버헤드·재작업·테스트 실패 후 수정·검증이 잡은 결함·오탐·생략 게이트·머지 후 결함은 발견 시 추가 기입). 이 데이터가 §0-3(규칙 증감은 측정 근거)의 입력이다.
-- **learned.md — 사용자의 학습용 제품 산출물 (프로세스 기록 아님).** 트리거는 stakes가 아니라 **학습 가치**: 새 라이브러리·패턴 / 비직관 버그 / 테스트 전략 변경이 나온 작업은 **풀 작성**(`templates/learned.md` 10항목 — 코드 예시는 원칙적으로 changelog 항목 ID 참조, 독립 학습에 꼭 필요할 때만 대표 스니펫 1개를 실파일에서 재인용), 그 외엔 task.md 안 5줄 요약. 사용자가 요청하면 언제든 풀로.
+- **learned.md — 사용자의 학습용 제품 산출물 (프로세스 기록 아님).** **코드 구현이 있는 작업마다 풀 작성**(changelog와 동일 트리거 — 문서-only 제외. 2026-06-12 사용자 결정: "학습 가치 시만"에서 상시로 승격). `templates/learned.md` 10항목 — 이번 작업에서 **사용·확인한 요소**(라이브러리·함수·패턴·테스트 도구·제약)의 상세 카탈로그. 코드 예시는 원칙적으로 changelog 항목 ID 참조, 독립 학습에 꼭 필요할 때만 대표 스니펫 1개를 실파일에서 재인용. 문서-only 작업은 task.md 안 5줄 요약으로 대체.
+- **TECHNICAL.md — 사용자의 기술 이해용 제품 산출물 (learned·changelog와 별개).** 코드 구현이 있는 작업마다 작성(`templates/technical.md`) — **diff 비종속 동작 모델**: 특정 diff를 몰라도 유지보수자가 이해해야 하는 개념·동작 원리·불변조건/계약·상태 소유권·정상/실패 플로우를 해설한다. 세 문서 경계: changelog = 이번 diff의 선택과 이유 / learned = 사용한 요소의 카탈로그 / **TECHNICAL = 바탕 개념과 동작 모델**(다른 프로젝트에 그대로 들고 갈 수 있는 설명).
 - **changelog.md — 사용자의 리뷰 훈련용 제품 산출물 (learned와 별개).** 코드 구현이 있는 작업마다(코드·스크립트·스키마 — 문서-only 제외, stakes 무관) 작업 폴더에 작성 — **검증 단계 종료 후·최종 응답 전**. 형식·커버리지 규칙(J/M/G 전수 분류)·근거 출처 필드는 `templates/changelog.md` 단일 출처. learned와 경계: changelog = 이번 diff의 의사결정 로그(스니펫은 여기에만) / learned = 전이 가능한 지식(changelog 항목 ID 참조).
 
 **문서 인용 규칙 (모든 산출물 공통)**: 코드 블록은 **실파일에서 복사**한다 — 메모리 재현 금지, placeholder·`...(생략)` 금지, 작성 직전 해당 파일 재읽기. 컨텍스트가 요약된 뒤의 기억은 신뢰하지 않는다.
 
-프로세스 산출물의 기본은 **`task.md` 1파일** (정의+계획+검증+기록 통합) — 단 `changelog.md`(코드 구현 시)·`learned.md`(학습 가치 시)·측정 1행은 각 트리거 충족 시 별도 작성한다. 위치: 대상 프로젝트 `docs/plans/YYYY-MM-DD/작업명/`.
+프로세스 산출물의 기본은 **`task.md` 1파일** (정의+계획+검증+기록 통합) — 단 코드 구현이 있는 작업은 `changelog.md`·`learned.md`·`TECHNICAL.md` 3종 + 측정 1행을 별도 작성한다. 위치: 대상 프로젝트 `docs/plans/YYYY-MM-DD/작업명/`.
 
 **경량 경로 폐지 (2026-06-10 사용자 결정)**: 모든 정의됨 작업은 task.md를 작성한다. 전 차원 비활성이 자명한 작업(오타·주석 수준)의 트리아지 1행 축약만 허용 — 형식은 dimensions.md 사용법을 따른다.
 
@@ -140,7 +141,7 @@
 | **테스트 설계** | 구현자가 작성 | 구현과 분리된 패스 (spec 기준 먼저 설계) | 별도 워커 — **구현 diff 미열람 계약** |
 | **리뷰** | 셀프체크 | 별도 패스 1회 | **병렬 듀얼 리뷰 루프** — Opus 워커 ∥ codex 동시 리뷰 → 메인 종합 → codex 종합 감사 → 수정·테스트 → 재리뷰 (최대 3루프). 절차·렌즈·finding 규칙·종료 조건 = `playbooks/review.md` 단일 출처 |
 | **산출물** | task.md 1파일 | task.md + 페이즈 절 | definition.md + task.md — **다단계(판정 §3.2)·대규모면 task.md 대신** master-plan + phases/ (측정·learned 판정은 master-plan "기록" 절) |
-| **learned** | (학습 가치 트리거 — stakes 무관, §3.5) | 〃 | 〃 (대규모는 풀 기본) |
+| **learned·TECHNICAL** | (코드 구현 시 상시 — stakes 무관, §3.5) | 〃 | 〃 |
 
 - **메인은 관리감독이다**: 정의·계획·게이트 판정·사용자 합의는 메인이 소유하고, 대량 읽기·탐색·독립 검증은 워커로 — 메인 컨텍스트 보호가 곧 판정 품질이다. 소유권·브리핑·절단 계약 상세는 `playbooks/orchestration.md`.
 - **실행체는 네이티브 도구다**: 탐색=Explore, 병렬 절단=Agent, 대규모 fan-out·adversarial verify=Workflow(사용자 opt-in). 표의 **"워커" = 이 서브에이전트 호출**을 말한다(새 세션·새 창 아님). 자작 워커 절차 문서를 따로 두지 않는다.
@@ -188,7 +189,8 @@
 | `templates/definition.md` | stakes 높음의 정의 단계 |
 | `templates/master-plan.md` + `templates/phase.md` | stakes 높음 **중 다단계·대규모**의 계획 단계 (단일 페이즈 높음은 definition+task.md) |
 | `templates/changelog.md` | 코드 구현이 있는 작업의 기록 단계 (문서-only 제외 — §3.5) |
-| `templates/learned.md` (+`learned-example.md`) | 학습 가치 트리거 충족 시 (§3.5) |
+| `templates/learned.md` (+`learned-example.md`) | 코드 구현이 있는 작업의 기록 단계 (문서-only 제외 — §3.5) |
+| `templates/technical.md` | 코드 구현이 있는 작업의 기록 단계 (문서-only 제외 — §3.5) |
 | `templates/measurement-log.md` | 대상 프로젝트에 로그 파일 최초 생성 시 |
 
 > playbook 가드: ① 트리거 시에만 읽음(상시 선독은 core 하나) ② 각 ≤80줄 ③ 규칙은 core 또는 playbook 한 곳에만(이관 시 core엔 포인터만).
@@ -212,3 +214,4 @@
 | 2026-06-12 (3) | Fable 5 | 커밋 메시지·코드 주석에 검증 과정 출처(codex 지적·리뷰 반영 언급) 기재 금지 — §6.4 + implementation §5. 근거 이력은 task.md·changelog.md 소유 | 사용자 결정: 커밋·주석은 산출물 자체를 설명해야 하고, 검증 이력이 섞이면 노이즈 |
 | 2026-06-12 (4) | Fable 5 | implementation §0 취지 명확화 — 렌즈는 리뷰 대비가 아니라 **설계의 입력**(본질), 자문 4→5질문(⑤ 설계 명확성 — 모호하면 정의/계획으로 회귀), 설계 codex 검증 대상 = 구현하려는 구조 자체 | 사용자 의도 명확화: 설계 시 고려가 본질이고 구조도 리뷰 대상. 하네스 역효과 병렬 검증(Opus∥codex, plans/2026-06-12/하네스-역효과-검증)은 "수정 없음 — 마찰은 학습·통제 목적의 의도된 비용" 결정 |
 | 2026-06-10 (3) | Fable 5 | **제품 산출물 복원 + playbook 분리**: learned.md를 학습용 제품 산출물로 복원(학습 가치 트리거, 풀 10항목 템플릿+예시), 문서 인용 규칙(실파일 복사·생략 금지·재읽기) 신설, 높은 stakes 산출물에 master-plan+phases(3파일: spec·changes·gate) 복원. playbooks/ 3종 신설(orchestration=메인 감독·절단 계약 / implementation=예외처리 일관성 / verification=예외 경로 테스트·플로우 디버깅·데이터 특칙 이관) | learned.md는 사용자 공부용 제품인데 프로세스 기록으로 오분류해 과축소했던 것을 교정. 검증에 "테스트 통과≠검증 완료"의 실행 플로우 축 추가. 워크플로우별 분리로 유지보수성 확보(playbook 가드 3종으로 재팽창 방지) |
+| 2026-06-12 (5) | Fable 5 | **TECHNICAL.md 산출물 신설 + learned 상시 승격**: 코드 구현 작업의 기록 산출물을 changelog·learned·TECHNICAL 3종으로 — learned는 "학습 가치 시만"→상시 풀(사용 요소 카탈로그), TECHNICAL은 diff 비종속 동작 모델(개념·불변조건·상태 소유권·정상/실패 플로우, `templates/technical.md`). §3.5·§7 배선 | 사용자 결정(resume-workbench 작업 중 — plans 종료 시 기술 해설 문서 상시 필요). codex 검토 채택: "코드 비종속 산문"→"diff 비종속 동작 모델"로 정의해 changelog·learned와 경계 분리, 템플릿에 불변조건·상태 소유권·외부 경계 슬롯 |
