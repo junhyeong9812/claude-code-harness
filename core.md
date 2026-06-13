@@ -72,6 +72,7 @@
 
 - **긴급(장애 대응)**: 게이트 왕복은 압축하되 최소 안전선(§4.3)은 생략 불가. 산출물·측정 1행은 사후 소급 기록.
 - **세션 재개**: 진행 중 작업은 대상 프로젝트 `docs/plans` 최신 작업 폴더의 task.md(다단계면 master-plan 승인 상태·최근 gate)부터 읽고 이어간다.
+- **git 워크플로우 (원격 있는 작업)**: 정의 게이트 통과 직후 **이슈 발행 + 작업 브랜치**(개발 진입 전), 기록 단계 종료 후 **커밋 정리 + MR/PR** — 절차·승인 경계는 §6.5 → `playbooks/git-workflow.md`.
 
 ### 3.1 정의
 §1의 명확도 6칸. 산출물: 작업 폴더의 `task.md`에 6칸 기록 (높은 stakes는 `definition.md` 분리 — `templates/definition.md`).
@@ -93,13 +94,15 @@
 
 ### 3.5 기록
 - `docs/measurement-log.md`에 1행 (<1분: 유형·stakes·총 소요·하네스 오버헤드·재작업·테스트 실패 후 수정·검증이 잡은 결함·오탐·생략 게이트·머지 후 결함은 발견 시 추가 기입). 이 데이터가 §0-3(규칙 증감은 측정 근거)의 입력이다.
+- **OVERVIEW.md — 사용자의 추상 진입점 제품 산출물 (산출물 피라미드의 꼭대기).** 코드 구현이 있는 작업마다 작성(`templates/overview.md` — changelog·learned·TECHNICAL과 동일 트리거, 문서-only 제외). **주요 포인트(3~7) + 워크플로우 다이어그램(ASCII, 절차+분기) + 딥다이브 인덱스**. "추상으로 잡고 → 아래 3문서로 딥다이브"의 진입점. **절차·분기 다이어그램은 OVERVIEW가 단독 소유** — TECHNICAL은 그 박스가 왜 그렇게 동작하는가(메커니즘·실패모드)를 산문으로 받는다(다이어그램 중복 금지).
 - **learned.md — 사용자의 학습용 제품 산출물 (프로세스 기록 아님).** **코드 구현이 있는 작업마다 풀 작성**(changelog와 동일 트리거 — 문서-only 제외. 2026-06-12 사용자 결정: "학습 가치 시만"에서 상시로 승격). `templates/learned.md` 10항목 — 이번 작업에서 **사용·확인한 요소**(라이브러리·함수·패턴·테스트 도구·제약)의 상세 카탈로그. 코드 예시는 원칙적으로 changelog 항목 ID 참조, 독립 학습에 꼭 필요할 때만 대표 스니펫 1개를 실파일에서 재인용. 문서-only 작업은 task.md 안 5줄 요약으로 대체.
-- **TECHNICAL.md — 사용자의 기술 이해용 제품 산출물 (learned·changelog와 별개).** 코드 구현이 있는 작업마다 작성(`templates/technical.md`) — **diff 비종속 동작 모델**: 특정 diff를 몰라도 유지보수자가 이해해야 하는 개념·동작 원리·불변조건/계약·상태 소유권·정상/실패 플로우를 해설한다. 세 문서 경계: changelog = 이번 diff의 선택과 이유 / learned = 사용한 요소의 카탈로그 / **TECHNICAL = 바탕 개념과 동작 모델**(다른 프로젝트에 그대로 들고 갈 수 있는 설명).
+- **TECHNICAL.md — 사용자의 기술 이해용 제품 산출물 (learned·changelog와 별개).** 코드 구현이 있는 작업마다 작성(`templates/technical.md`) — **diff 비종속 동작 모델**: 특정 diff를 몰라도 유지보수자가 이해해야 하는 개념·동작 원리·불변조건/계약·상태 소유권·**실패모드 메커니즘**을 해설한다. 네 문서 경계: OVERVIEW = 추상 지도(절차·분기 다이어그램) / changelog = 이번 diff의 선택과 이유 / learned = 사용한 요소의 카탈로그 / **TECHNICAL = 바탕 개념과 동작 모델**(다른 프로젝트에 그대로 들고 갈 수 있는 설명). 다이어그램은 OVERVIEW 소유 — TECHNICAL은 산문 메커니즘만.
 - **changelog.md — 사용자의 리뷰 훈련용 제품 산출물 (learned와 별개).** 코드 구현이 있는 작업마다(코드·스크립트·스키마 — 문서-only 제외, stakes 무관) 작업 폴더에 작성 — **검증 단계 종료 후·최종 응답 전**. 형식·커버리지 규칙(J/M/G 전수 분류)·근거 출처 필드는 `templates/changelog.md` 단일 출처. learned와 경계: changelog = 이번 diff의 의사결정 로그(스니펫은 여기에만) / learned = 전이 가능한 지식(changelog 항목 ID 참조).
+- **review-log.md — 리뷰 루프 findings 로그 (감사 추적 + 리뷰 학습용).** **codex 교차 검증 또는 듀얼 리뷰 루프가 실행된 작업마다**(중간↑ stakes — 코드·문서 무관. 낮음=셀프체크만은 제외) 작성(`templates/review-log.md`). finding별 출처(Opus·codex·감사)·`file:line`·채택/기각 근거·수정/재리뷰 결과. **ledger 스키마는 `playbooks/review.md §2` 단일 출처**, 이 파일은 그 인스턴스 — review.md의 ledger 기록 위치를 task.md에서 **여기로 승격**(종료 조건 판정 입력도 이 ledger). changelog "리뷰 연습 포인트"(사용자가 직접 연습)와 구분 — review-log = 리뷰어가 실제로 낸 finding.
 
 **문서 인용 규칙 (모든 산출물 공통)**: 코드 블록은 **실파일에서 복사**한다 — 메모리 재현 금지, placeholder·`...(생략)` 금지, 작성 직전 해당 파일 재읽기. 컨텍스트가 요약된 뒤의 기억은 신뢰하지 않는다.
 
-프로세스 산출물의 기본은 **`task.md` 1파일** (정의+계획+검증+기록 통합) — 단 코드 구현이 있는 작업은 `changelog.md`·`learned.md`·`TECHNICAL.md` 3종 + 측정 1행을 별도 작성한다. 위치: 대상 프로젝트 `docs/plans/YYYY-MM-DD/작업명/`.
+프로세스 산출물의 기본은 **`task.md` 1파일** (정의+계획+검증+기록 통합) — 단 코드 구현이 있는 작업은 `OVERVIEW.md`·`changelog.md`·`learned.md`·`TECHNICAL.md` 4종 + 측정 1행을 별도 작성하고, **리뷰/codex가 돈 작업(중간↑)은 `review-log.md`를 더한다**. 위치: 대상 프로젝트 `docs/plans/YYYY-MM-DD/작업명/`.
 
 **경량 경로 폐지 (2026-06-10 사용자 결정)**: 모든 정의됨 작업은 task.md를 작성한다. 전 차원 비활성이 자명한 작업(오타·주석 수준)의 트리아지 1행 축약만 허용 — 형식은 dimensions.md 사용법을 따른다.
 
@@ -141,7 +144,8 @@
 | **테스트 설계** | 구현자가 작성 | 구현과 분리된 패스 (spec 기준 먼저 설계) | 별도 워커 — **구현 diff 미열람 계약** |
 | **리뷰** | 셀프체크 | 별도 패스 1회 | **병렬 듀얼 리뷰 루프** — Opus 워커 ∥ codex 동시 리뷰 → 메인 종합 → codex 종합 감사 → 수정·테스트 → 재리뷰 (최대 3루프). 절차·렌즈·finding 규칙·종료 조건 = `playbooks/review.md` 단일 출처 |
 | **산출물** | task.md 1파일 | task.md + 페이즈 절 | definition.md + task.md — **다단계(판정 §3.2)·대규모면 task.md 대신** master-plan + phases/ (측정·learned 판정은 master-plan "기록" 절) |
-| **learned·TECHNICAL** | (코드 구현 시 상시 — stakes 무관, §3.5) | 〃 | 〃 |
+| **코드 구현 제품 산출물** | OVERVIEW·changelog·learned·TECHNICAL 4종 (코드 구현 시 상시 — stakes 무관, §3.5) | 〃 | 〃 |
+| **review-log** | — (셀프체크만) | codex 1회 시 작성 | 듀얼 루프 시 작성 (§3.5) |
 
 - **메인은 관리감독이다**: 정의·계획·게이트 판정·사용자 합의는 메인이 소유하고, 대량 읽기·탐색·독립 검증은 워커로 — 메인 컨텍스트 보호가 곧 판정 품질이다. 소유권·브리핑·절단 계약 상세는 `playbooks/orchestration.md`.
 - **실행체는 네이티브 도구다**: 탐색=Explore, 병렬 절단=Agent, 대규모 fan-out·adversarial verify=Workflow(사용자 opt-in). 표의 **"워커" = 이 서브에이전트 호출**을 말한다(새 세션·새 창 아님). 자작 워커 절차 문서를 따로 두지 않는다.
@@ -169,10 +173,18 @@
 ### 6.4 git (훅 강제 + 정책)
 - push는 사용자 확인 후 (리모트·브랜치·커밋 수 보고). 추측 push 금지. — `git-guard` 훅 강제
 - code 커밋에 docs 자동 포함 금지. 커밋 메시지에 AI trailer 금지. — `scope-guard` 경고
-- **커밋 메시지·코드 주석에 검증 과정 출처 기재 금지** — "codex 지적 반영"·"리뷰 finding 수정"·"교차 검증 결과" 류 언급은 커밋·주석이 아니라 task.md·changelog.md에만 남긴다. 커밋은 변경 내용을, 주석은 코드의 "왜"를 말한다.
+- **커밋 메시지·코드 주석에 검증 과정 출처 기재 금지** — "codex 지적 반영"·"리뷰 finding 수정"·"교차 검증 결과" 류 언급은 커밋·주석이 아니라 task.md·changelog.md·review-log.md에 목적별로 남긴다(리뷰 finding·처리 이력은 review-log 소유). 커밋은 변경 내용을, 주석은 코드의 "왜"를 말한다.
 - `--force`·`reset --hard`·`branch -D`·`checkout .`은 명시 요청 시만.
 
 > **활성 훅 (배포 단일 출처 = 이 repo 전체 — core·dimensions·templates·playbooks·hooks·settings. `~/.claude/`는 배포본, 변경 후 동기 필수)**: `git-guard`(PreToolUse:Bash) · `scope-guard`(PostToolUse:Edit|Write). **제거됨**: prompt-guard(상태머신)·stage-transition·session-context-loader — 네이티브 기능과 중복.
+
+### 6.5 태스크 git 워크플로우 (GitHub·GitLab 원격 작업)
+
+**인식되는 GitHub/GitLab 작업 원격**(사용자 지정 또는 `origin` 기본)이 있는 정의됨 작업은 **이슈 → 작업 브랜치 → 페이즈 커밋 → 커밋 정리 → MR/PR**로 진행한다. 인식 원격이 없거나(로컬 전용·미지원 호스트), 트리아지 1행 축약(자명) 작업은 비대상 — 로컬 커밋만. **플랫폼 감지·명령·절차는 `playbooks/git-workflow.md` 단일 출처**(여기엔 불변식만).
+
+- **승인 경계 (불변)**: 외부 발행 — **이슈 생성·push·MR/PR 생성, 그리고 원격 브랜치를 만드는 모든 경로는 각각 사용자 확인 후**(§6.4 push 확인의 연장, 추측 발행 금지). **브랜치 base·이름**과 **MR/PR target·draft 여부**도 사용자에게 확인한다.
+- **브랜치 우선 (불변)**: main(기본 브랜치) 직접 작업 금지 — 이슈를 열고 작업 브랜치로 분기한 뒤 개발한다.
+- **커밋 정리 (불변)**: 의미 단위 커밋은 유지, WIP·fixup만 정돈한다. **이미 push된 커밋은 rebase하지 않는다**(history 보존). code/docs 분리·AI trailer 금지·검증 출처 금지(§6.4)는 그대로.
 
 ---
 
@@ -184,13 +196,16 @@
 | `playbooks/orchestration.md` | **중간↑ stakes 진입 시 항상** (절단 계약은 orchestration §4) + 낮음이라도 대량 탐색 위임 시 |
 | `playbooks/implementation.md` | 개발 단계(§3.3) 진입 시 |
 | `playbooks/verification.md` | 검증 단계(§3.4) 진입 시 |
-| `playbooks/review.md` | **stakes 높음의 리뷰 시점(페이즈 구현 완료·커밋 후)** + 개발 단계 설계 자문·changelog 리뷰 연습 포인트 작성 시 §3 렌즈·§4 체크리스트만. 중간·낮음 리뷰·일반 검증에서는 로드하지 않음 |
+| `playbooks/git-workflow.md` | **원격 있는 정의됨 작업** — 개발 진입 시(이슈·브랜치) + 기록 종료 후(정리·MR/PR). 경량·로컬 전용 제외 (§6.5) |
+| `playbooks/review.md` | **stakes 높음의 리뷰 시점(페이즈 구현 완료·커밋 후)** + 개발 단계 설계 자문·changelog 리뷰 연습 포인트 작성 시 §3 렌즈·§4 체크리스트만. 중간·낮음 리뷰·일반 검증에서는 루프 절차 로드 안 함 — **단 중간이 `review-log.md` 작성 시 §2 ledger 스키마만 조건부 로드** |
 | `templates/task.md` | 작업 산출물 작성 시 |
 | `templates/definition.md` | stakes 높음의 정의 단계 |
 | `templates/master-plan.md` + `templates/phase.md` | stakes 높음 **중 다단계·대규모**의 계획 단계 (단일 페이즈 높음은 definition+task.md) |
 | `templates/changelog.md` | 코드 구현이 있는 작업의 기록 단계 (문서-only 제외 — §3.5) |
 | `templates/learned.md` (+`learned-example.md`) | 코드 구현이 있는 작업의 기록 단계 (문서-only 제외 — §3.5) |
 | `templates/technical.md` | 코드 구현이 있는 작업의 기록 단계 (문서-only 제외 — §3.5) |
+| `templates/overview.md` | 코드 구현이 있는 작업의 기록 단계 (문서-only 제외 — §3.5) |
+| `templates/review-log.md` | 리뷰/codex 교차 검증이 실행된 작업의 기록 단계 (중간↑ stakes, 코드·문서 무관 — §3.5) |
 | `templates/measurement-log.md` | 대상 프로젝트에 로그 파일 최초 생성 시 |
 
 > playbook 가드: ① 트리거 시에만 읽음(상시 선독은 core 하나) ② 각 ≤80줄 ③ 규칙은 core 또는 playbook 한 곳에만(이관 시 core엔 포인터만).
@@ -214,4 +229,6 @@
 | 2026-06-12 (3) | Fable 5 | 커밋 메시지·코드 주석에 검증 과정 출처(codex 지적·리뷰 반영 언급) 기재 금지 — §6.4 + implementation §5. 근거 이력은 task.md·changelog.md 소유 | 사용자 결정: 커밋·주석은 산출물 자체를 설명해야 하고, 검증 이력이 섞이면 노이즈 |
 | 2026-06-12 (4) | Fable 5 | implementation §0 취지 명확화 — 렌즈는 리뷰 대비가 아니라 **설계의 입력**(본질), 자문 4→5질문(⑤ 설계 명확성 — 모호하면 정의/계획으로 회귀), 설계 codex 검증 대상 = 구현하려는 구조 자체 | 사용자 의도 명확화: 설계 시 고려가 본질이고 구조도 리뷰 대상. 하네스 역효과 병렬 검증(Opus∥codex, plans/2026-06-12/하네스-역효과-검증)은 "수정 없음 — 마찰은 학습·통제 목적의 의도된 비용" 결정 |
 | 2026-06-10 (3) | Fable 5 | **제품 산출물 복원 + playbook 분리**: learned.md를 학습용 제품 산출물로 복원(학습 가치 트리거, 풀 10항목 템플릿+예시), 문서 인용 규칙(실파일 복사·생략 금지·재읽기) 신설, 높은 stakes 산출물에 master-plan+phases(3파일: spec·changes·gate) 복원. playbooks/ 3종 신설(orchestration=메인 감독·절단 계약 / implementation=예외처리 일관성 / verification=예외 경로 테스트·플로우 디버깅·데이터 특칙 이관) | learned.md는 사용자 공부용 제품인데 프로세스 기록으로 오분류해 과축소했던 것을 교정. 검증에 "테스트 통과≠검증 완료"의 실행 플로우 축 추가. 워크플로우별 분리로 유지보수성 확보(playbook 가드 3종으로 재팽창 방지) |
+| 2026-06-13 (2) | Opus 4.8 | **태스크 git 워크플로우 도입 — 이슈→브랜치→커밋 정리→MR/PR**: 원격 있는 정의됨 작업에 `playbooks/git-workflow.md` 신설(플랫폼 감지 gh/glab · 이슈·브랜치 착수 · 페이즈 커밋 · 비대화식 커밋 정리 · MR/PR). core §6.5 신설(승인 경계 불변: 이슈·push·MR 확인 후, 브랜치 base·MR target 사용자 확인, main 직접 작업 금지, 이미 push된 커밋 보존), §3 파이프라인 진입점·§7 트리거 배선 | 사용자 결정(2026-06-13): 태스크당 이슈·브랜치·MR로 추적, GitLab·GitHub 양쪽. 범위=원격 있는 모든 정의됨(경량 제외) / 승인=이슈·push·MR 모두 확인 후(+브랜치·MR 분기점 사용자 확인) / 정리=의미 단위 유지+WIP·fixup만 squash. glab 1.102 설치(GitLab 인증은 사용자 몫). codex 교차 검증 |
+| 2026-06-13 | Opus 4.8 | **기록 산출물 2종 추가 — OVERVIEW + review-log**: 코드 구현 작업에 `OVERVIEW.md`(추상 진입점 — 주요 포인트 + 워크플로우 ASCII 다이어그램 + 딥다이브 인덱스, `templates/overview.md`) 상시 추가, TECHNICAL의 절차·분기 다이어그램을 OVERVIEW로 이관(TECHNICAL은 실패모드 메커니즘 산문만 — 다이어그램 단일 출처). 리뷰/codex가 돈 작업(중간↑)에 `review-log.md`(리뷰 루프 findings 로그, `templates/review-log.md`) 추가 — review.md ledger 기록 위치를 task.md에서 review-log로 승격(스키마는 review.md §2 단일 출처 유지). §3.5·§5·§7·task 템플릿 배선 | 사용자 결정(2026-06-13): ① 구현을 추상으로 잡고 딥다이브하는 학습 흐름에 진입점 문서 상시 필요(OVERVIEW=꼭대기, 다이어그램은 ASCII) ② 듀얼 리뷰 루프에서 오간 리뷰 내용도 기록 산출물로 영속화. 트리거=리뷰/codex가 도는 모든 중간↑(코드·문서 무관) — 이 작업 자체가 dogfood |
 | 2026-06-12 (5) | Fable 5 | **TECHNICAL.md 산출물 신설 + learned 상시 승격**: 코드 구현 작업의 기록 산출물을 changelog·learned·TECHNICAL 3종으로 — learned는 "학습 가치 시만"→상시 풀(사용 요소 카탈로그), TECHNICAL은 diff 비종속 동작 모델(개념·불변조건·상태 소유권·정상/실패 플로우, `templates/technical.md`). §3.5·§7 배선 | 사용자 결정(resume-workbench 작업 중 — plans 종료 시 기술 해설 문서 상시 필요). codex 검토 채택: "코드 비종속 산문"→"diff 비종속 동작 모델"로 정의해 changelog·learned와 경계 분리, 템플릿에 불변조건·상태 소유권·외부 경계 슬롯 |
