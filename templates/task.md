@@ -61,13 +61,16 @@
 
 - 최소 안전선 (core §4.3): 테스트 □ / diff self-review □ / rollback 판단 □ / contract 영향 □ / 반증 질문 □
 - light 재판정 (활성/비활성 확정 + 칸6 stakes 재산정): (light 없었으면 "해당 없음")
-- stakes 비례 검증 (core §5): (codex 호출 ID·핵심 지적·채택/기각, 리뷰 결과 등)
+- stakes 비례 검증 (core §5): codex/리뷰가 돌았으면 **finding은 `review-log.md`에 기록**(중간↑ — ledger 단일 위치, review.md §2 스키마). 여기엔 결론 1줄 + review-log 링크만.
 
 ## 5. 기록
 
 - 측정 1행 기입 완료 □ (`docs/measurement-log.md`)
-- **changelog 판정** (core §3.5): 코드 구현 있음 □ / 문서-only라 제외 □
-  - 있음 → `changelog.md` 작성 완료 □ / `git diff --name-only` 파일 전부 J·M·G 분류 확인 □
-- **learned 판정** (core §3.5 — 학습 가치 트리거): 새 라이브러리·패턴 / 비직관 버그 / 테스트 전략 변경 있었나?
-  - 있음 → 별도 `learned.md` 풀 작성 (`templates/learned.md` — 코드 예시는 원칙적으로 changelog 항목 ID 참조, 필요 시 대표 스니펫 1개만 실파일에서 재인용) □
-  - 없음 → 아래 5줄 요약: 변경 / 검증 / 새로 안 것 / 지적받은 것 / 반복 금지:
+- **코드 구현 판정** (core §3.5): 코드 구현 있음 □ / 문서-only라 제외 □
+  - 있음 → 아래 4종을 모두 작성 (stakes 무관 상시):
+    - `OVERVIEW.md` □ (`templates/overview.md` — 주요 포인트 + 워크플로우 다이어그램 + 딥다이브 인덱스)
+    - `changelog.md` □ (`templates/changelog.md` — `git diff --name-only` 파일 전부 J·M·G 분류 확인 □, 스니펫은 실파일 복사)
+    - `learned.md` □ (`templates/learned.md` — 사용 요소 카탈로그, 코드 예시는 changelog 항목 ID 참조)
+    - `TECHNICAL.md` □ (`templates/technical.md` — diff 비종속 동작 모델, 다이어그램은 OVERVIEW가 소유)
+  - 없음(문서-only) → task.md 안 5줄 요약: 변경 / 검증 / 새로 안 것 / 지적받은 것 / 반복 금지:
+- **review-log 판정** (core §3.5): 리뷰/codex 교차 검증이 돌았나(중간↑)? 있음 → `review-log.md` □ (`templates/review-log.md` — ledger 단일 위치) / 낮음·셀프체크만이면 제외 □
