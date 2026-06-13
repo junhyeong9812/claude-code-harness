@@ -1,6 +1,6 @@
 # playbook: 리뷰 (높음 stakes — 병렬 듀얼 리뷰 루프)
 
-> 트리거: **stakes 높음**의 리뷰 시점(페이즈 구현 완료·커밋 후). 개발 단계의 설계 자문은 §3 렌즈만 참조(implementation.md §0). **중간·낮음 리뷰는 이 문서를 읽지 않는다** — core §5 표를 따른다.
+> 트리거: **stakes 높음**의 리뷰 시점(페이즈 구현 완료·커밋 후). 개발 단계의 설계 자문은 §3 렌즈만 참조(implementation.md §0). **중간·낮음의 리뷰 루프 절차(§1·§3·§4)는 이 문서를 읽지 않는다** — core §5 표를 따른다. 단 **중간이 `review-log.md`를 쓸 때는 §2 ledger 스키마만 조건부로 읽는다**(루프 절차는 불필요 — codex 1회의 finding을 같은 ledger 형식으로 기록하기 위함).
 > 원리: 같은 모델 여러 개는 편향을 공유한다 — 독립 신호는 다른 모델(codex)이 제공하고, 최종 판정은 투표가 아니라 근거 품질 재평가다.
 
 ## 1. 루프 절차
@@ -22,8 +22,8 @@
 
 ## 2. finding 규칙
 
-- **자격 조건 (전부 충족해야 finding)**: ① 현재 diff가 도입·변경한 코드 ② `file:line` 근거 ③ 실질 리스크(정확성·성능·유지보수 중 무엇인지 명시) ④ spec 또는 변경 의도와의 연결. 하나라도 없으면 "범위 밖" 또는 open question — 단순 선호·취향은 finding이 아니다.
-- **상태 ledger** (필수 필드 — 종료 판정의 입력): `id / first_seen_loop / source(opus·codex·감사) / file:line / disposition(채택·기각·범위 밖·open question) / status(open·fixed·user-deferred·unresolved) / fixed_in_loop`. 기록 위치: task.md(다단계·대규모는 해당 페이즈 gate.md). **종료식**: open = disposition=채택 AND status=open / 신규 채택 = first_seen_loop=현재 루프 AND disposition=채택.
+- **자격 조건 (전부 충족해야 finding)**: ① 현재 diff가 도입·변경한 **산출물**(코드·문서·정책 등) ② `file:line` 근거 ③ 실질 리스크(코드=정확성·성능·유지보수 / 문서·정책=정확성·일관성·운영·유지보수 중 무엇인지 명시) ④ spec 또는 변경 의도와의 연결. 하나라도 없으면 "범위 밖" 또는 open question — 단순 선호·취향은 finding이 아니다.
+- **상태 ledger** (필수 필드 — 종료 판정의 입력): `id / first_seen_loop / source(opus·codex·감사) / file:line / disposition(채택·기각·범위 밖·open question) / status(open·fixed·user-deferred·unresolved) / fixed_in_loop`. 기록 위치: **`review-log.md`**(`templates/review-log.md` — 이 스키마의 인스턴스 + finding별 실질 내용. core §3.5; 다단계·대규모는 해당 페이즈 폴더). **종료식**: open = disposition=채택 AND status=open / 신규 채택 = first_seen_loop=현재 루프 AND disposition=채택.
 - 애매하면 단정하지 않는다 — open question으로 남긴다 ("이 컬렉션의 최대 크기는 어디서 제한되나?").
 
 ## 3. 판단 렌즈 4레벨 (리뷰는 diff 기반, 판단은 이 레벨로 — 설계 시 선적용: implementation.md §0)
