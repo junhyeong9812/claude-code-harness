@@ -22,3 +22,6 @@
 | 2026-06-13 | 기록 산출물 2종 추가 (OVERVIEW+review-log, 템플릿 2 신설+core·review·task 배선) | 하네스(높음) | 높음 | 진행 중(1세션) | codex 1회 대기 + 게이트 질문 2라운드 | 0 | N/A (문서) | codex 5 finding+경계 1 전부 채택 (review-log 중간·문서 확장↔review.md 코드·높음 전제 충돌이 최중요 — F1·F2) | 0 | 없음 (review-log dogfood 첫 적용) | — |
 | 2026-06-13 | 태스크 git 워크플로우 (core §6.5 신설 + playbooks/git-workflow.md) | 하네스(높음) | 높음 | 진행 중(1세션) | codex 1회 대기 + 게이트 질문 3축 + 보강 1 | 0 | N/A (문서) | codex 7 finding 전부 채택 — 외부 발행 누수 3건(glab -f push·MR 본문 자동채움·gh issue develop 원격브랜치)이 최중요, 단일출처 중복·트리거 결정불가 포함 | 0 | 없음 (glab 설치 별도) | — |
 - 주기 분석 (**월 1회 또는 사용자 요청 시, 사용자와 함께 리뷰**): 결함·재작업을 줄인 증거 + 저비용 = 유지 / 설명만 그럴듯 + 측정 효과 없음 = 삭제.
+
+| 2026-06-16 | core.md 상시주입 수정 — CLAUDE.md @core.md import (#17) | 하네스(소) | 중간 | <15분 | 근본원인 규명+적용+README | 0 | N/A(설정) | 사용자 지적이 잡음 — core.md 미주입으로 정의게이트·dimensions·review-log 누락 사고(타 프로젝트 작업에서 발현) | 0 | codex 생략(1줄 import·mechanical·판단여지 낮음, task/README 기록 대체) | — |
+| 2026-06-16 | 산출물 템플릿 가드 훅 (#18) — template-guard.sh PostToolUse warn | 하네스(소) | 중간 | <20분 | 훅 작성+검증+settings 배선+README | 0 | N/A(훅) | 자체: 누락→exit2/준수→exit0/비대상 3케이스 + 뉴스레터 6산출물 self-lint(learned 1차 미준수 적발→재작성) | 0 | codex 생략(warn-only·additive, 본 보고 대체) | — |
