@@ -38,8 +38,8 @@ claude-code-harness/
 │   ├── phase.md               #   페이즈 3파일 양식 (spec/changes/gate)
 │   ├── learned.md (+example)  #   학습 기록 풀 10항목 — 사용자 공부용 제품 산출물
 │   └── measurement-log.md     #   작업당 측정 1행 (규칙 증감의 근거 데이터)
-├── hooks/                     # git-guard(push·docs커밋 가드) + scope-guard(docs/code 혼합 경고)
-├── settings.json              # 훅 2종 배선
+├── hooks/                     # git-guard(push·docs커밋 가드) + scope-guard(docs/code 혼합 경고) + template-guard(산출물 템플릿 미준수 경고)
+├── settings.json              # 훅 3종 배선
 ├── archive/2026-06-10-opus-harness/   # v1 전체 보존 (4문서·템플릿 16종·훅 5종·build/install)
 └── docs/                      # 설계 이력 (08~16 + HISTORY + plans) + 학습 제품 (17·18 개발 핵심질문)
 ```
@@ -97,5 +97,7 @@ cp hooks/*.sh ~/.claude/hooks/ && chmod +x ~/.claude/hooks/*.sh
 | **16** | **병렬 듀얼 리뷰 루프 + 학습 산출물 changelog (2026-06-12)** — ① 높음 stakes 리뷰를 루프로 교체: review packet(누적 diff, 동일 입력·보안 스캔) → **Opus 워커 ∥ codex 동시 리뷰** → 메인 종합(근거는 packet 내로 제한) → codex 종합 감사 → 수정·테스트 → 재리뷰. 종료 = open 0 AND 신규 0, ≤3루프(초과 시 unresolved). 판단 렌즈 4레벨(API 예외 전파 / 메서드 내부 알고리즘·자원·속도 / 네이밍 도메인 직관성 / ORM 쿼리·실행계획) + 자원속도 체크 8문항·finding 자격 조건·상태 ledger. 같은 렌즈를 **설계 단계에 선적용**(implementation §0: 함수명·테스트 용이성·도메인 경계·대안 자문 + 높음은 설계 codex 검증 후 구현 진입). ② **changelog.md 신설**: 코드 구현 작업마다 의사결정 로그 — J/M/G 전수 분류, 대안 비교 표(실검토만), 근거 출처(없으면 "사후 추정"), 원본 스니펫+라인별 해설 표, 리뷰 연습 포인트. 목적 = 사용자의 코드 리뷰 능력 훈련, learned(전이 지식)와 스니펫 소유권 경계 고정. **codex 검증 4회**(루프: 계획 12+최종 5 / changelog: 계획 8+최종 3) 전부 머지 전 반영 |
 
 | **17** | **core.md 상시 주입 수정 (2026-06-16)** — CLAUDE.md 가 "상시 규칙은 이 파일과 core.md 둘뿐"이라 선언하면서도 **core.md 를 컨텍스트에 주입하는 메커니즘이 없었다**(CLAUDE.md 본문만 자동 로드, core.md 는 별도 파일이라 미주입). 그 결과 세션이 정의 게이트(명확도 6칸)·`dimensions.md` 14차원 트리아지·`review-log.md` 의무(core §5)를 보지 못하고 건너뛰는 사고 발생. **수정**: CLAUDE.md 끝에 Claude Code 네이티브 `@core.md` import 추가 → 매 세션 core.md 전문이 상대경로(repo·`~/.claude` 동일)로 강제 인라인된다(core §1 "상시 선독"). `dimensions.md` 는 상시 주입하지 않음 — 정의 게이트 진입 시 core §7 트리거로 Read(컨텍스트 비용 1급 제약). 검증 한계: 실제 주입은 차기 세션 부팅에서 확인. |
+
+| **18** | **산출물 템플릿 가드 훅 (2026-06-16)** — `@core.md` 주입(#17) 후에도 남은 2차 누락: 산출물 형식 정본인 `templates/<name>.md` 가 상시주입 아닌 on-demand 라, 작성 시 템플릿을 Read 안 하고 약식 작성하는 실패모드(changelog 의 J/M/G·스니펫·라인해설표·리뷰포인트 누락 사고). **수정**: PostToolUse 훅 `template-guard.sh` 신설(scope-guard 와 동톤 warn) — `docs/plans/**/(changelog\|task\|learned\|review-log\|overview\|technical).md` Write/Edit 시 템플릿 필수 섹션 마커 검사, 누락이면 exit 2 로 stderr 경고를 모델에 피드백(쓰기는 완료 — non-blocking). `settings.json` PostToolUse 에 배선(훅 2→3종). **검증**: 누락→exit2·경고, 준수→exit0, 비대상→무시 확인. 강도는 사용자 결정(warn-only). |
 
 상세: `docs/HISTORY.md`, v1 규칙 전문: `archive/2026-06-10-opus-harness/`, v2 설계 근거: `docs/11`~`16` + core.md 변경 이력.
