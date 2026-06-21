@@ -25,3 +25,4 @@
 
 | 2026-06-16 | core.md 상시주입 수정 — CLAUDE.md @core.md import (#17) | 하네스(소) | 중간 | <15분 | 근본원인 규명+적용+README | 0 | N/A(설정) | 사용자 지적이 잡음 — core.md 미주입으로 정의게이트·dimensions·review-log 누락 사고(타 프로젝트 작업에서 발현) | 0 | codex 생략(1줄 import·mechanical·판단여지 낮음, task/README 기록 대체) | — |
 | 2026-06-16 | 산출물 템플릿 가드 훅 (#18) — template-guard.sh PostToolUse warn | 하네스(소) | 중간 | <20분 | 훅 작성+검증+settings 배선+README | 0 | N/A(훅) | 자체: 누락→exit2/준수→exit0/비대상 3케이스 + 뉴스레터 6산출물 self-lint(learned 1차 미준수 적발→재작성) | 0 | codex 생략(warn-only·additive, 본 보고 대체) | — |
+| 2026-06-21 | lazy-busy 모드 도입 (plans+playbook+훅 3종+settings·core 배선·~/.claude 활성) | 하네스(높음) | 높음 | 1세션(설계~배포~푸시, 12커밋) | 게이트 질문 다수 라운드(반복 설계) + 훅 스모크 테스트(9+6케이스) | 3 (모드 시점 세션시작→정의됨 진입 / 판정 메인→독립 워커 / task.md 모드체크 — 사용자 질의로 교정) | N/A (훅 스모크 전부 통과·실패 0) | 사용자 질의가 잡은 설계 결함: 계획 이해게이트 단방향→상호정렬 · 판정 훅불가→독립 워커 · 모드 시점 코드→정의됨 진입 · 리서치 강제 확인 | 0 | codex 생략 (사용자와 반복 설계·검증으로 대체 — 사후 codex 교차검증 권장) | — |
