@@ -35,7 +35,7 @@
 
 게이팅 강도를 정하는 **직교 축**. 훅이 강제 선택한다(session-mode-guard·task-mode-guard·gate-guard). **전 작업 기본**(2026-06-21 사용자 결정).
 
-- **구현 진입(첫 산출물 변경) 시**: `make-tools`(현행 자율주행 — 게이트 없음, 툴·잡일 빠르게) | `implementation`(실제 구현). **탐색·토론·설계·학습(탐색 중)은 모드 없이 자유 — 이때는 묻지 않는다.** (gate-guard가 산출물 변경만 막으므로 토론·설계 문서는 자유.)
+- **정의됨 진입 시**(구현·구현전 계획·설계로 전환 — "구현/설계/계획하자", 보통 task.md 생성 시점): `make-tools`(현행 자율주행 — 게이트 없음, 툴·잡일 빠르게) | `implementation`(실제 구현). **개념 탐색·토론·학습(탐색 중)은 모드 없이 자유 — 이때는 묻지 않는다.** (gate-guard가 task.md·산출물 변경만 막고, 탐색·설계 토론은 자유.)
 - **`implementation`의 새 태스크**(task.md 생성): `implementation`(현행 §3.3) | `lazymode`.
 - **`lazymode`**: 계획·개발·검증의 매 결정·매 diff에서 사용자 이해를 **주관식으로 검증하며 진행**(자율주행 금지) — 절차는 `playbooks/implementation-lazymode.md`. **게이트 발생은 gate-guard 훅이 강제, 판정은 독립 서브에이전트 워커**(§0.6 발생=훅/판정=문서). 미선택 시 산출물 변경 차단.
 - 설계 단일 출처: `docs/plans/2026-06-20/lazy-busy-mode/plans.md`.

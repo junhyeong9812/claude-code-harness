@@ -38,9 +38,15 @@ if [ ! -f "$STATE" ]; then
 fi
 
 FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
-# 면제: 상태 파일 / 프로세스 문서(docs/plans) — 게이트 클리어·스니펫 기록을 막지 않는다
+# 파일 분류:
+#   - 상태 파일: 항상 면제(게이트 클리어).
+#   - task.md: **정의됨 진입점** → 모드 체크 적용(미선택 차단), 단 per-diff 게이트는 면제.
+#   - 그 외 docs/plans: 프로세스 문서 → 완전 면제(탐색·설계 문서·스니펫·기록 자유).
+#   - 그 외(코드 등): 산출물 → 모드 체크 + per-diff 게이트.
+IS_TASKDEF=0
 case "$FILE_PATH" in
   */.claude/lazymode-state) exit 0 ;;
+  */docs/plans/*/task.md) IS_TASKDEF=1 ;;
   */docs/plans/*) exit 0 ;;
 esac
 
@@ -57,10 +63,10 @@ set_pending() {
   fi
 }
 
-# 1) 세션 모드 미선택 → 산출물 변경 차단
+# 1) 세션 모드 미선택 → 정의됨 진입(구현·계획·설계, task.md 포함)·산출물 변경 차단
 if [ "$SESSION_MODE" = "UNSET" ] || [ -z "$SESSION_MODE" ]; then
   if [ "$EVENT" = "PreToolUse" ]; then
-    echo "[gate-guard] 세션 작업 모드가 미선택(SESSION_MODE=UNSET)입니다. 산출물 변경 전에 사용자에게 make-tools | implementation 를 물어 선택받고 .claude/lazymode-state 에 기록한 뒤 다시 시도하세요." >&2
+    echo "[gate-guard] 세션 작업 모드 미선택(SESSION_MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다 — 사용자에게 make-tools | implementation 를 물어 .claude/lazymode-state 에 기록한 뒤 다시 시도하세요. (탐색·토론·학습은 자유)" >&2
     exit 2
   fi
   exit 0
@@ -87,8 +93,11 @@ if [ "$SESSION_MODE" = "implementation" ]; then
     exit 0
   fi
 
-  # 3c) lazymode → per-diff 게이트
+  # 3c) lazymode → per-diff 게이트 (단 task.md 정의 문서는 per-diff 면제 — 모드 체크만)
   if [ "$TASK_SUBMODE" = "lazymode" ]; then
+    if [ "$IS_TASKDEF" = "1" ]; then
+      exit 0
+    fi
     if [ "$EVENT" = "PostToolUse" ]; then
       set_pending
       echo "[gate-guard] diff 발생 → 이해 게이트 대기(PENDING_GATE=1). before/after 스니펫을 작업 문서에 기록하고, 사용자에게 이 변경을 주관식으로 설명받아 판정 워커로 검증한 뒤 PENDING_GATE=0 으로 내리세요. (implementation-lazymode.md §3·§4)" >&2

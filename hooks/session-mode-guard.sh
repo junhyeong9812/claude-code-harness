@@ -33,9 +33,9 @@ EOF
 
 # Claude에게 주입할 지시 — 지금은 묻지 말고, 구현 진입 시점에 묻게
 cat <<'MSG'
-[lazy-busy] 활성 (SESSION_MODE=UNSET). ★ 지금 모드를 묻지 마세요.
-탐색·토론·설계·학습(탐색 중)은 모드 없이 자유롭게 진행합니다 — 이때는 모드 질문 금지.
-**첫 산출물(코드) 변경 = 구현 진입** 시점에 gate-guard가 막으며, 그때 사용자에게 모드를 묻습니다:
+[lazy-busy] 활성 (SESSION_MODE=UNSET). ★ 지금(세션 시작) 모드를 묻지 마세요.
+개념 탐색·토론·학습은 모드 없이 자유 — 이때는 모드 질문 금지.
+**'이걸 구현/설계/계획하자'며 정의됨에 진입할 때**(구현·구현전 계획·설계, 보통 task.md 생성·코드 변경) gate-guard가 막으며, 그때 사용자에게 모드를 묻습니다:
   • make-tools     — 현행 자율주행(게이트 없음). 툴·하네스·잡일을 빠르게.
   • implementation — 실제 구현. 태스크마다 implementation | lazymode 를 선택(이해 게이트).
 선택을 받으면 .claude/lazymode-state 의 SESSION_MODE 에 기록하고 진행하세요. (정책: plans.md §0)
