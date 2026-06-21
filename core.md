@@ -20,7 +20,7 @@
 
 ## 1. 테스크 상태 모델
 
-작업은 두 상태 중 하나다. **모드 구분·라우팅은 없다.**
+작업은 두 상태 중 하나다 (옛 discuss/impl **페이즈 라우팅은 폐지**). 단 직교 축인 **작업 모드**(lazy-busy — 아래)가 게이팅 강도를 정한다.
 
 ```
 [탐색 중] ──(정의가 명확도 6칸을 통과 + 사용자 합의)──→ [정의됨] → §3 파이프라인
@@ -30,6 +30,15 @@
 - **정의됨**: 산출물 변경이 허가된 상태. 정의 게이트를 통과해야만 진입한다.
 
 > "산출물 변경" = 코드뿐 아니라 설정·문서·스크립트·SQL·스키마·프롬프트 등 **저장소에 쓰는 모든 것.** over-scoping·misunderstood_request는 코드 밖에서도 똑같이 발생한다.
+
+### 작업 모드 (lazy-busy — 훅 강제)
+
+게이팅 강도를 정하는 **직교 축**. 훅이 강제 선택한다(session-mode-guard·task-mode-guard·gate-guard). **전 작업 기본**(2026-06-21 사용자 결정).
+
+- **세션 시작**: `make-tools`(현행 자율주행 — 게이트 없음, 툴·잡일 빠르게) | `implementation`(실제 구현).
+- **`implementation`의 새 태스크**(task.md 생성): `implementation`(현행 §3.3) | `lazymode`.
+- **`lazymode`**: 계획·개발·검증의 매 결정·매 diff에서 사용자 이해를 **주관식으로 검증하며 진행**(자율주행 금지) — 절차는 `playbooks/implementation-lazymode.md`. **게이트 발생은 gate-guard 훅이 강제, 판정은 독립 서브에이전트 워커**(§0.6 발생=훅/판정=문서). 미선택 시 산출물 변경 차단.
+- 설계 단일 출처: `docs/plans/2026-06-20/lazy-busy-mode/plans.md`.
 
 ### 명확도 6칸 (정의 게이트)
 
@@ -83,6 +92,7 @@
 - **다단계 판정**: "중간 검증(빌드/테스트)을 통과시킬 수 있는 **독립 변경 단위가 2개 이상**인가?" — 예면 중간↑ stakes는 **페이즈로 분할**, 페이즈마다 빌드/테스트 통과 후 커밋(diff 격리)하고 다음으로.
 
 ### 3.3 개발 → `playbooks/implementation.md`
+- **작업 모드 `lazymode`면 `playbooks/implementation-lazymode.md`** (diff마다 이해 게이트 — §1 작업 모드). 그 외 모드는 이 절·implementation.md 그대로.
 - 계획에 없는 파일 수정 금지 — 필요해지면 멈추고 보고.
 - 변경은 한 번에 하나(검증 가능한 단위). **예외처리는 프로젝트 기존 전략을 따라 일관되게** (상세는 playbook).
 - 절단선 적용(§5): 테스트 설계는 구현 diff를 보지 않고 spec에서 출발 — **spec** = `phases/spec.md`, 페이즈 폴더가 없으면 task.md §1 정의+§2 계획.
@@ -176,7 +186,7 @@
 - **커밋 메시지·코드 주석에 검증 과정 출처 기재 금지** — "codex 지적 반영"·"리뷰 finding 수정"·"교차 검증 결과" 류 언급은 커밋·주석이 아니라 task.md·changelog.md·review-log.md에 목적별로 남긴다(리뷰 finding·처리 이력은 review-log 소유). 커밋은 변경 내용을, 주석은 코드의 "왜"를 말한다.
 - `--force`·`reset --hard`·`branch -D`·`checkout .`은 명시 요청 시만.
 
-> **활성 훅 (배포 단일 출처 = 이 repo 전체 — core·dimensions·templates·playbooks·hooks·settings. `~/.claude/`는 배포본, 변경 후 동기 필수)**: `git-guard`(PreToolUse:Bash) · `scope-guard`(PostToolUse:Edit|Write). **제거됨**: prompt-guard(상태머신)·stage-transition·session-context-loader — 네이티브 기능과 중복.
+> **활성 훅 (배포 단일 출처 = 이 repo 전체 — core·dimensions·templates·playbooks·hooks·settings. `~/.claude/`는 배포본, 변경 후 동기 필수)**: `git-guard`(PreToolUse:Bash) · `scope-guard`·`template-guard`(PostToolUse:Edit|Write) · **lazy-busy 3종**: `session-mode-guard`(SessionStart) · `gate-guard`(PreToolUse·PostToolUse:Edit|Write) · `task-mode-guard`(PostToolUse:Edit|Write) — §1 작업 모드. **제거됨**: prompt-guard(상태머신)·stage-transition·session-context-loader — 네이티브 기능과 중복.
 
 ### 6.5 태스크 git 워크플로우 (GitHub·GitLab 원격 작업)
 
@@ -195,6 +205,7 @@
 | `dimensions.md` | **정의 게이트 진입 시 — 모든 정의됨 작업** (칸2·칸6 트리아지). 표면이 배치/프론트/인프라/일회성 대량 보정이면 `dimensions-*.md` 팩 추가 |
 | `playbooks/orchestration.md` | **중간↑ stakes 진입 시 항상** (절단 계약은 orchestration §4) + 낮음이라도 대량 탐색 위임 시 |
 | `playbooks/implementation.md` | 개발 단계(§3.3) 진입 시 |
+| `playbooks/implementation-lazymode.md` | **작업 모드 `lazymode`**의 계획·개발·검증 — diff마다 이해 게이트 (§1 작업 모드) |
 | `playbooks/verification.md` | 검증 단계(§3.4) 진입 시 |
 | `playbooks/git-workflow.md` | **원격 있는 정의됨 작업** — 개발 진입 시(이슈·브랜치) + 기록 종료 후(정리·MR/PR). 경량·로컬 전용 제외 (§6.5) |
 | `playbooks/review.md` | **stakes 높음의 리뷰 시점(페이즈 구현 완료·커밋 후)** + 개발 단계 설계 자문·changelog 리뷰 연습 포인트 작성 시 §3 렌즈·§4 체크리스트만. 중간·낮음 리뷰·일반 검증에서는 루프 절차 로드 안 함 — **단 중간이 `review-log.md` 작성 시 §2 ledger 스키마만 조건부 로드** |
@@ -232,3 +243,4 @@
 | 2026-06-13 (2) | Opus 4.8 | **태스크 git 워크플로우 도입 — 이슈→브랜치→커밋 정리→MR/PR**: 원격 있는 정의됨 작업에 `playbooks/git-workflow.md` 신설(플랫폼 감지 gh/glab · 이슈·브랜치 착수 · 페이즈 커밋 · 비대화식 커밋 정리 · MR/PR). core §6.5 신설(승인 경계 불변: 이슈·push·MR 확인 후, 브랜치 base·MR target 사용자 확인, main 직접 작업 금지, 이미 push된 커밋 보존), §3 파이프라인 진입점·§7 트리거 배선 | 사용자 결정(2026-06-13): 태스크당 이슈·브랜치·MR로 추적, GitLab·GitHub 양쪽. 범위=원격 있는 모든 정의됨(경량 제외) / 승인=이슈·push·MR 모두 확인 후(+브랜치·MR 분기점 사용자 확인) / 정리=의미 단위 유지+WIP·fixup만 squash. glab 1.102 설치(GitLab 인증은 사용자 몫). codex 교차 검증 |
 | 2026-06-13 | Opus 4.8 | **기록 산출물 2종 추가 — OVERVIEW + review-log**: 코드 구현 작업에 `OVERVIEW.md`(추상 진입점 — 주요 포인트 + 워크플로우 ASCII 다이어그램 + 딥다이브 인덱스, `templates/overview.md`) 상시 추가, TECHNICAL의 절차·분기 다이어그램을 OVERVIEW로 이관(TECHNICAL은 실패모드 메커니즘 산문만 — 다이어그램 단일 출처). 리뷰/codex가 돈 작업(중간↑)에 `review-log.md`(리뷰 루프 findings 로그, `templates/review-log.md`) 추가 — review.md ledger 기록 위치를 task.md에서 review-log로 승격(스키마는 review.md §2 단일 출처 유지). §3.5·§5·§7·task 템플릿 배선 | 사용자 결정(2026-06-13): ① 구현을 추상으로 잡고 딥다이브하는 학습 흐름에 진입점 문서 상시 필요(OVERVIEW=꼭대기, 다이어그램은 ASCII) ② 듀얼 리뷰 루프에서 오간 리뷰 내용도 기록 산출물로 영속화. 트리거=리뷰/codex가 도는 모든 중간↑(코드·문서 무관) — 이 작업 자체가 dogfood |
 | 2026-06-12 (5) | Fable 5 | **TECHNICAL.md 산출물 신설 + learned 상시 승격**: 코드 구현 작업의 기록 산출물을 changelog·learned·TECHNICAL 3종으로 — learned는 "학습 가치 시만"→상시 풀(사용 요소 카탈로그), TECHNICAL은 diff 비종속 동작 모델(개념·불변조건·상태 소유권·정상/실패 플로우, `templates/technical.md`). §3.5·§7 배선 | 사용자 결정(resume-workbench 작업 중 — plans 종료 시 기술 해설 문서 상시 필요). codex 검토 채택: "코드 비종속 산문"→"diff 비종속 동작 모델"로 정의해 changelog·learned와 경계 분리, 템플릿에 불변조건·상태 소유권·외부 경계 슬롯 |
+| 2026-06-21 | Opus 4.8 (1M) | **lazy-busy 모드 도입** — 세션(make-tools\|implementation)·태스크(implementation\|lazymode) 2레벨 작업 모드(훅 강제). `lazymode`는 계획·개발·검증의 매 결정·매 diff에서 사용자 이해를 **주관식으로 검증**(자율주행 금지), 판정은 **독립 서브에이전트 워커**(맥락 보호·탈편향), **게이트 발생은 gate-guard 훅 강제**(발생=훅/판정=문서). before/after 스니펫 강제·최대 2회(x/2). `playbooks/implementation-lazymode.md` 신설 + 훅 3종(session-mode-guard·task-mode-guard·gate-guard) + settings 배선·~/.claude 동기 활성화. §1 작업 모드·§3.3·§6.4·§7 배선. 설계=`docs/plans/2026-06-20/lazy-busy-mode/plans.md`, v2 스냅샷=`archive/2026-06-20-harness-v2` | 사용자 결정(2026-06-21): AI 에이전트 시대의 핵심은 '검증할 사람'인데 자율주행은 학습이 안 남는다 → 매 구현마다 이해를 강제 검증하는 모드. 전 작업 기본 |
