@@ -6,7 +6,7 @@
 
 ## 0. 모드 진입 (훅 강제)
 
-- 세션 시작: `make-tools` | `implementation` 강제 선택 (session-mode-guard). make-tools = 현행 자율주행.
+- **구현 진입(첫 산출물 변경) 시**: `make-tools` | `implementation` 선택 (gate-guard가 산출물 변경을 막아 강제). **탐색·토론·설계는 모드 없이 자유 — 이때 묻지 않음.** make-tools = 현행 자율주행.
 - 태스크 시작(`task.md` 생성 감지): `implementation`(현행) | `lazymode` 강제 선택 (task-mode-guard).
 - lazymode면 **이 플레이북이 §2~§6 게이트를 지배**한다. 정의·dimensions·templates·hooks·review·verification·git-workflow·open-source는 **현행 그대로**(단일 출처 — 복제 금지).
 

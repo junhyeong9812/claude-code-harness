@@ -31,13 +31,14 @@ TASK_SUBMODE=UNSET
 PENDING_GATE=0
 EOF
 
-# Claude에게 주입할 지시 — 사용자에게 모드 선택을 먼저 받게
+# Claude에게 주입할 지시 — 지금은 묻지 말고, 구현 진입 시점에 묻게
 cat <<'MSG'
-[lazy-busy] 세션 작업 모드가 아직 정해지지 않았습니다 (SESSION_MODE=UNSET).
-산출물을 변경하기 전에 먼저 사용자에게 이 세션을 어떤 모드로 진행할지 물어 선택받으세요:
+[lazy-busy] 활성 (SESSION_MODE=UNSET). ★ 지금 모드를 묻지 마세요.
+탐색·토론·설계·학습(탐색 중)은 모드 없이 자유롭게 진행합니다 — 이때는 모드 질문 금지.
+**첫 산출물(코드) 변경 = 구현 진입** 시점에 gate-guard가 막으며, 그때 사용자에게 모드를 묻습니다:
   • make-tools     — 현행 자율주행(게이트 없음). 툴·하네스·잡일을 빠르게.
-  • implementation — 실제 구현. 태스크마다 implementation | lazymode 를 다시 선택(이해 게이트).
-선택을 받으면 .claude/lazymode-state 의 SESSION_MODE 를 그 값으로 기록하고 진행하세요. (정책: plans.md §0)
+  • implementation — 실제 구현. 태스크마다 implementation | lazymode 를 선택(이해 게이트).
+선택을 받으면 .claude/lazymode-state 의 SESSION_MODE 에 기록하고 진행하세요. (정책: plans.md §0)
 MSG
 
 exit 0
