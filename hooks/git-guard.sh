@@ -63,7 +63,18 @@ get_recent_user_messages() {
            else empty end' "$latest" 2>/dev/null | grep -v '^$' | tail -5
 }
 
-LAST_USER_MSG="$(get_recent_user_messages)"
+# push/docs 승인 판정 입력 = **현재 턴 프롬프트가 authoritative**.
+# capture-prompt.sh 사이드카(현재 턴 .prompt, 지연 없음)가 있으면 **그것만** 쓴다 —
+# jsonl(transcript)은 직전 턴들의 "푸시" 잔재로 현재 턴을 과허용할 수 있어 신뢰하지 않는다.
+# 사이드카가 없을 때만(capture-prompt 미배포·비정상 세션) jsonl tail 폴백.
+# 이로써 ① jsonl flush 지연 false-block 해결 ② stale jsonl 과허용 차단(둘 다).
+SID_FOR_PATH=$(echo "$SESSION_ID" | tr -cd 'A-Za-z0-9_-')
+CURRENT_PROMPT_FILE="$CWD/.claude/lazymode/$SID_FOR_PATH.prompt"
+if [ -n "$SID_FOR_PATH" ] && [ -s "$CURRENT_PROMPT_FILE" ]; then
+  LAST_USER_MSG="$(cat "$CURRENT_PROMPT_FILE" 2>/dev/null || true)"
+else
+  LAST_USER_MSG="$(get_recent_user_messages)"
+fi
 
 # ─────────────────────────────────────────────
 # 1) git push 가드

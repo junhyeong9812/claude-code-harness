@@ -66,13 +66,12 @@ FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
 [ -z "$FILE_PATH" ] && exit 0   # 파일 경로 없음 → inert (fail-open)
 # 파일 분류:
 #   - 상태 파일(.claude/lazymode/*): 항상 면제(게이트 클리어·스니펫 기록).
-#   - task.md: **정의됨 진입점** → 모드 체크 적용(미선택 차단), 단 per-diff 게이트는 면제.
-#   - 그 외 docs/plans: 프로세스 문서 → 완전 면제(탐색·설계 문서·스니펫·기록 자유).
+#   - docs/plans/*(task.md 포함): 프로세스/정의 문서 → 완전 면제. **task.md도 면제**(F4 수정):
+#       task.md를 모드 게이트로 막으면, task-mode-guard가 그 task.md에서 모드를 리셋해 이중질문이 난다.
+#       모드 재질문은 task-mode-guard(리셋+리마인더)가 담당하고, 하드 게이트는 첫 *산출물(코드)* 변경에서 건다.
 #   - 그 외(코드 등): 산출물 → 모드 체크 + per-diff 게이트.
-IS_TASKDEF=0
 case "$FILE_PATH" in
   */.claude/lazymode/*) exit 0 ;;
-  */docs/plans/*/task.md) IS_TASKDEF=1 ;;
   */docs/plans/*) exit 0 ;;
 esac
 
@@ -89,7 +88,7 @@ set_pending() {
   fi
 }
 
-# 1) 모드 미선택 → 정의됨 진입(구현·계획·설계, task.md 포함)·산출물 변경 차단
+# 1) 모드 미선택 → 산출물(코드) 변경 차단. (task.md·docs/plans는 위에서 면제 — F4: task.md는 안 막는다)
 if [ "$MODE" = "UNSET" ] || [ -z "$MODE" ]; then
   if [ "$EVENT" = "PreToolUse" ]; then
     echo "[gate-guard] 작업 모드 미선택(MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다 — 사용자에게 auto-implements | lazy-implements | auto-write | lazy-write 를 물어 .claude/lazymode/$SESSION_ID 에 기록한 뒤 다시 시도하세요. (탐색·토론·학습은 자유)" >&2
@@ -127,12 +126,9 @@ case "$MODE" in
   auto-implements|auto-write) exit 0 ;;
 esac
 
-# 4) lazy-implements|lazy-write(impl) → per-diff 게이트 (단 task.md 정의 문서는 per-diff 면제 — 모드 체크만)
+# 4) lazy-implements|lazy-write(impl) → per-diff 게이트 (task.md 등 docs/plans는 위에서 이미 면제)
 case "$MODE" in
   lazy-implements|lazy-write)
-    if [ "$IS_TASKDEF" = "1" ]; then
-      exit 0
-    fi
     if [ "$EVENT" = "PostToolUse" ]; then
       set_pending
       echo "[gate-guard] diff 발생 → 이해 게이트 대기(PENDING_GATE=1). before/after 스니펫을 작업 문서에 기록하고, 사용자에게 이 변경을 주관식으로 설명받아 판정 워커로 검증한 뒤 .claude/lazymode/$SESSION_ID 의 PENDING_GATE 를 0 으로 내리세요. (implementation-lazymode.md §3·§4)" >&2

@@ -51,7 +51,7 @@ CURRENT=$(grep -E '^MODE=' "$STATE" 2>/dev/null | head -1 | cut -d= -f2 || true)
 cat <<MSG
 [lazy-busy] 활성. 현재 작업 모드: ${CURRENT:-UNSET}. 세션 상태파일: .claude/lazymode/$SESSION_ID
 ★ 지금(세션 시작) 모드를 묻지 마세요. 개념 탐색·토론·학습은 모드 없이 자유 — 이때 모드 질문 금지.
-**'이걸 구현/설계/계획하자'며 정의됨에 진입할 때**(구현·구현전 계획·설계, 보통 task.md 생성·코드 변경) gate-guard가 막으며, 그때 사용자에게 모드를 묻습니다.
+**'이걸 구현/설계/계획하자'며 정의됨에 진입할 때**(구현·구현전 계획·설계) 모드를 묻습니다 — 새 task.md 생성 시 task-mode-guard가 모드 선택을 띄우고, gate-guard가 첫 산출물(코드) 변경을 막아 강제합니다(task.md 자체는 안 막음).
 2축: 구현 게이트(auto 자율 / lazy 매 diff 이해 게이트) × 핸드오프(implements 코드 유지 / write 롤백 후 사용자 필사):
   • auto-implements — 앞단(정의·계획) 합의 후 자율 실행. 검증·codex는 stakes 규칙대로.
   • lazy-implements — 매 diff 사용자 이해 게이트(주관식→판정 워커). 자율주행 금지.
