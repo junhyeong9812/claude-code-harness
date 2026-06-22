@@ -14,6 +14,7 @@ v2(2026-06-10, Fable 5)는 v1의 "절차를 촘촘히 강제하는 외골격"을
 5. **절단은 구조로.** 생성≠검증(테스트 설계는 구현 diff 미열람, 리뷰는 구현자와 분리)을 산문 규칙이 아니라 **네이티브 서브에이전트의 컨텍스트 격리**로 집행한다. 대규모 fan-out은 Workflow 도구(opt-in).
 6. **learned.md·changelog.md는 제품이다.** 사용자의 학습 산출물 — 프로세스 기록이 아니므로 간소화 대상이 아니다. learned = 전이 가능한 새 지식(트리거: 학습 가치) / changelog = 이번 diff의 의사결정 로그(트리거: 코드 구현 — 대안 비교·근거·리뷰 연습 포인트로 사용자의 코드 리뷰 능력을 훈련).
 7. **질문이 본체다 — "무엇을 보나"의 기준화.** 시니어가 변경을 볼 때 도는 점검 차원(입력 검증·권한·정합성·동시성·예외·성능·장애·운영·보안·계약·도메인 규칙·모델링·비용·가시성 14개 + 표면별 팩)을 `dimensions.md`로 명시하고, **모든 정의됨 작업에서 전수 트리아지**(해당/비해당 + 증거 인용)한다. stakes도 감이 아니라 활성 차원에서 도출된다. 프로세스는 이 질문들이 빠짐없이 던져지게 하는 장치다. (근거: docs/16, 인간용 질문 원문: docs/17·18)
+8. **작업 모드(lazy-busy)는 직교 축이다 — 학습을 위한 강제.** 게이팅 강도를 정하는 별도 축. 정의됨 진입 시 훅이 **2축 4분기**를 강제 선택시킨다: 구현 게이트 축(`auto` 자율 / `lazy` 매 diff 주관식 이해 게이트 — 판정은 독립 워커) × 핸드오프 축(`implements` 코드 유지 / `write` 구현·기록 후 코드 롤백 → 사용자가 `writing.md` 보고 직접 필사 → 검증). AI 시대의 핵심은 '검증할 사람'인데 자율주행은 학습이 안 남는다 → 읽기(lazy)·쓰기(write)로 이해를 강제한다. **발생은 훅(gate-guard 등 5종), 판정은 문서/워커.** 토큰 비용은 의도된 비용.
 
 ---
 
@@ -28,20 +29,30 @@ claude-code-harness/
 ├── playbooks/                 # 조건부 (트리거 시만 읽음, 각 ≤80줄)
 │   ├── orchestration.md       #   메인=관리감독, 워커 위임·브리핑·절단 계약·렌즈·Workflow
 │   ├── implementation.md      #   설계 §0(렌즈 선적용·자문 4질문·높음은 설계 codex 검증)·읽기·범위 통제·예외처리 일관성·페이즈/커밋 규율
+│   ├── implementation-lazymode.md #   작업 모드 lazy-*: 매 diff 주관식 이해 게이트(판정 독립 워커·before/after 스니펫·최대 2회)
+│   ├── write-handoff.md       #   작업 모드 *-write: 구현·기록 후 코드/테스트 롤백 → writing.md 필사 → 검증(지적만). 구현은 auto/lazy 상속
 │   ├── review.md              #   높음 stakes 병렬 듀얼 리뷰 루프 — Opus∥codex → 메인 종합 → codex 감사 → 수정·테스트 → 재리뷰(≤3) + 렌즈 4레벨·자원속도 체크 8문항
-│   └── verification.md        #   stakes 비례 회귀·예외 경로 테스트·플로우 디버깅(API/서비스 간/비동기)·데이터 특칙
+│   ├── verification.md        #   stakes 비례 회귀·예외 경로 테스트·플로우 디버깅(API/서비스 간/비동기)·데이터 특칙
+│   ├── git-workflow.md        #   원격 있는 작업: 이슈 → 작업 브랜치 → 페이즈 커밋 → 커밋 정리 → MR/PR (gh/glab, 외부 발행은 사용자 확인)
+│   └── open-source.md         #   오픈소스 기여 프로세스
 ├── templates/
 │   ├── task.md                #   기본 산출물 1파일 (정의+계획+검증+기록)
 │   ├── changelog.md           #   코드 구현 작업마다 — 의사결정 로그 (J/M/G 전수 분류·대안 비교·근거 출처·라인별 해설·리뷰 연습 포인트)
+│   ├── overview.md            #   코드 구현 작업마다 — 추상 진입점 (주요 포인트 + 워크플로우 ASCII 다이어그램 + 딥다이브 인덱스)
+│   ├── technical.md           #   코드 구현 작업마다 — diff 비종속 동작 모델 (개념·불변조건·상태 소유권·실패모드 메커니즘)
+│   ├── learned.md (+example)  #   코드 구현 작업마다 — 학습 기록 풀 10항목 (사용자 공부용 제품)
+│   ├── review-log.md          #   리뷰/codex가 돈 작업(중간↑) — finding ledger (출처·file:line·채택/기각·해소)
+│   ├── writing.md             #   작업 모드 *-write — 필사 가이드 (앵커별 before/after + 설명 + 테스트)
 │   ├── definition.md          #   높은 stakes 정의 (경계×불변식×실패 의미론, 애매성 0)
 │   ├── master-plan.md         #   높은 stakes 다단계·대규모 (task.md 대체)
 │   ├── phase.md               #   페이즈 3파일 양식 (spec/changes/gate)
-│   ├── learned.md (+example)  #   학습 기록 풀 10항목 — 사용자 공부용 제품 산출물
 │   └── measurement-log.md     #   작업당 측정 1행 (규칙 증감의 근거 데이터)
-├── hooks/                     # git-guard(push·docs커밋 가드) + scope-guard(docs/code 혼합 경고) + template-guard(산출물 템플릿 미준수 경고)
-├── settings.json              # 훅 3종 배선
-├── archive/2026-06-10-opus-harness/   # v1 전체 보존 (4문서·템플릿 16종·훅 5종·build/install)
-└── docs/                      # 설계 이력 (08~16 + HISTORY + plans) + 학습 제품 (17·18 개발 핵심질문)
+├── hooks/                     # 강제(발생)만 결정론적으로:
+│   │                          #   git-guard(push·docs커밋 가드 — 현재 턴 프롬프트 + jsonl) · scope-guard(docs/code 혼합 경고) · template-guard(산출물 템플릿 미준수 경고)
+│   │                          #   작업 모드(lazy-busy): session-mode-guard·reinject-mode·capture-prompt·gate-guard·task-mode-guard
+├── settings.json              # 훅 8종 배선 (SessionStart·UserPromptSubmit·PreToolUse·PostToolUse)
+├── archive/                   # v1 전체(2026-06-10-opus-harness) + 하네스 v2 스냅샷(2026-06-20-harness-v2)
+└── docs/                      # 설계 이력 (08~16 + HISTORY) + plans/ (작업별 산출물·설계) + 학습 제품 (17·18 개발 핵심질문)
 ```
 
 ## 작업 흐름
@@ -53,7 +64,9 @@ claude-code-harness/
   │    └─ 결론이 구현 입력이 되는 순간 실코드 재확인 / 고위험 결론은 확정 전 교차 검증
   │
   └─ 산출물 변경 → 정의 게이트(명확도 6칸 + 14차원 트리아지 + 사용자 합의) [정의됨]
-       → 계획(사용자 승인) → 개발(설계: 렌즈 선적용 → 절단: 구현 ∥ 테스트설계 → 리뷰) → 검증(stakes 비례 + 활성 차원 렌즈) → 기록(측정 1행 + learned·changelog 판정)
+       → 작업 모드 선택(훅 강제: auto-implements | lazy-implements | auto-write | lazy-write)
+       → 계획(사용자 승인) → 개발(설계: 렌즈 선적용 → 절단: 구현 ∥ 테스트설계 → 리뷰; lazy면 매 diff 이해 게이트) → 검증(stakes 비례 + 활성 차원 렌즈) → 기록(측정 1행 + 산출물 판정)
+       → (*-write면) 코드/테스트 롤백 → 사용자 필사(writing.md) → 검증·피드백
 ```
 
 | stakes | 외부 검색 | codex | 테스트설계/리뷰 | 산출물 |
@@ -62,7 +75,7 @@ claude-code-harness/
 | 중간 | 낯선 영역 | 반드시 1회 | 분리 패스 | task.md (+페이즈 절) |
 | 높음 | 의무 | 계획+설계+최종 (페이즈 diff는 리뷰 루프가 겸함) | 테스트설계 별도 워커(diff 미열람) · 리뷰 = **병렬 듀얼 리뷰 루프**(playbooks/review.md) | definition + task.md (다단계면 master-plan+phases) |
 
-> 코드 구현이 있는 작업은 stakes 무관 `changelog.md`(리뷰 훈련용 의사결정 로그) 추가 작성.
+> 코드 구현이 있는 작업은 stakes 무관 **제품 산출물 4종**(`OVERVIEW`·`changelog`·`learned`·`TECHNICAL`) 추가 작성, 리뷰/codex가 돈 작업(중간↑)은 `review-log.md`까지. 경계: OVERVIEW=추상 지도(다이어그램) / changelog=이번 diff 의사결정(스니펫) / learned=사용 요소 카탈로그 / TECHNICAL=diff 비종속 동작 모델 / review-log=리뷰 finding.
 
 ## 설치 / 배포
 
@@ -100,4 +113,12 @@ cp hooks/*.sh ~/.claude/hooks/ && chmod +x ~/.claude/hooks/*.sh
 
 | **18** | **산출물 템플릿 가드 훅 (2026-06-16)** — `@core.md` 주입(#17) 후에도 남은 2차 누락: 산출물 형식 정본인 `templates/<name>.md` 가 상시주입 아닌 on-demand 라, 작성 시 템플릿을 Read 안 하고 약식 작성하는 실패모드(changelog 의 J/M/G·스니펫·라인해설표·리뷰포인트 누락 사고). **수정**: PostToolUse 훅 `template-guard.sh` 신설(scope-guard 와 동톤 warn) — `docs/plans/**/(changelog\|task\|learned\|review-log\|overview\|technical).md` Write/Edit 시 템플릿 필수 섹션 마커 검사, 누락이면 exit 2 로 stderr 경고를 모델에 피드백(쓰기는 완료 — non-blocking). `settings.json` PostToolUse 에 배선(훅 2→3종). **검증**: 누락→exit2·경고, 준수→exit0, 비대상→무시 확인. 강도는 사용자 결정(warn-only). |
 
-상세: `docs/HISTORY.md`, v1 규칙 전문: `archive/2026-06-10-opus-harness/`, v2 설계 근거: `docs/11`~`16` + core.md 변경 이력.
+| **19** | **기록 산출물 확장 + 태스크 git 워크플로우 (2026-06-12~13)** — ① **TECHNICAL.md** 신설(diff 비종속 동작 모델 — 개념·불변조건·상태 소유권·실패모드 메커니즘) + **learned.md 상시 승격**(학습가치 시만→코드 구현마다). ② **OVERVIEW.md** 신설(추상 진입점 — 주요 포인트 + 워크플로우 ASCII 다이어그램 + 딥다이브 인덱스, 절차·분기 다이어그램은 OVERVIEW 단독 소유) + **review-log.md** 신설(리뷰/codex가 돈 작업의 finding ledger — review.md ledger 위치를 task.md→review-log로 승격). ③ **태스크 git 워크플로우** `playbooks/git-workflow.md` 신설 — 원격 있는 작업은 이슈 → 작업 브랜치 → 페이즈 커밋 → 커밋 정리 → MR/PR(gh/glab 감지). core §6.5 승인 경계 불변(이슈·push·MR/PR·원격 브랜치는 각각 사용자 확인, main 직접 작업 금지, 이미 push된 커밋 보존). 코드 구현 산출물이 changelog 1종 → **OVERVIEW·changelog·learned·TECHNICAL 4종 + (중간↑)review-log** 로 확정. codex 교차 검증 |
+
+| **20** | **lazy-busy 작업 모드 + 택소노미 단순화·세션 isolation (2026-06-21)** — 자율주행은 학습이 안 남는다 → 게이팅 강도를 정하는 **직교 축(작업 모드)**을 훅으로 강제 도입. 초안(세션×태스크 2레벨)에서 **단일 분기 `auto-implements`\|`lazy-implements`**로 단순화(`make-tools` 제거 — over-scoping 가드까지 끄는 철학 구멍). `lazy-implements`=계획·개발·검증의 매 diff에서 사용자 이해를 **주관식 검증**(판정은 독립 서브에이전트 워커 — 맥락 보호·탈편향, before/after 스니펫 강제, 최대 2회). **발생=훅, 판정=문서**(gate-guard가 게이트 발생을 강제, 정답성은 워커+사용자 정직). 상태 `.claude/lazymode/<session_id>`(세션 단위 — 동시 세션 격리·resume 복구·source=clear 리셋·30일 prune). 훅 3종(session-mode-guard·task-mode-guard·gate-guard) + reinject-mode(매 턴 모드·경로 재주입, jsonl 비의존). `playbooks/implementation-lazymode.md` 신설. codex 계획 검토(8지적 반영). 설계=`docs/plans/2026-06-20·21/` |
+
+| **21** | **write(필사) 핸드오프 축 — 작업 모드 4분기 (2026-06-22)** — lazy(읽고 설명)에 더해 **직접 타이핑으로 익히는** 모드. 직교 접미사 `write`를 추가해 `MODE ∈ {auto-implements, lazy-implements, auto-write, lazy-write}`(2축 4분기). `*-write`=auto/lazy로 구현·검증·기록을 마친 뒤 **코드·테스트를 롤백하고 `writing.md` 단일 가이드로 사용자가 직접 필사 → Claude가 검증(지적만, 수정은 사용자)**. per-diff 게이트는 `auto-`/`lazy-` 접두사로만 결정(write 무관). 상태에 `WRITE_PHASE`(impl·await·verify·done) 추가 — reinject가 생명주기 복구, **gate-guard가 await/verify에서 Claude 코드/테스트 직접 수정 차단**(필사 보호·자율주행 방지, fail-closed). `playbooks/write-handoff.md`·`templates/writing.md` 신설. **codex 2회**(계획 10지적: 핵심 "write는 단순 접미사가 아닌 별도 생명주기→WRITE_PHASE 상태화"·롤백 안전·단일출처 경계·필사 앵커 / 최종 4지적: Bash 우회·롤백 dirty삭제·phase fail-open 반영). 시나리오 32/32. 설계=`docs/plans/2026-06-22/write-mode/` |
+
+| **22** | **훅 버그 2건 수정 (2026-06-22, dogfood)** — 이 세션에서 실재현된 두 버그. ① **F4 모드 이중질문**: gate-guard가 UNSET에서 task.md를 막아 모드를 먼저 고르게 하는데 task-mode-guard가 그 task.md에서 모드를 리셋 → 재질문. **수정**: task.md를 gate-guard 완전 면제(docs/plans처럼), 모드 재질문은 task-mode-guard(리셋+리마인더)·하드 게이트는 첫 산출물(코드) 변경에서. ② **git-guard jsonl 지연 false-block**: push/docs 승인을 세션 jsonl(flush 지연)에서만 grep → 현재 턴 "푸시해줘"를 못 봐 명시 승인도 차단. **수정**: 신규 `capture-prompt.sh`(UserPromptSubmit)가 현재 턴 `.prompt`를 사이드카에 기록, git-guard가 **사이드카 authoritative**(있으면 그것만, jsonl은 폴백) — false-block 해결 + stale jsonl 과허용 차단. 훅 8종 체계 확정. codex 최종(authoritative 반영). 시나리오 11/11 + 회귀 32/32. 설계=`docs/plans/2026-06-22/hook-bugfixes/` |
+
+상세: `docs/HISTORY.md`, v1 규칙 전문: `archive/2026-06-10-opus-harness/`, v2 설계 근거: `docs/11`~`16` + `docs/plans/` + core.md 변경 이력.
