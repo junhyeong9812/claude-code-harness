@@ -40,11 +40,22 @@ if grep -qE '^MODE=' "$STATE" 2>/dev/null; then
 else
   echo "MODE=UNSET" >> "$STATE"
 fi
+# 새 태스크는 fresh — 직전 태스크의 게이트 빚(PENDING_GATE)·write 단계(WRITE_PHASE)를 함께 리셋
+# (안 그러면 새 lazy 태스크 첫 edit이 stale PENDING에 막히거나, *-write 잔재 단계가 코드 수정을 오차단).
+if grep -qE '^PENDING_GATE=' "$STATE" 2>/dev/null; then
+  sed -i 's/^PENDING_GATE=.*/PENDING_GATE=0/' "$STATE" 2>/dev/null || true
+fi
+if grep -qE '^WRITE_PHASE=' "$STATE" 2>/dev/null; then
+  sed -i 's/^WRITE_PHASE=.*/WRITE_PHASE=impl/' "$STATE" 2>/dev/null || true
+fi
 
 cat >&2 <<MSG
-[lazy-busy] 새 태스크 감지 (task.md 생성). 구현 변경 전에 사용자에게 이 태스크의 모드를 물어 선택받으세요:
+[lazy-busy] 새 태스크 감지 (task.md 생성). 구현 변경 전에 사용자에게 이 태스크의 모드를 물어 선택받으세요
+(2축: auto 자율 / lazy 매 diff 게이트 × implements 코드 유지 / write 롤백 후 사용자 필사):
   • auto-implements — 앞단 합의 후 자율 실행 (per-diff 이해 게이트 없음).
   • lazy-implements — 이해 게이트 모드(playbooks/implementation-lazymode.md): diff마다 주관식 검증.
+  • auto-write — auto 구현·검증·기록 후 롤백 + writing.md로 사용자 필사 → 검증 (playbooks/write-handoff.md).
+  • lazy-write — lazy 게이트로 구현 후 롤백 + 필사 (읽고 설명 + 직접 타이핑).
 선택을 받으면 .claude/lazymode/$SESSION_ID 의 MODE 를 그 값으로 기록하고 진행하세요. (plans.md §0·§7-A)
 MSG
 
