@@ -97,25 +97,26 @@ git-guard.sh · scope-guard.sh · template-guard.sh · settings.json(훅 이미 
 계획 검토 1회(이 task.md) + 구현 후 최종 검증 1회. 보안 스캔(외부 전송 게이트) 먼저. 경로: `$(ls ~/.nvm/versions/node/*/bin/codex | head -1)`.
 
 ### 2.7 git
-현재 브랜치 `1-harness-records-and-git-workflow` 유지(사용자 확인 예정). 페이즈 커밋(code/docs 분리, AI trailer·검증출처 금지). push·MR은 종료 후 사용자 확인.
+이슈 #3 발행 → 브랜치 `3-write-mode-handoff`(base=`1-harness-records-and-git-workflow`, 택소노미 포함). 택소노미 미커밋분은 base 브랜치에 선커밋(code/docs 분리). 페이즈 커밋(code/docs 분리, AI trailer·검증출처 금지). push·MR(target=base 브랜치)은 종료 후 사용자 확인.
 
 ---
 
 ## 3. 진행 기록
-- [ ] 계획 codex 검토 + 사용자 승인(+git 브랜치 확인)
-- [ ] 페이즈 A(훅) → bash -n·시나리오 → 커밋
-- [ ] 페이즈 B(문서/정책) → grep 정합 → 커밋
-- [ ] 페이즈 C(~/.claude 동기)
-- [ ] codex 최종 검증
-- [ ] 산출물(OVERVIEW·changelog·learned·TECHNICAL·review-log) + 측정 1행
-- [ ] push/MR 확인
+- [x] 계획 codex 검토(10지적 반영) + 사용자 승인 + git: 택소노미 선커밋 → 이슈 #3 → 브랜치 `3-write-mode-handoff`(base=현재)
+- [x] 페이즈 A(훅 4종) → bash -n·시나리오 21/21 → 커밋 e43805d
+- [x] 페이즈 B(문서/정책: core·write-handoff·writing·impl-lazymode) → grep 정합 → 커밋 5ad217e
+- [x] 페이즈 C(~/.claude 동기 8파일)
+- [x] codex 최종 검증(4지적: F1·F2·F3 반영 → 262ff4c·e1c7213, 시나리오 32/32 / F4 범위밖)
+- [x] 산출물(OVERVIEW·changelog·learned·TECHNICAL·review-log) + 측정 1행
+- [ ] push/MR 확인 (사용자)
+- **계획 deviation**: settings.json "불변" → codex F1 소프트가드 위해 PreToolUse:Bash gate-guard 등록(사용자 보고).
 
 ## 4. 검증 결과
-- 최소 안전선: 테스트 □ / diff self-review □ / rollback 판단 □ / contract 영향 □ / 반증 질문 □
-- light 재판정(#10): (검증 후 기입)
-- stakes 비례 검증: codex finding → `review-log.md`(결론 1줄 + 링크)
+- 최소 안전선: 테스트 ☑(시나리오 32/32) / diff self-review ☑ / rollback ☑(브랜치·로컬커밋, push 전) / contract ☑(MODE 4훅 공유·grep 정합) / 반증 질문 ☑(손상 MODE·WRITE_PHASE·Bash·세션격리·done 추가)
+- light 재판정(#10 운영가능성): **활성 확정** — reinject가 WRITE_PHASE 4상태 복구, 시나리오 검증. stakes 영향 없음(이미 높음).
+- stakes 비례 검증: codex 계획 10 + 최종 4 → `review-log.md`(ledger 단일 위치). open(채택·미수정)=0.
 
 ## 5. 기록
-- 측정 1행 □ (`docs/measurement-log.md`)
-- 코드 구현 판정: 코드 구현 있음(훅) □ → OVERVIEW·changelog·learned·TECHNICAL □
-- review-log(codex 돌면) □
+- 측정 1행 ☑ (`docs/measurement-log.md` 2026-06-22)
+- 코드 구현 판정: 코드 구현 있음(훅 4종) ☑ → OVERVIEW ☑·changelog ☑·learned ☑·TECHNICAL ☑
+- review-log ☑ (codex 2회)
