@@ -30,9 +30,11 @@ WRITE_PHASE=$(grep -E '^WRITE_PHASE=' "$STATE" 2>/dev/null | head -1 | cut -d= -
 # *-write 핸드오프 단계 안내 (컨텍스트 요약 후에도 "이미 롤백했는지/필사 검증만 할지"를 복구 — write-handoff.md)
 write_phase_msg() {
   case "${WRITE_PHASE:-impl}" in
-    await)  echo "★ WRITE_PHASE=await — 이미 코드/테스트 롤백 완료, 사용자가 writing.md 보고 필사 중. Claude는 코드/테스트 직접 수정 금지(gate-guard 차단). 사용자가 '완료'라 하면 $STATE 의 WRITE_PHASE=verify 로 올리고 검증." ;;
+    await)  echo "★ WRITE_PHASE=await — 이미 코드/테스트 롤백 완료, 사용자가 writing.md 보고 필사 중. Claude는 코드/테스트 직접 수정 금지(gate-guard 차단; Bash 쓰기도 금지 — 프로토콜). 사용자가 '완료'라 하면 $STATE 의 WRITE_PHASE=verify 로 올리고 검증." ;;
     verify) echo "★ WRITE_PHASE=verify — 사용자 필사본 검증 중. writing.md(정답 단일 출처)와 실파일 대조 + 테스트 실행. 오류는 지적만(file:line), 수정은 사용자가. Claude 직접 수정 금지." ;;
-    *)      echo "WRITE_PHASE=impl — 구현 단계. 구현·검증·기록 완료 후 write-handoff: 캡처→writing.md→코드/테스트 롤백→사용자 필사→검증." ;;
+    done)   echo "WRITE_PHASE=done — 핸드오프 완료(필사·검증 끝). 필사본이 코드 커밋이 된다." ;;
+    impl)   echo "WRITE_PHASE=impl — 구현 단계. 구현·검증·기록 완료 후 write-handoff: 캡처→writing.md→코드/테스트 롤백→사용자 필사→검증." ;;
+    *)      echo "⚠ WRITE_PHASE='${WRITE_PHASE}' 손상(impl|await|verify|done 아님) — $STATE 확인. gate-guard가 *-write 코드수정을 fail-closed 차단 중." ;;
   esac
 }
 

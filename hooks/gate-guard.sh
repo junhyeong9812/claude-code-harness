@@ -27,8 +27,10 @@ HOOK_INPUT=$(cat)
 
 EVENT=$(echo "$HOOK_INPUT" | jq -r '.hook_event_name // empty')
 TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool_name // empty')
+IS_BASH=0
 case "$TOOL_NAME" in
   Edit|Write|MultiEdit) ;;
+  Bash) IS_BASH=1 ;;   # *-write await/verify 소프트 리마인더용 (PreToolUse:Bash)
   *) exit 0 ;;
 esac
 
@@ -46,6 +48,18 @@ fi
 STATE="$CWD/.claude/lazymode/$SESSION_ID"
 if [ ! -f "$STATE" ]; then
   exit 0   # 상태 없음 → inert (fail-open)
+fi
+
+# Bash 경로: file_path가 없어 아래 산출물 분류가 안 맞는다 — *-write await/verify의 소프트 리마인더만 한다.
+# (Bash 하드 차단은 안 한다: verify 단계가 테스트 실행으로 인터프리터를 써야 해 FP가 크다. 코드/테스트의
+#  Bash 직접 수정 금지는 훅 비강제 — 프로토콜(write-handoff.md §5)+매턴 reinject로 보강. §0.6 정직 경계.)
+if [ "$IS_BASH" = "1" ]; then
+  B_MODE=$(grep -E '^MODE=' "$STATE" 2>/dev/null | head -1 | cut -d= -f2 || true)
+  B_WP=$(grep -E '^WRITE_PHASE=' "$STATE" 2>/dev/null | head -1 | cut -d= -f2 || true)
+  if { [ "$B_MODE" = "auto-write" ] || [ "$B_MODE" = "lazy-write" ]; } && { [ "$B_WP" = "await" ] || [ "$B_WP" = "verify" ]; }; then
+    echo "[gate-guard] write '$B_WP' 단계: Bash로 코드/테스트를 수정하지 마세요(sed -i·tee·redirect 등). 사용자가 필사·수정합니다 — Claude는 읽기·테스트 실행·git diff 만. (write-handoff.md §5)" >&2
+  fi
+  exit 0
 fi
 
 FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
@@ -84,15 +98,28 @@ if [ "$MODE" = "UNSET" ] || [ -z "$MODE" ]; then
   exit 0
 fi
 
-# 2) write 핸드오프 단계 차단 (*-write 전용) — 롤백 후 코드/테스트는 사용자가 필사한다.
-#    await(필사 중)·verify(필사본 검증 중)에는 Claude의 코드/테스트 직접 수정을 막는다(검증은 지적만).
+# 2) *-write 핸드오프: WRITE_PHASE enum 검증 + await/verify 코드/테스트 수정 차단.
+#    await(필사 중)·verify(필사본 검증 중) → 차단(검증은 지적만). impl·done → 접두사 로직으로 진행.
+#    손상/미지 WRITE_PHASE → fail-closed(MODE처럼 — 필사 중 상태파일 깨져도 보호 유지).
 #    docs/plans·state·writing.md(docs)는 위에서 이미 면제됨 — 여기 도달하는 건 코드/테스트뿐.
-if { [ "$MODE" = "auto-write" ] || [ "$MODE" = "lazy-write" ]; } && { [ "$WRITE_PHASE" = "await" ] || [ "$WRITE_PHASE" = "verify" ]; }; then
-  if [ "$EVENT" = "PreToolUse" ]; then
-    echo "[gate-guard] write 핸드오프 '$WRITE_PHASE' 단계 — 코드/테스트는 사용자가 writing.md 보고 직접 타이핑합니다. Claude 직접 수정 금지(검증은 지적만; file:line 은 task.md/writing.md 에 기록). 정말 수정이 필요하면 사용자 확인 후 .claude/lazymode/$SESSION_ID 의 WRITE_PHASE 를 impl 로 내리고 진행하세요. (write-handoff.md)" >&2
-    exit 2
-  fi
-  exit 0
+if [ "$MODE" = "auto-write" ] || [ "$MODE" = "lazy-write" ]; then
+  case "$WRITE_PHASE" in
+    await|verify)
+      if [ "$EVENT" = "PreToolUse" ]; then
+        echo "[gate-guard] write 핸드오프 '$WRITE_PHASE' 단계 — 코드/테스트는 사용자가 writing.md 보고 직접 타이핑합니다. Claude 직접 수정 금지(검증은 지적만; file:line 은 task.md/writing.md 에 기록). 정말 수정이 필요하면 사용자 확인 후 .claude/lazymode/$SESSION_ID 의 WRITE_PHASE 를 impl 로 내리고 진행하세요. (write-handoff.md)" >&2
+        exit 2
+      fi
+      exit 0 ;;
+    impl|done)
+      : ;;  # 구현 단계·핸드오프 완료 → 아래 접두사 로직대로
+    *)
+      if [ "$EVENT" = "PreToolUse" ]; then
+        echo "[gate-guard] 손상 WRITE_PHASE='$WRITE_PHASE' (*-write, .claude/lazymode/$SESSION_ID 손상?). impl|await|verify|done 중 하나로 고친 뒤 다시 시도하세요." >&2
+        exit 2
+      fi
+      echo "[gate-guard] 경고: 손상 WRITE_PHASE='$WRITE_PHASE' (*-write, PostToolUse) — 보호 적용 못 함. 상태파일 확인." >&2
+      exit 0 ;;
+  esac
 fi
 
 # 3) auto-implements|auto-write(impl) → 구현 게이트 없음 (앞단 합의 후 자율 실행)
