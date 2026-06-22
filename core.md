@@ -162,6 +162,7 @@
 - 리뷰 가드레일: 신뢰도 높은 발견만 보고(`file:line` 인용), 선재 이슈·린터가 잡을 것 제보 금지. **각 finding은 현재 diff 또는 spec과의 불일치에 귀속을 증명**해야 하며, 귀속이 불명확하면 "범위 밖"으로만 기록한다(오귀속 방지 — 페이즈 커밋으로 diff 격리, §3.2). **페르소나 다수결은 codex(다른 모델) 독립 신호를 대체하지 못한다.**
 - **codex 호출 전 보안 스캔(외부 전송 게이트)**: 시크릿 키 패턴(`sk-`·`ghp_`·`AKIA`·PRIVATE KEY)·`password|token|secret[:=]` 값·PII·내부 경로/호스트를 스캔 — 매칭 0건만 자동 통과, 발견 시 redact 후 사용자 확인.
 - **codex 호출**: `codex exec` CLI — `cat 입력.md | codex exec --skip-git-repo-check -s read-only --ephemeral -o 출력.md -` (Bash, 백그라운드 권장).
+- **codex 경로(비대화형 셸 PATH 함정)**: codex는 nvm로 설치돼 **Claude의 Bash 툴(비대화형)에는 PATH에 안 잡힌다** — `which codex`가 실패해도 미설치가 아니다(대화형 셸에선 정상). 호출 전 `codex` 직접 대신 `CODEX=$(ls ~/.nvm/versions/node/*/bin/codex 2>/dev/null | head -1)`로 전체 경로를 잡거나 nvm을 source한다.
 - **codex 호출 실패**: 낮음은 자동 스킵 + 사유 기록. **중간은 0회로 끝내지 않는다** — 분리 컨텍스트 리뷰 패스로 대체하거나 사용자 보고. **높음은 스킵 불가** — 대체 독립 검증 또는 사용자 확인으로 분기.
 - **외부 검색 불가**(네트워크·내부 전용 도메인·보안상 부적합) 시: 사유 기록 + codex 큐레이션으로 대체하거나 사용자 보고 — 높음 stakes에서 말없이 생략하지 않는다.
 
