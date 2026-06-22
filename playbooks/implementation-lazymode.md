@@ -1,14 +1,14 @@
 # playbook: 구현 — lazymode
 
-> 트리거: `implementation` 세션에서 태스크 서브모드 = **lazymode** 선택 시 (task-mode-guard 훅).
+> 트리거: 작업 모드 = **lazy-implements** 선택 시 (task-mode-guard·gate-guard 훅).
 > 목적: **자율주행 금지** — 매 결정·매 diff에서 사용자 이해를 주관식으로 검증하며 진행한다.
-> 설계 단일 출처: `docs/plans/2026-06-20/lazy-busy-mode/plans.md`. 토큰 비용은 **의도된 비용**.
+> 설계 단일 출처: `docs/plans/2026-06-20/lazy-busy-mode/plans.md` + `docs/plans/2026-06-21/mode-taxonomy-session-keying/`. 토큰 비용은 **의도된 비용**.
 
 ## 0. 모드 진입 (훅 강제)
 
-- **정의됨 진입 시**(구현·구현전 계획·설계 착수 — "구현/설계/계획하자", 보통 task.md 생성): `make-tools` | `implementation` 선택 (gate-guard가 task.md·산출물 변경을 막아 강제). **개념 탐색·토론·학습은 자유 — 이때 묻지 않음.** make-tools = 현행 자율주행.
-- 태스크 시작(`task.md` 생성 감지): `implementation`(현행) | `lazymode` 강제 선택 (task-mode-guard).
-- lazymode면 **이 플레이북이 §2~§6 게이트를 지배**한다. 정의·dimensions·templates·hooks·review·verification·git-workflow·open-source는 **현행 그대로**(단일 출처 — 복제 금지).
+- **정의됨 진입 시 단일 분기**(구현·구현전 계획·설계 착수 — "구현/설계/계획하자", 보통 task.md 생성): `auto-implements` | `lazy-implements` 선택 (gate-guard가 task.md·산출물 변경을 막아 강제). 태스크마다 재질문(task-mode-guard). **개념 탐색·토론·학습은 자유 — 이때 묻지 않음.**
+- `auto-implements` = 앞단(정의·계획) 합의 후 자율 실행(per-diff 게이트 없음). `lazy-implements` = 이 플레이북.
+- lazy-implements면 **이 플레이북이 §2~§6 게이트를 지배**한다. 정의·dimensions·templates·hooks·review·verification·git-workflow·open-source는 **현행 그대로**(단일 출처 — 복제 금지).
 
 ## 1. 게이트 형식 (공통)
 
@@ -45,7 +45,7 @@
 
 ## 5. 강제 경계 (훅 vs 판단)
 
-- **훅 강제(발생)**: 모드 선택 + 게이트 발생 — 직전 diff 게이트(질문→사용자 답변)가 처리되기 전 다음 Edit/Write/테스트 **차단**. 상태: `.claude/lazymode-state`(현재 모드 + `pending_gate`).
+- **훅 강제(발생)**: 모드 선택 + 게이트 발생 — 직전 diff 게이트(질문→사용자 답변)가 처리되기 전 다음 Edit/Write/테스트 **차단**. 상태: `.claude/lazymode/<session_id>`(MODE + `PENDING_GATE`, 세션 단위).
 - **문서/워커(판정)**: 질문 생성·이해 판정·루프 종료는 훅이 못 한다. 훅은 *발생*까지, **정답성은 워커 + 사용자 정직함**에 남는다(환원 불가).
 
 ## 6. 검증·기록

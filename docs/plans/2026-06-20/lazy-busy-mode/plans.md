@@ -5,6 +5,11 @@
 > **매 단계 사용자의 이해를 주관식으로 검증하며 진행하도록** 강제해 해소한다.
 > 이 문서는 "어떻게 설계하고 어떻게 만들지"의 단일 출처다. 구현 전 이 문서와 사용자 이해가
 > 일치하는지부터 검증한다.
+>
+> ⚠️ **택소노미 개편(2026-06-21, 부분 supersede)**: 아래 §1 **두-레벨 모드(make-tools/implementation × implementation/lazymode)**는
+> **단일 분기 `auto-implements` | `lazy-implements`**로 대체됐다(make-tools 제거). 상태도 프로젝트 단위 `lazymode-state`→
+> **세션 단위 `.claude/lazymode/<session_id>`**. §2~§4의 게이트 기계(주관식·판정 워커·before/after)는 **그대로 유효**(이름만 lazymode→lazy-implements).
+> 개편 단일 출처: `docs/plans/2026-06-21/mode-taxonomy-session-keying/`.
 
 ---
 
@@ -17,23 +22,21 @@
 
 ---
 
-## 1. 두-레벨 모드 시스템
+## 1. 모드 시스템 (2026-06-21 개편 — 단일 분기)
 
 ```
 [정의됨 진입 = 구현·계획·설계 착수 (task.md 생성·코드 변경)]   ※ 개념 탐색·토론·학습은 자유
-   │  (gate-guard가 task.md·산출물 변경을 막아 강제 선택 — 둘 중 하나)
-   ├─ make-tools ───────────► 지금처럼 자동 진행(자율주행). 게이트 없음.
-   │                          (툴·하네스·잡일 빨리 만들 때)
+   │  (gate-guard가 task.md·산출물 변경을 막아 강제 선택 — 둘 중 하나, 태스크마다 재질문)
+   ├─ auto-implements ──────► 앞단(정의·계획) 합의 후 자율 실행. per-diff 게이트 없음.
+   │                          (검증·codex·테스트는 stakes 비례로 자율 수행)
    │
-   └─ implementation ───────► 실제 기능/구현 작업.
-                              │  (태스크 진행할 때마다 훅 강제 선택 — 둘 중 하나)
-                              ├─ implementation(현행) ─► 지금 구현 방식. per-diff 게이트 없음.
-                              └─ lazymode ────────────► 풀 이해 게이트. (이 문서의 핵심)
+   └─ lazy-implements ──────► 풀 이해 게이트. 매 diff 주관식 검증. (이 문서의 핵심)
 ```
 
-- **세션 모드 선택**: `make-tools` vs `implementation` — **세션 시작이 아니라 정의됨 진입(구현·계획·설계 착수, task.md 생성 포함) 시** gate-guard가 막으며 선택(미선택 시 진입 불가). **개념 탐색·토론·학습은 자유.** session-mode-guard는 상태 초기화만 하고 시작 때 묻지 않는다.
-- **태스크 진행 훅**(implementation 세션에서만): 각 태스크마다 `implementation` vs `lazymode` **강제 선택**.
-- `make-tools` = 현행 자동 모드(변경 없음). `implementation`(서브) = 현행 개발 방식. **`lazymode` = 신규 게이트 모드.**
+- **모드 선택**: `auto-implements` vs `lazy-implements` — **세션 시작이 아니라 정의됨 진입(구현·계획·설계 착수, task.md 생성 포함) 시** gate-guard가 막으며 선택(미선택 시 진입 불가). **개념 탐색·토론·학습은 자유.** session-mode-guard는 상태 초기화/복구만 하고 시작 때 묻지 않는다.
+- **태스크 재질문**: 새 `task.md` 생성 시 task-mode-guard가 모드를 UNSET으로 리셋 → 태스크마다 다시 선택.
+- `auto-implements` = 앞단 합의 후 자율 실행(현행 implementation 계승). **`lazy-implements` = 이해 게이트 모드(현행 lazymode 계승).** `make-tools`(완전 자율주행)는 **제거**(over-scoping 가드까지 끄는 철학 구멍).
+- **상태 격리**: `.claude/lazymode/<session_id>`(MODE + PENDING_GATE) — 같은 폴더 동시 세션이 서로의 모드를 clobber하지 않음. reinject-mode(UserPromptSubmit)가 매 턴 모드·경로 재주입.
 
 ---
 
