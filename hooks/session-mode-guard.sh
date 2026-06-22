@@ -3,7 +3,7 @@
 # stdin JSON: {session_id, cwd, source, ...}
 #
 # 정책 (lazy-busy 모드 — plans.md §0·§5):
-#   - 상태 파일: <project>/.claude/lazymode/<session_id> — 세션 단위(동시 세션 격리·resume 복구).
+#   - 상태 파일: <project>/.claude/lazymode/<session_id> (MODE / PENDING_GATE / WRITE_PHASE) — 세션 단위(동시 세션 격리·resume 복구).
 #   - **init-if-absent**: 파일 있으면 보존(resume → 모드/PENDING 복구), 없으면 MODE=UNSET 생성.
 #   - source=clear → 강제 리셋(새 작업; id 유지 여부와 무관하게 새로 묻는다).
 #   - 시작 때 모드를 묻지 않는다 — 탐색·토론·학습 자유. 차단은 gate-guard가 정의됨 진입 시.
@@ -38,6 +38,7 @@ if [ ! -f "$STATE" ] || [ "$SOURCE" = "clear" ]; then
   cat > "$STATE" <<EOF
 MODE=UNSET
 PENDING_GATE=0
+WRITE_PHASE=impl
 EOF
 fi
 
@@ -50,10 +51,13 @@ CURRENT=$(grep -E '^MODE=' "$STATE" 2>/dev/null | head -1 | cut -d= -f2 || true)
 cat <<MSG
 [lazy-busy] 활성. 현재 작업 모드: ${CURRENT:-UNSET}. 세션 상태파일: .claude/lazymode/$SESSION_ID
 ★ 지금(세션 시작) 모드를 묻지 마세요. 개념 탐색·토론·학습은 모드 없이 자유 — 이때 모드 질문 금지.
-**'이걸 구현/설계/계획하자'며 정의됨에 진입할 때**(구현·구현전 계획·설계, 보통 task.md 생성·코드 변경) gate-guard가 막으며, 그때 사용자에게 모드를 묻습니다:
-  • auto-implements — 앞단(정의·계획) 합의 후 자율 실행. 검증·codex는 stakes 규칙대로 자율적으로 돔.
+**'이걸 구현/설계/계획하자'며 정의됨에 진입할 때**(구현·구현전 계획·설계, 보통 task.md 생성·코드 변경) gate-guard가 막으며, 그때 사용자에게 모드를 묻습니다.
+2축: 구현 게이트(auto 자율 / lazy 매 diff 이해 게이트) × 핸드오프(implements 코드 유지 / write 롤백 후 사용자 필사):
+  • auto-implements — 앞단(정의·계획) 합의 후 자율 실행. 검증·codex는 stakes 규칙대로.
   • lazy-implements — 매 diff 사용자 이해 게이트(주관식→판정 워커). 자율주행 금지.
-선택을 받으면 위 세션 상태파일의 MODE 에 그 값을 기록하고 진행하세요. (정책: plans.md §0)
+  • auto-write — auto로 구현·검증·기록 완료 후, 코드/테스트 롤백 + writing.md로 사용자가 직접 필사 → 검증.
+  • lazy-write — lazy 게이트로 구현 후, 롤백 + 필사(최대 학습: 읽고 설명 + 직접 타이핑).
+선택을 받으면 위 세션 상태파일의 MODE 에 그 값을 기록하고 진행하세요. (*-write 는 write-handoff.md. 정책: plans.md §0)
 MSG
 
 exit 0
