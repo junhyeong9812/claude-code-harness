@@ -6,7 +6,7 @@
 
 ## 0. 모드 진입 (훅 강제)
 
-- **정의됨 진입 시 2축 4분기**(구현·구현전 계획·설계 착수 — "구현/설계/계획하자", 보통 task.md 생성): `auto-implements` | `lazy-implements` | `auto-write` | `lazy-write` 선택 (gate-guard가 task.md·산출물 변경을 막아 강제). 태스크마다 재질문(task-mode-guard). **개념 탐색·토론·학습은 자유 — 이때 묻지 않음.**
+- **정의됨 진입 시 2축 4분기**(구현·구현전 계획·설계 착수 — "구현/설계/계획하자", 보통 task.md 생성): `auto-implements` | `lazy-implements` | `auto-write` | `lazy-write` 선택 (task-mode-guard가 새 task.md에서 리셋·재질문, gate-guard가 첫 **산출물(코드)** 변경을 막아 강제 — task.md 자체는 안 막음, F4). 태스크마다 재질문. **개념 탐색·토론·학습은 자유 — 이때 묻지 않음.**
 - `auto-implements` = 앞단(정의·계획) 합의 후 자율 실행(per-diff 게이트 없음). **`lazy-implements`·`lazy-write` = 이 플레이북**(per-diff 이해 게이트는 `lazy-` 접두사로 결정).
 - **`lazy-write`**: 구현 단계는 이 플레이북 그대로(매 diff 게이트), 단 기록 단계 종료 후 `playbooks/write-handoff.md` 핸드오프(코드/테스트 롤백 → writing.md 필사 → 검증)를 append (§1 작업 모드).
 - lazy 계열이면 **이 플레이북이 §2~§6 게이트를 지배**한다. 정의·dimensions·templates·hooks·review·verification·git-workflow·open-source는 **현행 그대로**(단일 출처 — 복제 금지).
