@@ -31,7 +31,7 @@ claude-code-harness/
 │   ├── implementation.md      #   설계 §0(렌즈 선적용·자문 4질문·높음은 설계 codex 검증)·읽기·범위 통제·예외처리 일관성·페이즈/커밋 규율
 │   ├── implementation-lazymode.md #   작업 모드 lazy-*: 매 diff 주관식 이해 게이트(판정 독립 워커·before/after 스니펫·최대 2회)
 │   ├── write-handoff.md       #   작업 모드 *-write: 구현·기록 후 코드/테스트 롤백 → writing.md 필사 → 검증(지적만). 구현은 auto/lazy 상속
-│   ├── review.md              #   높음 stakes 병렬 듀얼 리뷰 루프 — Opus∥codex → 메인 종합 → codex 감사 → 수정·테스트 → 재리뷰(≤3) + 렌즈 4레벨·자원속도 체크 8문항
+│   ├── review.md              #   높음 stakes 병렬 듀얼 리뷰 루프 — Opus∥codex → 메인 종합 → codex 감사 → 수정·테스트 → 재리뷰(≤3) + 판단 렌즈(diff정확성 4 + 완전성·운영성/통합·부작용 2)·자원속도 체크 8문항
 │   ├── verification.md        #   stakes 비례 회귀·예외 경로 테스트·플로우 디버깅(API/서비스 간/비동기)·데이터 특칙
 │   ├── git-workflow.md        #   원격 있는 작업: 이슈 → 작업 브랜치 → 페이즈 커밋 → 커밋 정리 → MR/PR (gh/glab, 외부 발행은 사용자 확인)
 │   └── open-source.md         #   오픈소스 기여 프로세스

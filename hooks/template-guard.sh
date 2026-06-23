@@ -38,7 +38,7 @@ case "$NAME" in
   changelog)  need "## 1. 판단 항목 (J"; need "## 2. 기계적 변경 (M"; need "리뷰 연습 포인트" ;;
   task)       need "명확도 6칸"; need "트리아지" ;;
   learned)    need "## 1. 사용된 라이브러리"; need "## 4. 수정 전/후 코드 비교" ;;
-  review-log) need "## 루프 메타"; need "## finding ledger" ;;
+  review-log) need "## 루프 메타"; need "## 리뷰 모드"; need "## finding ledger" ;;
   overview)   need "## 주요 포인트"; need "## 워크플로우"; need "## 딥다이브 인덱스" ;;
   technical)  need "## 동작 방식" ;;
   *) exit 0 ;;
