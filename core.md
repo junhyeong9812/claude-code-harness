@@ -215,6 +215,7 @@
 | `playbooks/verification.md` | 검증 단계(§3.4) 진입 시 |
 | `playbooks/git-workflow.md` | **원격 있는 정의됨 작업** — 개발 진입 시(이슈·브랜치) + 기록 종료 후(정리·MR/PR). 경량·로컬 전용 제외 (§6.5) |
 | `playbooks/review.md` | **stakes 높음의 리뷰 시점(페이즈 구현 완료·커밋 후)** + 개발 단계 설계 자문·changelog 리뷰 연습 포인트 작성 시 §3 렌즈·§4 체크리스트만. 중간·낮음 리뷰·일반 검증에서는 루프 절차 로드 안 함 — **단 중간이 `review-log.md` 작성 시 §2 ledger 스키마만 조건부 로드** |
+| `playbooks/design-taste.md` | **review.md §3 "설계 품질·취향" 렌즈 적용 시** + implementation.md §0 설계 시 — 8앵커·Fowler 코드냄새·DDD(용어일관성·경계·Aggregate) 카탈로그. 렌즈 판단질문 본체는 review.md §3 단일 출처 |
 | `templates/task.md` | 작업 산출물 작성 시 |
 | `templates/definition.md` | stakes 높음의 정의 단계 |
 | `templates/master-plan.md` + `templates/phase.md` | stakes 높음 **중 다단계·대규모**의 계획 단계 (단일 페이즈 높음은 definition+task.md) |
