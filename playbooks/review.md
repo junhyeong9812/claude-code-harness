@@ -1,6 +1,6 @@
-# playbook: 리뷰 (높음 stakes — 병렬 듀얼 리뷰 루프)
+# playbook: 리뷰 (中=듀얼 1패스 / 높음=병렬 듀얼 리뷰 루프)
 
-> 트리거: **stakes 높음**의 리뷰 시점(페이즈 구현 완료·커밋 후). 개발 단계의 설계 자문은 §3 렌즈만 참조(implementation.md §0). **중간·낮음의 리뷰 루프 절차(§1·§3·§4)는 이 문서를 읽지 않는다** — core §5 표를 따른다. 단 **중간이 `review-log.md`를 쓸 때는 §2 ledger 스키마만 조건부로 읽는다**(루프 절차는 불필요 — codex 1회의 finding을 같은 ledger 형식으로 기록하기 위함).
+> 트리거: **中·높음**의 리뷰 시점(페이즈 구현 완료·커밋 후). 개발 단계의 설계 자문은 §3 렌즈만 참조(implementation.md §0). **낮음(셀프체크)만 이 문서를 읽지 않는다.** 中 = §1의 **듀얼 1패스**(⓪~④ + post-fix 타깃 재점검, ⑤ 반복 없음) + §2·§3 / 높음 = §1 전체(반복 루프 max3) + 설계 선검증·blind 테스트 워커. §2 대칭 부담·ledger는 中·높음 공통.
 > 원리: 같은 모델 여러 개는 편향을 공유한다 — 독립 신호는 다른 모델(codex)이 제공하고, 최종 판정은 투표가 아니라 근거 품질 재평가다.
 
 ## 1. 루프 절차
@@ -18,12 +18,15 @@
 - **④ 수정 → 테스트**: verification.md대로. finding 재현 테스트는 **"fix verification test"로 분류** — blind 테스트 설계(구현 diff 미열람 계약)와 구분하고, 그 계약을 소급 오염시키지 않는다.
 - **⑤ 재리뷰**: ①로 복귀. 입력은 갱신된 누적 diff packet.
 
-**종료 조건**: `open(채택·미수정) finding 0` **AND** `이번 루프 신규 채택 finding 0`. **최대 3루프** — 초과 시 `review unresolved`로 중단하고 미해소 finding·기각 목록·잔여 리스크·필요한 사용자 결정을 보고한다 (해소 또는 사용자 보류 결정 전 머지 불가).
+**종료 조건 (높음 — 반복 루프)**: `open(채택·미수정) finding 0` **AND** `이번 루프 신규 채택 finding 0` **AND** `대칭 부담 충족(§2)`. **최대 3루프** — 초과 시 `review unresolved`로 중단하고 미해소 finding·기각 목록·잔여 리스크·필요한 사용자 결정을 보고한다 (해소 또는 사용자 보류 결정 전 머지 불가).
+
+- **中 변형 (듀얼 1패스 — 반복 루프 없음)**: 中 stakes는 ⓪~④를 1회 수행하고 **⑤ 재리뷰 반복을 하지 않는다**. ④ 수정 후 **post-fix 타깃 재점검 1회**(채택 finding을 고친 hunks + 인접 호출부 + 새 테스트만 — codex 또는 Opus 워커 중 하나가 재검토하되 **독립성 위해 원 수정 근거를 낸 쪽이 아닌 리뷰어 권장(codex 우선)**, 종합 감사 재실행 없음, 전체 packet 재리뷰 아님)로 수정-새결함을 차단한다. **中 종료 조건**: `채택 finding 전부 fixed` + `post-fix 재점검 clean(신규 finding 0)` + §4.3 최소 안전선 + **대칭 부담(§2 — 이 신규 0 상태에 적용)**. 설계 선검증·blind 테스트 워커는 中 비대상(高 전용 — 中 테스트는 core §5대로 spec-우선 + 테스트 코드 자체 정합성 점검). 진행 중 설계 리스크가 드러나면(테스트 설계 막힘·불변식 한 문장 설명 실패·변경 확산 — core §4.1) **높음 승격**, 이미 수행한 듀얼 1패스를 높음 루프 **1회차로 인정**(처음부터 다시 X).
 
 ## 2. finding 규칙
 
-- **자격 조건 (전부 충족해야 finding)**: ① 현재 diff가 도입·변경한 **산출물**(코드·문서·정책 등) ② `file:line` 근거 ③ 실질 리스크(코드=정확성·성능·유지보수 / 문서·정책=정확성·일관성·운영·유지보수 중 무엇인지 명시) ④ spec 또는 변경 의도와의 연결. 하나라도 없으면 "범위 밖" 또는 open question — 단순 선호·취향은 finding이 아니다.
-- **상태 ledger** (필수 필드 — 종료 판정의 입력): `id / first_seen_loop / source(opus·codex·감사) / file:line / disposition(채택·기각·범위 밖·open question) / status(open·fixed·user-deferred·unresolved) / fixed_in_loop`. 기록 위치: **`review-log.md`**(`templates/review-log.md` — 이 스키마의 인스턴스 + finding별 실질 내용. core §3.5; 다단계·대규모는 해당 페이즈 폴더). **종료식**: open = disposition=채택 AND status=open / 신규 채택 = first_seen_loop=현재 루프 AND disposition=채택.
+- **자격 조건 (전부 충족해야 finding)**: ① 현재 diff가 도입·변경한 **산출물**(코드·문서·정책 등) ② **근거 위치** — `file:line`, 또는 "diff에 *없는 것*"(완전성·통합 렌즈) finding은 누락 산출물 경로·deploy 단계·runtime 계약 형식 허용 ③ 실질 리스크(코드=정확성·성능·유지보수 / 문서·정책=정확성·일관성·운영·유지보수 중 무엇인지 명시) ④ spec 또는 변경 의도와의 연결. 하나라도 없으면 "범위 밖" 또는 open question — 단순 선호·취향은 finding이 아니다.
+- **상태 ledger** (필수 필드 — 종료 판정의 입력): `id / first_seen_loop / source(opus·codex·감사·main-synthesis) / 근거(file:line, 또는 diff-밖 finding은 누락 경로·deploy·runtime 계약) / disposition(채택·기각·범위 밖·open question) / status(open·fixed·user-deferred·unresolved) / fixed_in_loop`. 기록 위치: **`review-log.md`**(`templates/review-log.md` — 이 스키마의 인스턴스 + finding별 실질 내용. core §3.5; 다단계·대규모는 해당 페이즈 폴더). **종료식**: open = disposition=채택 AND status=open / 신규 채택 = first_seen_loop=현재 루프 AND disposition=채택. **finding 단위**: 같은 `file:line`·같은 불변식 위반은 1건(출처가 둘이면 source 병기) — 쪼개거나 합쳐 종료식을 조작하지 않는다. 코드 변경 없이 테스트만 추가한 수정도 재점검 대상. **메인 종합 중 양 리뷰 비교로 발견한 결함**은 `source: main-synthesis`로 등록 — 독립 신호는 아니나 유효 finding(귀속·자격은 동일).
+- **대칭 부담 (신규 채택 finding 0인 루프 — 무근거 통과 차단)**: finding 0을 종료로 인정하려면 §3 렌즈마다 **applicable / not-applicable을 근거 1줄로 판정**하고(예: "동시성 = N/A: 단일 인스턴스 read-only"), **applicable 렌즈를 전부 `verified`로 입증**한다. **고정 개수 요구 없음** — 적용 안 되는 렌즈를 형식 충족용으로 verified 처리하는 것이 더 큰 위반(과거 "필수 finding 강제 → 날조" 재현). **verified ledger 필드**: `lens / 근거(file:line, 또는 "diff에 *없는 것*" 렌즈는 누락 산출물 경로·deploy 단계·runtime 계약 허용) / how(충족 방식 1줄) / source(opus·codex)`. 근거는 병렬 리뷰 원문에서 인용(메인 사후 창작 금지). **양쪽 균형**: applicable 렌즈를 Opus·codex가 합쳐서 전부 커버하면 충족 — applicable verified 전체를 통틀어 한 source(opus 또는 codex)의 기여가 0건이면 종료는 가능하되 `비대칭` 플래그로 리스크 기록(편향 공유 가능성). 中·높음 공통, 신규 finding 있는 루프엔 불필요(검사가 이미 입증됨).
 - 애매하면 단정하지 않는다 — open question으로 남긴다 ("이 컬렉션의 최대 크기는 어디서 제한되나?").
 
 ## 3. 판단 렌즈 (리뷰는 diff 기반, 판단은 이 레벨로 — 설계 시 선적용: implementation.md §0)

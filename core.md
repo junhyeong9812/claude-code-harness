@@ -153,21 +153,22 @@
 | | 낮음 | 중간 | 높음 |
 |---|------|------|------|
 | **외부 검색** | 불필요 | 낯선 영역만 | 의무 (유사 사례·함정) |
-| **codex 교차 검증** | 없음 | **반드시 1회** — 계획·최종·가장 불확실한 지점 중 위치 선택. 대체 허용 기준: "동등" = 외부 근거로 ground된 **분리 컨텍스트 리뷰 패스** 수준, 대체 사유 기록 | 계획 검토 + **설계 검증(구현 착수 전 — implementation.md §0)** + 최종 검증. **리뷰 루프를 수행한 작업은 루프의 codex 병렬 리뷰+종합 감사가 최종 검증을 겸한다(별도 패스 없음)** — 루프 비대상 산출물(문서·정책 등)만 별도 최종 검증 1회 |
-| **테스트 설계** | 구현자가 작성 | 구현과 분리된 패스 (spec 기준 먼저 설계) | 별도 워커 — **구현 diff 미열람 계약** |
-| **리뷰** | 셀프체크 | 별도 패스 1회 | **병렬 듀얼 리뷰 루프** — Opus 워커 ∥ codex 동시 리뷰 → 메인 종합 → codex 종합 감사 → 수정·테스트 → 재리뷰 (최대 3루프). 절차·렌즈·finding 규칙·종료 조건 = `playbooks/review.md` 단일 출처. **codex 단독·메인 셀프리뷰로 대체 금지 — 셀프리뷰 ≠ Opus 워커(Opus 워커 = 별도 서브에이전트). Opus 워커 생략은 무단 불가: 사유를 review-log에 명시하고 사용자 확인.** |
+| **codex 교차 검증** | 없음 | **듀얼 1패스의 일부** — 리뷰 행의 Opus∥codex 병렬 + codex 종합 감사가 codex 교차검증·최종을 겸한다. **설계 선검증은 제외(高 전용)**. codex 단독으로 갈음 불가(Opus 워커 필수) | 계획 검토 + **설계 검증(구현 착수 전 — implementation.md §0)** + 최종 검증. **리뷰 루프를 수행한 작업은 루프의 codex 병렬 리뷰+종합 감사가 최종 검증을 겸한다(별도 패스 없음)** — 루프 비대상 산출물(문서·정책 등)만 별도 최종 검증 1회 |
+| **테스트 설계** | 구현자가 작성 | 구현과 분리된 패스(spec 기준 먼저) **+ 테스트 코드 자체 정합성 점검**(불변식을 진짜 검증하나·거짓 통과 없나 — 高 blind 워커의 경량 대체) | 별도 워커 — **구현 diff 미열람 계약** |
+| **리뷰** | 셀프체크 | **듀얼 1패스** — Opus 워커 ∥ codex → 메인 종합 → codex 종합 감사 → 수정 → **post-fix 타깃 재점검 1회**(수정 hunks+인접 호출부+새 테스트만, **반복 루프 없음**). 절차·렌즈·finding·대칭부담 = `playbooks/review.md` 단일 출처. **codex 단독·셀프리뷰 대체 금지 — Opus 워커(별도 서브에이전트) 필수, 생략은 무단 불가(사유 review-log 명시 + 사용자 확인)** | **병렬 듀얼 리뷰 루프** = 中의 듀얼 1패스 + **재리뷰 반복(최대 3루프)** + 설계 선검증·blind 테스트 워커. Opus 워커 ∥ codex → 종합 → codex 감사 → 수정·테스트 → 재리뷰. 절차 = `playbooks/review.md` |
 | **산출물** | task.md 1파일 | task.md + 페이즈 절 | definition.md + task.md — **다단계(판정 §3.2)·대규모면 task.md 대신** master-plan + phases/ (측정·learned 판정은 master-plan "기록" 절) |
 | **코드 구현 제품 산출물** | OVERVIEW·changelog·learned·TECHNICAL 4종 (코드 구현 시 상시 — stakes 무관, §3.5) | 〃 | 〃 |
-| **review-log** | — (셀프체크만) | codex 1회 시 작성 | 듀얼 루프 시 작성 (§3.5) |
+| **review-log** | — (셀프체크만) | 듀얼 1패스 시 작성 | 듀얼 루프 시 작성 (§3.5) |
 
 - **메인은 관리감독이다**: 정의·계획·게이트 판정·사용자 합의는 메인이 소유하고, 대량 읽기·탐색·독립 검증은 워커로 — 메인 컨텍스트 보호가 곧 판정 품질이다. 소유권·브리핑·절단 계약 상세는 `playbooks/orchestration.md`.
 - **실행체는 네이티브 도구다**: 탐색=Explore, 병렬 절단=Agent, 대규모 fan-out·adversarial verify=Workflow(사용자 opt-in). 표의 **"워커" = 이 서브에이전트 호출**을 말한다(새 세션·새 창 아님). 자작 워커 절차 문서를 따로 두지 않는다.
-- **듀얼 리뷰 누락 금지(높음 stakes)**: 높음은 Opus 워커(독립 서브에이전트) ∥ codex 를 **둘 다** 수행한다. codex 만 돌리고 메인 셀프리뷰로 갈음하는 것은 듀얼 루프가 아니다(셀프리뷰는 같은 컨텍스트라 독립 신호가 아님). review-log `## 리뷰 모드`에 실제 수행한 리뷰 모드를 명시하고, Opus 워커를 생략했다면 사유 + 사용자 확인을 기록한다. (template-guard 가 review-log 의 `## 리뷰 모드` 섹션 존재를 경고로 강제)
+- **듀얼 리뷰 누락 금지(中·높음)**: 中·높음 **둘 다** Opus 워커(독립 서브에이전트) ∥ codex 를 수행한다 — 차이는 中=듀얼 1패스, 높음=반복 루프(위 표). codex 만 돌리고 메인 셀프리뷰로 갈음하는 것은 듀얼 리뷰가 아니다(셀프리뷰는 같은 컨텍스트라 독립 신호가 아님). review-log `## 리뷰 모드`에 실제 수행한 리뷰 모드를 명시하고, Opus 워커를 생략했다면 사유 + 사용자 확인을 기록한다. (template-guard 가 review-log 의 `## 리뷰 모드`·`## verified` 섹션 존재를 경고로 강제)
+- **대칭 부담(中·높음 — 무근거 통과 차단)**: 신규 채택 finding 0인 리뷰(루프)는 "깨끗함"을 능동 입증해야 종료로 인정한다 — 먼저 §3 렌즈마다 **applicable/not-applicable을 근거 1줄로 판정**하고, **applicable 렌즈를 전부 `verified`**(렌즈·근거·충족 방식·출처)로 기록한다. **고정 개수 강제 없음** — 적용 안 되는 렌즈를 형식 충족용으로 verified 처리하는 것이 더 큰 위반(과거 "필수 finding 강제 → 날조" 재현 회피). 스키마·근거 형식·양쪽 균형 = `playbooks/review.md §2`.
 - 리뷰 가드레일: 신뢰도 높은 발견만 보고(`file:line` 인용), 선재 이슈·린터가 잡을 것 제보 금지. **각 finding은 현재 diff 또는 spec과의 불일치에 귀속을 증명**해야 하며, 귀속이 불명확하면 "범위 밖"으로만 기록한다(오귀속 방지 — 페이즈 커밋으로 diff 격리, §3.2). **페르소나 다수결은 codex(다른 모델) 독립 신호를 대체하지 못한다.**
 - **codex 호출 전 보안 스캔(외부 전송 게이트)**: 시크릿 키 패턴(`sk-`·`ghp_`·`AKIA`·PRIVATE KEY)·`password|token|secret[:=]` 값·PII·내부 경로/호스트를 스캔 — 매칭 0건만 자동 통과, 발견 시 redact 후 사용자 확인.
 - **codex 호출**: `codex exec` CLI — `cat 입력.md | codex exec --skip-git-repo-check -s read-only --ephemeral -o 출력.md -` (Bash, 백그라운드 권장).
 - **codex 경로(비대화형 셸 PATH 함정)**: codex는 nvm로 설치돼 **Claude의 Bash 툴(비대화형)에는 PATH에 안 잡힌다** — `which codex`가 실패해도 미설치가 아니다(대화형 셸에선 정상). 호출 전 `codex` 직접 대신 `CODEX=$(ls ~/.nvm/versions/node/*/bin/codex 2>/dev/null | head -1)`로 전체 경로를 잡거나 nvm을 source한다.
-- **codex 호출 실패**: 낮음은 자동 스킵 + 사유 기록. **중간은 0회로 끝내지 않는다** — 분리 컨텍스트 리뷰 패스로 대체하거나 사용자 보고. **높음은 스킵 불가** — 대체 독립 검증 또는 사용자 확인으로 분기.
+- **codex 호출 실패**: 낮음은 자동 스킵 + 사유 기록. **中·높음은 듀얼 리뷰가 의무 — 0회로 끝내지 않는다**: 1회 재시도 → 대체 독립 리뷰어로 동등 패스 수행하거나 `review blocked`. 사용자 override 시 잔여 리스크 기록(review.md §1 ① 실패 분기와 동일).
 - **외부 검색 불가**(네트워크·내부 전용 도메인·보안상 부적합) 시: 사유 기록 + codex 큐레이션으로 대체하거나 사용자 보고 — 높음 stakes에서 말없이 생략하지 않는다.
 
 ---
@@ -214,7 +215,7 @@
 | `playbooks/write-handoff.md` | **작업 모드 `auto-write`·`lazy-write`**의 기록 단계 종료 후 핸드오프 — 코드/테스트 롤백 → writing.md 필사 → 검증 (§1 작업 모드·§3.3) |
 | `playbooks/verification.md` | 검증 단계(§3.4) 진입 시 |
 | `playbooks/git-workflow.md` | **원격 있는 정의됨 작업** — 개발 진입 시(이슈·브랜치) + 기록 종료 후(정리·MR/PR). 경량·로컬 전용 제외 (§6.5) |
-| `playbooks/review.md` | **stakes 높음의 리뷰 시점(페이즈 구현 완료·커밋 후)** + 개발 단계 설계 자문·changelog 리뷰 연습 포인트 작성 시 §3 렌즈·§4 체크리스트만. 중간·낮음 리뷰·일반 검증에서는 루프 절차 로드 안 함 — **단 중간이 `review-log.md` 작성 시 §2 ledger 스키마만 조건부 로드** |
+| `playbooks/review.md` | **stakes 中·높음의 리뷰 시점(페이즈 구현 완료·커밋 후)** — 中=§1 듀얼 1패스 절차(반복 없음·post-fix 재점검)+§2·§3, 높음=§1 전체 루프(≤3)+설계 선검증·blind 워커. 개발 단계 설계 자문·changelog 리뷰 연습 포인트 작성 시 §3 렌즈·§4 체크리스트만. **낮음 리뷰·일반 검증에서는 로드 안 함** |
 | `playbooks/design-taste.md` | **review.md §3 "설계 품질·취향" 렌즈 적용 시** + implementation.md §0 설계 시 — 8앵커·Fowler 코드냄새·DDD(용어일관성·경계·Aggregate) 카탈로그. 렌즈 판단질문 본체는 review.md §3 단일 출처 |
 | `templates/task.md` | 작업 산출물 작성 시 |
 | `templates/definition.md` | stakes 높음의 정의 단계 |
@@ -257,3 +258,4 @@
 | 2026-06-22 (2) | Opus 4.8 (1M) | **훅 버그 2건 수정** — ① **F4 모드 이중질문**: gate-guard가 UNSET에서 task.md를 막아 모드를 먼저 고르게 하는데 task-mode-guard가 그 task.md에서 리셋해 재질문 → **task.md를 게이트 완전 면제**(docs/plans처럼). 모드 재질문은 task-mode-guard(리셋+리마인더)가, 하드 게이트는 첫 산출물(코드) 변경에서. ② **git-guard jsonl 지연 false-block**: push/docs 승인을 세션 jsonl(지연)에서만 grep해 현재 턴 "푸시해줘"를 놓침 → 신규 `capture-prompt.sh`(UserPromptSubmit)가 현재 턴 `.prompt`를 사이드카에 기록, git-guard가 jsonl + 사이드카로 판정. settings UserPromptSubmit 배선. §1·§6.4 정합. 설계=`docs/plans/2026-06-22/hook-bugfixes/` | 사용자 지적(2026-06-22): 둘 다 버그 — 모드가 task.md 직후 사라져 두 번 물음(이 세션에서 실재현), push 승인 명시해도 jsonl 지연으로 false-block(이 세션에서 실재현). codex 교차검증 |
 | 2026-06-23 | Opus 4.8 | **듀얼 리뷰 누락 방지(소프트 강제) + 완전성·운영성/통합·부작용 리뷰 렌즈 추가** — §5 리뷰 high 셀에 "codex 단독·셀프리뷰로 대체 금지(셀프리뷰≠Opus 워커), 생략 시 사유+사용자 확인" 명문화 + 가드레일 불릿. `templates/review-log.md`에 `## 리뷰 모드`(수행 리뷰 모드 명시) 섹션 + `hooks/template-guard.sh` 마커 강제(누락 가시화). `playbooks/review.md §3` 판단 렌즈에 **완전성·운영성**(diff에 *없는 것* — public 필터가 admin 가두나·숨김/비활성/삭제 데이터 admin 조회·복구 경로)·**통합·부작용**(공유 데이터 무단 덮어쓰기·소스 전환 미처리 경로 단절) 2렌즈 추가 | 사용자 지적(2026-06-23): 인증 작업에서 Opus 서브에이전트 리뷰를 생략(codex만)했고, MR !29(숨김 데이터 admin 조회 불가)·!38(Opus가 codex 미검출 blocker H1 비번재설정 단절·M1 공유 USER_GB 덮어쓰기 검출)에서 완전성·통합 관점이 약했음이 드러남. §0.6(훅=결정론만)상 하드블록 불가→소프트 가드(문서+review-log 마커) |
 | 2026-06-24 | Opus 4.8 (1M) | **2026-06-23 렌즈 전파 정합 (후속)** — 신규 2렌즈(완전성·운영성·통합·부작용)가 `review.md §3`에만 반영되고 다른 렌즈 열거에 전파 안 됐던 것을 정합: ① `playbooks/implementation.md §0`("렌즈는 설계의 입력이다" 열거)가 옛 4렌즈만 나열 → 6렌즈로 갱신(하필 "diff에 *없는 것*" 렌즈라 설계 선적용 누락이 치명적). ② `templates/review-log.md` finding 상세 "review.md §3 4레벨" → "§3 렌즈"(개수 비종속화로 re-stale 방지). 렌즈 본체는 review.md §3 단일 출처 유지 — 이번 변경은 포인터 정합만. ~/.claude 동기 | 사용자 점검(2026-06-24): "렌즈가 제대로 적용됐나" 확인 중 §0·review-log 템플릿의 렌즈 열거가 4개로 stale인 것 발견. 2026-06-23 변경의 전파 누락 |
+| 2026-06-29 | Opus 4.8 (1M) | **中 stakes 듀얼 리뷰 승격 + 대칭 부담 도입** — 中을 "별도 패스 1회(codex 단독 가능)"에서 **듀얼 1패스**(Opus 워커 ∥ codex → 종합 → codex 감사 → 수정 → **post-fix 타깃 재점검 1회**, 반복 루프 없음)로 승격 → 中이 더는 Opus 워커를 스킵 못 함(2026-06-23 구멍 봉쇄). 高 = 中 + 반복 루프 max3 + 설계 선검증 + blind 테스트 워커(이 둘은 高 전용). 中 테스트 = spec-우선 + **테스트 코드 자체 정합성 점검**(blind 워커 경량 대체). **대칭 부담**: 신규 finding 0 리뷰는 §3 렌즈 applicable 판정 후 **applicable 전부 verified**(고정수 X — 날조 방지). core §5 표·불릿, `review.md` 제목·트리거·§1 中 변형·§2 대칭부담/근거형식/source, `review-log.md`·`template-guard.sh` 배선. 낮음·dimensions·§4 불변. 설계=`docs/plans/2026-06-29/stakes-중간-듀얼리뷰-대칭부담/` | 사용자 결정(2026-06-29): "안 하다 나중에 다 다시 < 지금 비용" — 中(조용히 나중에 터지는 부류)은 선검증 ROI 최고 구간. codex 설계검증 15지적 반영(≥4 고정→applicable 전부 / 재리뷰 완전제거→post-fix 타깃재점검 / 외부검색 의무→조건부 / blind워커→테스트 정합성 점검). 약/강 2단 전면 개편안은 blast radius 과다로 기각, 中 승격만 |

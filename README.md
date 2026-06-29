@@ -31,7 +31,7 @@ claude-code-harness/
 │   ├── implementation.md      #   설계 §0(렌즈 선적용·자문 4질문·높음은 설계 codex 검증)·읽기·범위 통제·예외처리 일관성·페이즈/커밋 규율
 │   ├── implementation-lazymode.md #   작업 모드 lazy-*: 매 diff 주관식 이해 게이트(판정 독립 워커·before/after 스니펫·최대 2회)
 │   ├── write-handoff.md       #   작업 모드 *-write: 구현·기록 후 코드/테스트 롤백 → writing.md 필사 → 검증(지적만). 구현은 auto/lazy 상속
-│   ├── review.md              #   높음 stakes 병렬 듀얼 리뷰 루프 — Opus∥codex → 메인 종합 → codex 감사 → 수정·테스트 → 재리뷰(≤3) + 판단 렌즈(diff정확성 4 + 완전성·운영성/통합·부작용 2)·자원속도 체크 8문항
+│   ├── review.md              #   中=듀얼 1패스(반복 없음·post-fix 재점검) / 높음=병렬 듀얼 리뷰 루프(≤3) — Opus∥codex → 종합 → codex 감사 → 수정 + 판단 렌즈(diff정확성 4 + 완전성·운영성/통합·부작용 2 + 설계취향)·대칭 부담·자원속도 체크 8문항
 │   ├── verification.md        #   stakes 비례 회귀·예외 경로 테스트·플로우 디버깅(API/서비스 간/비동기)·데이터 특칙
 │   ├── git-workflow.md        #   원격 있는 작업: 이슈 → 작업 브랜치 → 페이즈 커밋 → 커밋 정리 → MR/PR (gh/glab, 외부 발행은 사용자 확인)
 │   └── open-source.md         #   오픈소스 기여 프로세스
@@ -72,8 +72,8 @@ claude-code-harness/
 | stakes | 외부 검색 | codex | 테스트설계/리뷰 | 산출물 |
 |--------|----------|-------|----------------|--------|
 | 낮음 | — | — | 셀프체크 | task.md (전 차원 비활성 자명 작업은 트리아지 1행 축약) |
-| 중간 | 낯선 영역 | 반드시 1회 | 분리 패스 | task.md (+페이즈 절) |
-| 높음 | 의무 | 계획+설계+최종 (페이즈 diff는 리뷰 루프가 겸함) | 테스트설계 별도 워커(diff 미열람) · 리뷰 = **병렬 듀얼 리뷰 루프**(playbooks/review.md) | definition + task.md (다단계면 master-plan+phases) |
+| 중간 | 낯선 영역 | 듀얼 1패스에 포함 (설계 선검증 제외) | spec-우선 + 테스트 코드 정합성 점검 · 리뷰 = **듀얼 1패스**(Opus∥codex → 종합 → 감사 → 수정 → post-fix 타깃 재점검, 반복 없음) | task.md (+페이즈 절) |
+| 높음 | 의무 | 계획+설계+최종 (페이즈 diff는 리뷰 루프가 겸함) | 테스트설계 별도 워커(diff 미열람) · 리뷰 = **병렬 듀얼 리뷰 루프**(中 1패스 + 반복 ≤3, playbooks/review.md) | definition + task.md (다단계면 master-plan+phases) |
 
 > 코드 구현이 있는 작업은 stakes 무관 **제품 산출물 4종**(`OVERVIEW`·`changelog`·`learned`·`TECHNICAL`) 추가 작성, 리뷰/codex가 돈 작업(중간↑)은 `review-log.md`까지. 경계: OVERVIEW=추상 지도(다이어그램) / changelog=이번 diff 의사결정(스니펫) / learned=사용 요소 카탈로그 / TECHNICAL=diff 비종속 동작 모델 / review-log=리뷰 finding.
 
@@ -122,5 +122,7 @@ cp hooks/*.sh ~/.claude/hooks/ && chmod +x ~/.claude/hooks/*.sh
 | **22** | **훅 버그 2건 수정 (2026-06-22, dogfood)** — 이 세션에서 실재현된 두 버그. ① **F4 모드 이중질문**: gate-guard가 UNSET에서 task.md를 막아 모드를 먼저 고르게 하는데 task-mode-guard가 그 task.md에서 모드를 리셋 → 재질문. **수정**: task.md를 gate-guard 완전 면제(docs/plans처럼), 모드 재질문은 task-mode-guard(리셋+리마인더)·하드 게이트는 첫 산출물(코드) 변경에서. ② **git-guard jsonl 지연 false-block**: push/docs 승인을 세션 jsonl(flush 지연)에서만 grep → 현재 턴 "푸시해줘"를 못 봐 명시 승인도 차단. **수정**: 신규 `capture-prompt.sh`(UserPromptSubmit)가 현재 턴 `.prompt`를 사이드카에 기록, git-guard가 **사이드카 authoritative**(있으면 그것만, jsonl은 폴백) — false-block 해결 + stale jsonl 과허용 차단. 훅 8종 체계 확정. codex 최종(authoritative 반영). 시나리오 11/11 + 회귀 32/32. 설계=`docs/plans/2026-06-22/hook-bugfixes/` |
 
 | **23** | **듀얼 리뷰 누락 방지 + 완전성·운영성/통합·부작용 렌즈 (2026-06-23~24)** — 인증 작업에서 Opus 워커 리뷰를 생략(codex만)했고 MR !29(숨김 데이터 admin 조회 불가)·!38(공유 USER_GB 덮어쓰기·비번재설정 단절)에서 "diff에 *없는 것*" 관점이 약했음이 드러남. ① §5 리뷰 high 셀에 "codex 단독·셀프리뷰로 대체 금지(셀프리뷰≠Opus 워커), 생략 시 사유+사용자 확인" 명문화 + `review-log.md` `## 리뷰 모드` 섹션·`template-guard` 마커 강제(소프트 가드 — §0.6상 하드블록 불가). ② `playbooks/review.md §3` 판단 렌즈 4→6: **완전성·운영성**(빠진 CRUD/복구 경로·public 필터가 admin 가두나)·**통합·부작용**(공유 데이터 무단 덮어쓰기·소스 전환 단절). ③ (2026-06-24 후속, dogfood 점검 발견) 신규 2렌즈가 `review.md §3`에만 반영되고 `implementation.md §0`(설계 선적용 열거)·`review-log` 템플릿에 전파 안 됐던 것 정합(4→6렌즈 열거·"4레벨"→"렌즈" 개수 비종속화). |
+
+| **24** | **中 stakes 듀얼 리뷰 승격 + 대칭 부담 (2026-06-29)** — 中이 "별도 패스 1회(codex 단독 가능)"라 Opus 워커를 스킵할 여지가 남아 있던 것(2026-06-23 구멍)을 닫음. 中을 **듀얼 1패스**(Opus 워커 ∥ codex → 종합 → codex 감사 → 수정 → **post-fix 타깃 재점검 1회**, 반복 루프 없음)로 승격 → 高 = 中 + 반복 루프(≤3) + 설계 선검증 + blind 테스트 워커(이 둘만 高 전용). 中 테스트 = spec-우선 + **테스트 코드 자체 정합성 점검**(blind 워커 경량 대체). **대칭 부담**: 신규 finding 0 리뷰는 §3 렌즈 applicable 판정 후 **applicable 전부 verified**(고정수 X — "필수 finding 강제→날조" 함정 회피, `## verified` 섹션·template-guard 마커). 낮음·dimensions·§4 불변. core §5·`review.md`·`review-log.md`·`template-guard.sh` 배선. **약/강 2단 전면 개편안은 blast radius 과다로 기각**(中 승격만). codex 설계검증 15지적 반영(≥4 고정→applicable 전부 / 재리뷰 제거→post-fix 타깃재점검 / 외부검색 의무→조건부 / blind→테스트 정합성 점검). 설계=`docs/plans/2026-06-29/stakes-중간-듀얼리뷰-대칭부담/` |
 
 상세: `docs/HISTORY.md`, v1 규칙 전문: `archive/2026-06-10-opus-harness/`, v2 설계 근거: `docs/11`~`16` + `docs/plans/` + core.md 변경 이력.
