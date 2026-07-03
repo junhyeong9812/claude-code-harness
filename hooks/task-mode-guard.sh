@@ -34,20 +34,33 @@ SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty' | tr -cd 'A-Za-z0
 STATE="$CWD/.claude/lazymode/$SESSION_ID"
 [ -f "$STATE" ] || exit 0
 
-# 새 태스크 → MODE=UNSET 리셋 (gate-guard가 이걸 보고 차단)
-if grep -qE '^MODE=' "$STATE" 2>/dev/null; then
-  sed -i 's/^MODE=.*/MODE=UNSET/' "$STATE" 2>/dev/null || true
-else
-  echo "MODE=UNSET" >> "$STATE"
+# 같은 task.md 재작성(Edit 갱신·재Write)에는 모드를 리셋하지 않는다 (#12) — 경로가 바뀔 때만 새 태스크.
+# canonical 경로로 비교(상대/절대·심링크 무관). 저장된 TASK_PATH와 같으면 리셋 스킵.
+canon() { realpath -m -- "$1" 2>/dev/null || realpath -- "$1" 2>/dev/null || python3 -I -S -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null; }
+case "$FILE_PATH" in /*) CFP=$(canon "$FILE_PATH") ;; *) CFP=$(canon "$CWD/$FILE_PATH") ;; esac
+PREV_TASK=$(grep -E '^TASK_PATH=' "$STATE" 2>/dev/null | head -1 | cut -d= -f2- || true)
+if [ -n "$CFP" ] && [ "$CFP" = "$PREV_TASK" ]; then
+  exit 0   # 같은 태스크 재작성 — 모드 유지, 재질문 없음
 fi
-# 새 태스크는 fresh — 직전 태스크의 게이트 빚(PENDING_GATE)·write 단계(WRITE_PHASE)를 함께 리셋
-# (안 그러면 새 lazy 태스크 첫 edit이 stale PENDING에 막히거나, *-write 잔재 단계가 코드 수정을 오차단).
-if grep -qE '^PENDING_GATE=' "$STATE" 2>/dev/null; then
-  sed -i 's/^PENDING_GATE=.*/PENDING_GATE=0/' "$STATE" 2>/dev/null || true
-fi
-if grep -qE '^WRITE_PHASE=' "$STATE" 2>/dev/null; then
-  sed -i 's/^WRITE_PHASE=.*/WRITE_PHASE=impl/' "$STATE" 2>/dev/null || true
-fi
+
+# 상태 갱신 헬퍼 (원자 — temp+mv)
+set_kv() {
+  local key="$1" val="$2" tmp
+  tmp=$(mktemp "$(dirname "$STATE")/.tmst.XXXXXX" 2>/dev/null) || return 1
+  if grep -qE "^$key=" "$STATE" 2>/dev/null; then
+    sed "s#^$key=.*#$key=$val#" "$STATE" > "$tmp" 2>/dev/null || { rm -f "$tmp"; return 1; }
+  else
+    { cat "$STATE" 2>/dev/null; echo "$key=$val"; } > "$tmp" 2>/dev/null || { rm -f "$tmp"; return 1; }
+  fi
+  mv -f "$tmp" "$STATE" 2>/dev/null || { rm -f "$tmp"; return 1; }
+}
+
+# 새 태스크 → MODE=UNSET 리셋 + TASK_PATH 기록 (gate-guard가 UNSET을 보고 차단)
+set_kv MODE UNSET || true
+[ -n "$CFP" ] && { set_kv TASK_PATH "$CFP" || true; }
+# 새 태스크는 fresh — 직전 태스크의 게이트 빚(PENDING_GATE)·write 단계(WRITE_PHASE)를 함께 리셋.
+set_kv PENDING_GATE 0 || true
+set_kv WRITE_PHASE impl || true
 
 cat >&2 <<MSG
 [lazy-busy] 새 태스크 감지 (task.md 생성). 구현 변경 전에 사용자에게 이 태스크의 모드를 물어 선택받으세요

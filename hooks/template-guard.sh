@@ -22,11 +22,17 @@ esac
 
 FILE=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
 [ -n "$FILE" ] || exit 0
-echo "$FILE" | grep -qE '/docs/plans/.+/(changelog|task|learned|review-log|overview|technical)\.md$' || exit 0
-[ -f "$FILE" ] || exit 0
+# 대소문자 무관(-i) + 상대경로 허용((^|/)) — OVERVIEW.md·TECHNICAL.md(대문자 정본)가 검사되지 않던 버그 교정 (#1·#16)
+echo "$FILE" | grep -qiE '(^|/)docs/plans/.+/(changelog|task|learned|review-log|overview|technical)\.md$' || exit 0
+# 상대경로는 입력 cwd 기준으로 해석(훅 프로세스 cwd ≠ 세션 cwd 대비, #16)
+CWD=$(echo "$HOOK_INPUT" | jq -r '.cwd // empty')
+[ -n "$CWD" ] && [ -d "$CWD" ] || CWD="$PWD"
+case "$FILE" in /*) FPATH="$FILE" ;; *) FPATH="$CWD/$FILE" ;; esac
+[ -f "$FPATH" ] || exit 0
 
-NAME=$(basename "$FILE" .md)
-CONTENT=$(cat "$FILE" 2>/dev/null || true)
+# NAME 소문자 정규화 — OVERVIEW.md → overview 로 case 분기 매칭
+NAME=$(basename "$FILE" .md | tr '[:upper:]' '[:lower:]')
+CONTENT=$(cat "$FPATH" 2>/dev/null || true)
 MISSING=""
 
 need() {
