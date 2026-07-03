@@ -20,5 +20,20 @@
 | P3-07 | 1 | fable | *-write 빈 WRITE_PHASE fail-closed (fable#4) | 확인·해소 | — | — | cross-phase: task-mode-guard가 새 task에서 WRITE_PHASE=impl 초기화(현행 코드) + session-mode-guard init. 빈 phase 도달 경로 없음 — 기존 동작 보존, 신규 결함 아님 |
 | P3-08 | 1 | fable | root-level 경로 double-slash (fable#5 info) | 기각 | — | — | //newtop/a.c은 repo 밖이라 exit 0 — cosmetic, 판정 영향 0 |
 
-## verified
-(loop2에서 신규 0 확인 시 대칭 부담 기록)
+| P3-09 | 2 | codex | realpath -m GNU 전용 → BSD/macOS 전면 차단 (codex loop2 High) | 채택 | fixed | 2 | 상태파일 존재+realpath -m 미지원 시 auto 포함 모든 Edit/Write 차단 → realpath -m→realpath→python3 폴백 체인 |
+| P3-10 | 2 | fable | */docs/plans/* glob이 repo/src/docs/plans/ 소스 면제 (fable 관찰) | 범위 밖 | — | — | loop1 비귀속(기존 서브프로젝트 지원 glob, 구 수동루프도 동일 산출) — realpath -m 교체가 신설/악화 아님. 정규화 후에도 동일. 서브프로젝트 docs/plans 지원 목적 유지, 소스에 docs/plans 디렉토리는 극히 드묾 |
+
+## 종료 판정 (loop2 — Fable 신규 0, codex High 1 수정)
+- Fable 워커: loop1 수정이 기존 게이트 무파손 실측 검증(신규 High 0). codex: 이식성 High 1(P3-09) → 수정 → 타깃 재점검.
+- **종료 상태: 사실상 수렴** — loop2에 실질 채택 1건(이식성, 격리적). open 0·미수정 0. 재점검 clean 시 정식 종료 인정(신규는 이식성 1건뿐, 보안 우회 계열 아님).
+
+## verified (loop2 — 대칭 부담, 양측 원문)
+
+| lens | applicable | 근거·충족 | source |
+|------|-----------|-----------|--------|
+| 면제 정확성 | applicable | realpath -m 교체 후 gt_03/04/13/14·docs/plans·repo prefix 전 케이스 실측 보존 | fable |
+| 상태 원자성 | applicable | set_kv flock+temp+mv 불변(loop1 canon만 수정), gt_05/06 커버 | fable+codex |
+| 보존 불변식 | applicable | UNSET차단·auto통과·lazy게이트·await차단 — 실측 5케이스 기대 일치 | fable |
+| set -eu | applicable | canon/PostToolUse 신규 경로 미가드 nonzero 0, 실패=exit2/비정상종료로 닫힘 | fable+codex |
+| 이식성 | applicable | realpath -m→realpath→python3 폴백 (codex High 반영) | codex |
+- 비대칭 없음: 면제·불변식은 fable, 이식성은 codex 커버.
