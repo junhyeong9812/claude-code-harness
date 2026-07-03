@@ -34,9 +34,23 @@ MARK="$MARK_DIR/${SESSION_ID:-nosession}.warned"
 [ -f "$MARK" ] && exit 0
 
 # untracked 신규 파일도 포함(-uall) — git diff는 untracked를 안 보여 code+docs 혼재 신규를 놓쳤다(#14).
-# rename(R old -> new)은 원본·대상 **양쪽**을 집계 — docs↔code 경계를 넘는 rename 경고 누락 방지 (phase-04 codex)
-CHANGED=$(git -c core.quotePath=false status --porcelain=v1 -uall 2>/dev/null \
-  | sed 's/^...//' | sed 's/ -> /\n/' | sed 's/^"//; s/"$//' | grep -v '^$' | sort -u)
+# rename은 원본·대상 **양쪽** 집계(경계 넘는 rename 경고 누락 방지) — NUL(-z) 파싱으로 ` -> ` 포함 파일명 오분할 차단 (phase-04 codex 재점검)
+CHANGED=$(git -c core.quotePath=false status --porcelain=v1 -uall -z 2>/dev/null \
+  | python3 -I -S -c '
+import sys
+d=sys.stdin.buffer.read().split(b"\0"); out=set(); i=0
+while i < len(d):
+    e=d[i]
+    if not e: i+=1; continue
+    xy=e[:2]; p=e[3:]
+    if xy[:1] in (b"R", b"C"):      # rename/copy: 다음 레코드가 원본
+        i+=1; out.add(p); out.add(d[i] if i < len(d) else b"")
+    else:
+        out.add(p)
+    i+=1
+for x in sorted(out):
+    if x: print(x.decode("utf-8","replace"))
+' 2>/dev/null | grep -v '^$' | sort -u)
 [ -n "$CHANGED" ] || exit 0
 
 DOCS_RE='(^docs/|(^|/)README($|[._-])|(^|/)CHANGELOG($|[._-])|(^|/)HISTORY($|[._-])|(^|/)LICENSE($|[._-])|\.md$)'
