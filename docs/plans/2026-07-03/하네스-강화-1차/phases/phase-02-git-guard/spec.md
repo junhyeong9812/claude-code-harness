@@ -53,3 +53,5 @@ git-guard.sh·capture-prompt.sh를 phase-01 gate 커밋으로 restore + 테스�
 
 ## 8. spec 고정
 이 시점 커밋 후 구현 진입. 변경은 여기 append.
+
+- [구현 중 append] ① gg_13 기대 정정: "pending 파일 부재"가 아니라 **구 pending(turn=4) 소모 + 재차단이 새 pending(turn=5) 기록** — 차단은 항상 pending을 기록하는 것이 2턴 흐름의 일관 동작(비긍정 발화 후에도 사용자가 다음 턴에 "응" 하면 승인 가능해야 함). ② **신규 결함 발견·수정(실재현)**: 구 가드가 heredoc 본문 안 `git push` 문자열을 명령으로 오인해 이 페이즈의 테스트 추가 Bash를 차단 — 신규 설계도 공유하던 오탐이라 `strip_heredocs`(<< TAG ~ TAG 구간 제외)를 추가하고 gg_18로 고정. ③ gg 신규 케이스 추가로 tests.lock 재생성(사유=이 spec, gate.md에 기록).
