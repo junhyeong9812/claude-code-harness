@@ -117,6 +117,8 @@
 
 프로세스 산출물의 기본은 **`task.md` 1파일** (정의+계획+검증+기록 통합) — 단 코드 구현이 있는 작업은 `OVERVIEW.md`·`changelog.md`·`learned.md`·`TECHNICAL.md` 4종 + 측정 1행을 별도 작성하고, **리뷰/codex가 돈 작업(중간↑)은 `review-log.md`를 더한다**. 위치: 대상 프로젝트 `docs/plans/YYYY-MM-DD/작업명/`.
 
+**낮음 stakes 산출물 경량화 (2026-07-03 사용자 결정)**: **낮음 stakes**의 코드 구현 작업은 4종 별도 파일 대신 **task.md 안의 통합 절**로 갈음할 수 있다 — `## 산출물 요약`에 OVERVIEW(주요 포인트 3~5 + 딥다이브 인덱스)·learned(사용 요소 카탈로그)·TECHNICAL(동작 모델 요지)을 압축하고, **changelog는 반드시 before/after diff 스니펫**(실파일 복사, J/M/G 핵심 항목)을 포함한다 — "무엇이 어떻게 바뀌었나"를 diff로 남기는 것이 경량화의 핵심(리뷰 훈련 가치 보존). **중간·높음 stakes는 4종 별도 파일 유지**(경량화 대상 아님 — 보안·동시성 등 저-diff 고-stakes는 §4대로 풀 산출물). 낮음이라도 학습 가치가 크면 풀 4종으로 승격 가능.
+
 **경량 경로 폐지 (2026-06-10 사용자 결정)**: 모든 정의됨 작업은 task.md를 작성한다. 전 차원 비활성이 자명한 작업(오타·주석 수준)의 트리아지 1행 축약만 허용 — 형식은 dimensions.md 사용법을 따른다.
 
 ---
@@ -157,7 +159,7 @@
 | **테스트 설계** | 구현자가 작성 | 구현과 분리된 패스(spec 기준 먼저) **+ 테스트 코드 자체 정합성 점검**(불변식을 진짜 검증하나·거짓 통과 없나 — 高 blind 워커의 경량 대체) | 별도 워커 — **구현 diff 미열람 계약** |
 | **리뷰** | 셀프체크 | **듀얼 1패스** — Opus 워커 ∥ codex → 메인 종합 → codex 종합 감사 → 수정 → **post-fix 타깃 재점검 1회**(수정 hunks+인접 호출부+새 테스트만, **반복 루프 없음**). 절차·렌즈·finding·대칭부담 = `playbooks/review.md` 단일 출처. **codex 단독·셀프리뷰 대체 금지 — Opus 워커(별도 서브에이전트) 필수, 생략은 무단 불가(사유 review-log 명시 + 사용자 확인)** | **병렬 듀얼 리뷰 루프** = 中의 듀얼 1패스 + **재리뷰 반복(최대 3루프)** + 설계 선검증·blind 테스트 워커. Opus 워커 ∥ codex → 종합 → codex 감사 → 수정·테스트 → 재리뷰. 절차 = `playbooks/review.md` |
 | **산출물** | task.md 1파일 | task.md + 페이즈 절 | definition.md + task.md — **다단계(판정 §3.2)·대규모면 task.md 대신** master-plan + phases/ (측정·learned 판정은 master-plan "기록" 절) |
-| **코드 구현 제품 산출물** | OVERVIEW·changelog·learned·TECHNICAL 4종 (코드 구현 시 상시 — stakes 무관, §3.5) | 〃 | 〃 |
+| **코드 구현 제품 산출물** | **task.md 통합 절 갈음 가능** (`## 산출물 요약` — OVERVIEW·learned·TECHNICAL 압축 + **changelog before/after diff 스니펫 필수**, §3.5) | OVERVIEW·changelog·learned·TECHNICAL 4종 (별도 파일) | 〃 |
 | **review-log** | — (셀프체크만) | 듀얼 1패스 시 작성 | 듀얼 루프 시 작성 (§3.5) |
 
 - **메인은 관리감독이다**: 정의·계획·게이트 판정·사용자 합의는 메인이 소유하고, 대량 읽기·탐색·독립 검증은 워커로 — 메인 컨텍스트 보호가 곧 판정 품질이다. 소유권·브리핑·절단 계약 상세는 `playbooks/orchestration.md`.
