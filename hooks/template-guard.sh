@@ -30,8 +30,8 @@ CWD=$(echo "$HOOK_INPUT" | jq -r '.cwd // empty')
 case "$FILE" in /*) FPATH="$FILE" ;; *) FPATH="$CWD/$FILE" ;; esac
 [ -f "$FPATH" ] || exit 0
 
-# NAME 소문자 정규화 — OVERVIEW.md → overview 로 case 분기 매칭
-NAME=$(basename "$FILE" .md | tr '[:upper:]' '[:lower:]')
+# NAME 소문자 정규화 — 확장자(.MD 대문자 포함)까지 제거 후 소문자화 → OVERVIEW.MD → overview (phase-04 codex)
+NAME=$(basename "$FILE" | sed -E 's/\.[Mm][Dd]$//' | tr '[:upper:]' '[:lower:]')
 CONTENT=$(cat "$FPATH" 2>/dev/null || true)
 MISSING=""
 

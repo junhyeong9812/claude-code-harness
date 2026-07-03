@@ -34,7 +34,9 @@ MARK="$MARK_DIR/${SESSION_ID:-nosession}.warned"
 [ -f "$MARK" ] && exit 0
 
 # untracked 신규 파일도 포함(-uall) — git diff는 untracked를 안 보여 code+docs 혼재 신규를 놓쳤다(#14).
-CHANGED=$(git -c core.quotePath=false status --porcelain=v1 -uall 2>/dev/null | sed 's/^...//; s/.* -> //; s/^"//; s/"$//' | sort -u)
+# rename(R old -> new)은 원본·대상 **양쪽**을 집계 — docs↔code 경계를 넘는 rename 경고 누락 방지 (phase-04 codex)
+CHANGED=$(git -c core.quotePath=false status --porcelain=v1 -uall 2>/dev/null \
+  | sed 's/^...//' | sed 's/ -> /\n/' | sed 's/^"//; s/"$//' | grep -v '^$' | sort -u)
 [ -n "$CHANGED" ] || exit 0
 
 DOCS_RE='(^docs/|(^|/)README($|[._-])|(^|/)CHANGELOG($|[._-])|(^|/)HISTORY($|[._-])|(^|/)LICENSE($|[._-])|\.md$)'

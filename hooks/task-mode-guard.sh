@@ -19,9 +19,9 @@ TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool_name // empty')
 [ "$TOOL_NAME" = "Write" ] || exit 0
 
 FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
-# 새 태스크 정의 파일인가 (.../docs/plans/.../task.md)
+# 새 태스크 정의 파일인가 (.../docs/plans/.../task.md) — 절대·상대경로 모두 (phase-04 codex: 상대 미매칭 교정)
 case "$FILE_PATH" in
-  */docs/plans/*/task.md) ;;
+  */docs/plans/*/task.md|docs/plans/*/task.md) ;;
   *) exit 0 ;;
 esac
 

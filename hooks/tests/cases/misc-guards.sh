@@ -103,3 +103,29 @@ test_cp_03() { # [신규 phase-02] 헤더 형식 — turn 단조 증가 + ts 존
   [ "$t2" = "$((t1 + 1))" ] || fail turn-monotonic
   sed -n '2p' "$SIDECAR" | grep -qE '^#ts=[0-9]+$' || fail ts-header
 }
+
+# ── phase-04 fix-verification (codex 듀얼 1패스 채택)
+
+test_tp_06() { # [fix-verify] 대문자 확장자 OVERVIEW.MD도 검사 (마커 없음 → exit 2)
+  mkdir -p "$REPO/docs/plans/a"; echo hi > "$REPO/docs/plans/a/OVERVIEW.MD"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/OVERVIEW.MD")"
+  assert_exit 2 uppercase-ext-checked
+}
+
+test_tm_04() { # [fix-verify] 상대경로 task.md도 새 태스크 리셋 (사전 case 매칭)
+  write_state auto-implements
+  mkdir -p "$REPO/docs/plans/a"; echo t > "$REPO/docs/plans/a/task.md"
+  local j; j=$(jq -cn --arg f "docs/plans/a/task.md" --arg c "$REPO" --arg s "$SID" \
+    '{hook_event_name:"PostToolUse", tool_name:"Write", tool_input:{file_path:$f}, cwd:$c, session_id:$s}')
+  run_hook task-mode-guard.sh "$j"
+  assert_state MODE UNSET relative-task-reset
+}
+
+test_sc_03() { # [fix-verify] docs→code 경계 넘는 rename도 혼재 경고
+  mkdir -p "$REPO/docs" "$REPO/src"
+  echo d > "$REPO/docs/a.md"; gitq add docs/a.md; gitq commit -qm add
+  gitq mv docs/a.md src/a.c 2>/dev/null || { git -C "$REPO" mv docs/a.md src/a.c; }
+  echo x > "$REPO/docs/keep.md"; gitq add docs/keep.md
+  run_hook scope-guard.sh "$(json_file PostToolUse Edit "$REPO/src/a.c")"
+  assert_stderr_match 'docs와 code' rename-boundary
+}
