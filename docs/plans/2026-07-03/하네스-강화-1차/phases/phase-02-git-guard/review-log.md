@@ -31,5 +31,17 @@
 | P2-17 | 1 | fable | 사이드카 소비자 호환 (fable#8 open question) | 해소 | fixed | 1 | grep 확인 — 소비자는 git-guard·capture-prompt뿐(reinject-mode 등 0건). 호환 문제 없음 |
 | P2-18 | 1 | main-synthesis | TREE_SCAN이 .claude/ 상태 파일 오집계 | 채택 | fixed | 1 | P2-03 수정 검증 중 발견(gg_20 unexpected-fail 디버깅) — 하네스 상태 디렉토리를 트리 판정에서 제외 |
 
+| P2-19 | 2 | codex+fable | strip awk 산술 시프트 (codex L2#1·fable#3) | 채택 | fixed | 2 | $((1<<8))이 유령 heredoc(감사 P2-09 확장이 넓힌 구멍) → << 직전 (·숫자 제외 + 순수 숫자 태그 제외, gg_30 고정 |
+| P2-20 | 2 | codex+fable | ? 소멸 질문 미탐 (codex L2#2·fable#2) | 채택 | fixed | 2 | tr이 ?를 구분자로 소비해 질문 신호 파괴 — "푸시해도 돼?" 승인 → ?를 QMARK 마커로 절 내 보존, gg_28 고정 |
+| P2-21 | 2 | codex | 붙는 부정형 (codex L2#3) | 채택 | fixed | 2 | "푸시 안해/안할래" 미탐 → 안+동사 패턴 추가, gg_29 고정 |
+| P2-22 | 2 | codex+fable | pending 교차-op 소모 교착 (codex L2#4·fable#5) | 채택 | fixed | 2 | 복합 docs&&push에서 타 op pending 소모·livelock → **op별 pending 파일 + 평가-후-판정 구조(차단 시 미승인 op 전부 기록 → 다음 턴 긍정 1회로 전부 승인)**, gg_31 고정 |
+| P2-23 | 2 | codex+fable | TREE_SCAN 범위 (codex L2#5·fable#8) | 채택 | fixed | 2 | pathspec 무시 전체 합산·-u에 untracked 오포함·quotePath 미처리 → pathspec 한정 스캔(-u는 -uno)·quotePath=false·인용 벗기기, gg_33 고정. " -> " 파일명 오절단은 잔여 한계 주석 |
+| P2-24 | 2 | codex | date 실패 조기사망 (codex L2#6) | 채택 | fixed | 2 | now 파싱 가드 — 검증 불가 시 승인 무효 |
+| P2-25 | 2 | fable | 말고 앞 절 오승인 (fable#1 High) | 채택 | fixed | 2 | "푸시 말고 커밋해줘"가 push 승인(구분자 소비로 부정 표지 소멸) → 절마다 마지막 말고 이후만 평가, gg_27 고정 |
+| P2-26 | 2 | fable | 인용 안 << 유령 heredoc (fable#4) | 채택 | fixed | 2 | 탐지는 인용 Q치환 사본·태그는 원본 마지막 <<에서 — 수정 중 gg_18 회귀(인용된 태그 소멸)를 suite가 즉시 검출·재수정, gg_32 고정 |
+| P2-27 | 2 | fable | 인용 add 경로 증발 (fable#6) | 채택 | fixed | 2 | ADD 인자를 SCAN_NOHD(인용 유지)에서 추출 + 인용 포함 인자는 보수적 트리 판정 |
+| P2-28 | 2 | fable | capture 영속 확인 TOCTOU (fable#7) | 채택 | fixed | 2 | re-read를 flock 안으로 이동 |
+| P2-29 | 2 | main-synthesis | gg_33 스캔 한정 누락 | 채택 | fixed | 2 | 실존 경로 인자가 PATHSPECS 미등록 → 모든 경로 인자를 스캔 한정에 사용 (suite unexpected-fail이 검출) |
+
 ## verified
-(loop 2에서 신규 0 확인 시 대칭 부담 기록)
+(loop 3에서 신규 0 확인 시 대칭 부담 기록. loop2는 신규 11건 — 비대상)
