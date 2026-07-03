@@ -10,18 +10,47 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$TESTS_DIR"
 
 # 수집: 소스 후 declare -F 기반 — 선언 형식(들여쓰기·function 키워드)에 비종속 (loop2 L2-E)
-discover_tests() { # <casefile> → test id들
-  bash -c 'source lib.sh >/dev/null 2>&1; source "$1" >/dev/null 2>&1; declare -F' _ "$1" \
-    | awk '{print $3}' | grep '^test_' || true
+# source 실패는 삼키지 않는다 — 문법 오류 파일의 후속 함수 무신호 소실 차단 (loop3 F-L3-1)
+discover_tests() { # <casefile> → test id들 (source 실패 시 rc 1)
+  local out
+  out=$(bash -c 'source lib.sh >/dev/null 2>&1 && source "$1" >/dev/null 2>&1 && declare -F' _ "$1") || {
+    echo "케이스 소스 실패: $1 — 수집 중단(문법 오류?)" >&2; return 1; }
+  printf '%s\n' "$out" | awk '{print $3}' | grep '^test_' || true
+}
+# 동일 파일 내 중복 선언은 bash가 덮어써 declare -F에 하나만 남는다 — 구문 출현 횟수로 별도 검증 (loop3 L3-01)
+check_intra_file_dups() {
+  local f decl_n syn_n
+  for f in cases/*.sh; do
+    decl_n=$(discover_tests "$f" | wc -l)
+    syn_n=$(grep -cE '^\s*(function\s+)?test_[a-z0-9_]+\s*\(\)' "$f" || true)
+    if [ "$decl_n" != "$syn_n" ]; then
+      echo "중복/비정형 test 선언 의심: $f (선언 $syn_n vs 유효 $decl_n)" >&2
+      return 1
+    fi
+  done
 }
 all_test_ids() {
-  local f
-  for f in cases/*.sh; do discover_tests "$f"; done | LC_ALL=C sort
+  local f ids
+  for f in cases/*.sh; do
+    ids=$(discover_tests "$f") || return 1
+    printf '%s\n' "$ids"
+  done | grep -v '^$' | LC_ALL=C sort
 }
 # 판정 입력 전체를 lock 대상에 포함 — baseline.manifest 무검증 편집 차단 (loop2 L2-A)
 LOCK_TARGETS="cases run.sh lib.sh baseline.manifest"
 
+# lock 대상 선검증: 실존 regular file(symlink 불가 — 판정 입력이 lock 밖 내용을 가리키는 것 차단, loop3 L3-02)
+check_lock_targets() {
+  local t
+  for t in run.sh lib.sh baseline.manifest; do
+    if [ ! -f "$t" ] || [ -L "$t" ]; then echo "lock 대상 이상: $t (부재 또는 symlink)" >&2; return 1; fi
+  done
+  [ -d cases ] || { echo "cases/ 부재" >&2; return 1; }
+}
+
 if [ "${1:-}" = "--lock" ]; then
+  check_lock_targets || exit 1
+  check_intra_file_dups || exit 1
   dup=$(all_test_ids | uniq -d)
   if [ -n "$dup" ]; then echo "중복 test-id: $dup — lock 생성 거부" >&2; exit 1; fi
   # shellcheck disable=SC2086
@@ -41,6 +70,8 @@ if [ ! -f tests.lock ]; then
   echo "tests.lock 없음 — 무결성 미검증 상태로는 실행하지 않습니다. 'run.sh --lock' 생성(사유는 gate.md 기록) 후 재실행." >&2
   exit 1
 fi
+check_lock_targets || exit 1
+check_intra_file_dups || exit 1
 lock_files=$(grep -v '^# test:' tests.lock | awk '{print $2}' | LC_ALL=C sort)
 # shellcheck disable=SC2086
 real_files=$(find $LOCK_TARGETS -type f | LC_ALL=C sort)
@@ -77,8 +108,12 @@ snapshot_detail() { # $1 = 출력 파일
     git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null
     git -C "$REPO_ROOT" status --porcelain=v1 -uall 2>/dev/null
     git -C "$REPO_ROOT" diff HEAD 2>/dev/null | sha256sum
-    (cd "$REPO_ROOT" && git ls-files --others --exclude-standard -z 2>/dev/null \
-       | LC_ALL=C sort -z | xargs -0 -r sha256sum 2>/dev/null)
+    # untracked: regular file만 내용 해시(`--`로 '-'파일명 보호), 비정규(fifo·symlink 등)는 type 목록으로 (loop3 L3-03)
+    (cd "$REPO_ROOT" && git ls-files --others --exclude-standard -z 2>/dev/null | LC_ALL=C sort -z \
+       | while IFS= read -r -d '' p; do
+           if [ -f "$p" ] && [ ! -L "$p" ]; then sha256sum -- "$p" 2>/dev/null
+           else printf 'nonreg %s %s\n' "$(stat -c %F "$p" 2>/dev/null)" "$p"; fi
+         done)
   } > "$1"
 }
 SNAP_BEFORE=$(mktemp); SNAP_AFTER=$(mktemp)
@@ -88,7 +123,7 @@ snapshot_detail "$SNAP_BEFORE"
 # ── 테스트 수집·실행
 PASS=0; declare -a FAILS=()   # "test-id assert-id"
 for casefile in cases/*.sh; do
-  tests=$(discover_tests "$casefile")
+  tests=$(discover_tests "$casefile") || { echo "수집 실패 — 중단" >&2; exit 1; }
   for t in $tests; do
     out=$( {
       set -e
