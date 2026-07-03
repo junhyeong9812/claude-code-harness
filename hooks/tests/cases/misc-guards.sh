@@ -5,6 +5,7 @@ test_tm_01() { # [green] 새 task.md 첫 Write → MODE=UNSET 리셋
   write_state auto-implements
   mkdir -p "$REPO/docs/plans/a"; echo t > "$REPO/docs/plans/a/task.md"
   run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/task.md")"
+  assert_exit 0 first-reset-exit
   assert_state MODE UNSET first-reset
   assert_stderr_match '새 태스크' reset-msg
 }
@@ -26,6 +27,7 @@ test_tm_03() { # [green] 다른 task.md 경로 → 새 태스크 리셋
   run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/task.md")"
   sed -i 's/^MODE=.*/MODE=auto-implements/' "$STATE"
   run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/b/task.md")"
+  assert_exit 0 new-task-exit
   assert_state MODE UNSET new-task-reset
 }
 
@@ -74,17 +76,20 @@ test_sc_02() { # [green] tracked 변경 code+docs 혼재 경고 (현행 동작 �
   gitq add src/a.c docs/d.md; gitq commit -qm add
   echo c2 > "$REPO/src/a.c"; echo d2 > "$REPO/docs/d.md"
   run_hook scope-guard.sh "$(json_file PostToolUse Edit "$REPO/src/a.c")"
+  assert_exit 0 tracked-mixed-exit
   assert_stderr_match 'docs와 code' tracked-mixed
 }
 
 test_cp_01() { # [green] 사이드카는 매 턴 덮어씀 — 직전 턴 잔재 없음
   run_hook capture-prompt.sh "$(json_prompt '첫 번째 요청 푸시해줘')"
   run_hook capture-prompt.sh "$(json_prompt '두 번째 요청')"
+  assert_exit 0 overwrite-exit
   assert_file_contains "$SIDECAR" '두 번째 요청' overwrite-new
   assert_file_not_contains "$SIDECAR" '푸시해줘' overwrite-old
 }
 
 test_cp_02() { # [green] 정상 캡처 — 프롬프트 본문 보존
   run_hook capture-prompt.sh "$(json_prompt '이 파일 리팩토링 해줘')"
+  assert_exit 0 capture-exit
   assert_file_contains "$SIDECAR" '이 파일 리팩토링 해줘' capture-body
 }

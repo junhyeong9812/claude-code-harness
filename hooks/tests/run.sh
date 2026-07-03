@@ -9,40 +9,76 @@ set -u
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$TESTS_DIR"
 
+discover_tests() { # <casefile> → test id들
+  grep -oE '^test_[a-z0-9_]+\(\)' "$1" | tr -d '()'
+}
+all_test_ids() {
+  local f
+  for f in cases/*.sh; do discover_tests "$f"; done | LC_ALL=C sort
+}
+
 if [ "${1:-}" = "--lock" ]; then
-  find cases run.sh lib.sh -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > tests.lock
-  echo "tests.lock written ($(wc -l < tests.lock) files)"
+  { find cases run.sh lib.sh -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum
+    all_test_ids | sed 's/^/# test: /'
+  } > tests.lock
+  echo "tests.lock written ($(grep -vc '^# test:' tests.lock) files, $(grep -c '^# test:' tests.lock) tests)"
+  echo "주의: lock 재생성은 테스트 변경 — 사유를 해당 페이즈 gate.md에 기록해야 한다." >&2
   exit 0
 fi
 
 MODE=normal
 [ "${1:-}" = "--baseline" ] && MODE=baseline
 
-# ── 실환경 무결성 스냅샷 (hermetic 검증: 테스트가 실제 ~/.claude·이 repo를 건드리지 않았나)
-snapshot_env() {
-  local claude_hash="none" repo_hash="none"
-  if [ -d "$HOME/.claude" ]; then
-    claude_hash=$(find "$HOME/.claude" -path "$HOME/.claude/projects" -prune -o -type f -print0 2>/dev/null \
-      | LC_ALL=C sort -z | xargs -0 sha256sum 2>/dev/null | sha256sum | cut -d' ' -f1)
+# ── tests.lock 검증 (테스트 무단 변경·삭제·수집 누락 차단 — 리뷰 P1-02)
+if [ -f tests.lock ]; then
+  lock_files=$(grep -v '^# test:' tests.lock | awk '{print $2}' | LC_ALL=C sort)
+  real_files=$(find cases run.sh lib.sh -type f | LC_ALL=C sort)
+  if [ "$lock_files" != "$real_files" ] || ! grep -v '^# test:' tests.lock | sha256sum -c --quiet - 2>/dev/null; then
+    echo "tests.lock 불일치 — 테스트 파일이 변경·추가·삭제됐습니다. 의도된 변경이면 사유를 gate.md에 기록하고 'run.sh --lock' 재생성." >&2
+    exit 1
   fi
-  repo_hash=$(git -C "$TESTS_DIR" status --porcelain=v1 -uall 2>/dev/null | sha256sum | cut -d' ' -f1)
-  echo "$claude_hash $repo_hash"
+  lock_tests=$(grep '^# test: ' tests.lock | sed 's/^# test: //' | LC_ALL=C sort)
+  if [ "$lock_tests" != "$(all_test_ids)" ]; then
+    echo "tests.lock 불일치 — 수집된 test-id 집합이 lock과 다릅니다(수집 regex 누락 가능)." >&2
+    exit 1
+  fi
+fi
+
+# ── 실환경 무결성 스냅샷 (hermetic 검증: 테스트가 보호 대상을 건드리지 않았나)
+# 보호 대상 allowlist = 배포 하네스 파일 + 이 repo 작업트리. ~/.claude 전체가 아닌 이유:
+# projects(transcript)·todos·statsig 등은 동시 세션이 상시 갱신 → 오탐(리뷰 P1-04).
+# repo는 HEAD + porcelain + dirty 내용(diff) 해시 — dirty 파일의 추가 변경도 잡는다(감사 이의 반영).
+PROTECTED_CLAUDE="hooks templates playbooks core.md dimensions.md dimensions-batch.md dimensions-frontend.md dimensions-infra.md CLAUDE.md settings.json"
+snapshot_detail() { # $1 = 출력 파일
+  {
+    if [ -d "$HOME/.claude" ]; then
+      # shellcheck disable=SC2086
+      (cd "$HOME/.claude" && find $PROTECTED_CLAUDE -type f -print0 2>/dev/null \
+         | LC_ALL=C sort -z | xargs -0 -r sha256sum 2>/dev/null)
+      (cd "$HOME/.claude" && find $PROTECTED_CLAUDE -type l -printf '%p -> %l\n' 2>/dev/null | LC_ALL=C sort)
+    fi
+    git -C "$TESTS_DIR" rev-parse HEAD 2>/dev/null
+    git -C "$TESTS_DIR" status --porcelain=v1 -uall 2>/dev/null
+    git -C "$TESTS_DIR" diff HEAD 2>/dev/null | sha256sum
+  } > "$1"
 }
-SNAP_BEFORE=$(snapshot_env)
+SNAP_BEFORE=$(mktemp); SNAP_AFTER=$(mktemp)
+trap 'rm -f "$SNAP_BEFORE" "$SNAP_AFTER"' EXIT
+snapshot_detail "$SNAP_BEFORE"
 
 # ── 테스트 수집·실행
 PASS=0; declare -a FAILS=()   # "test-id assert-id"
 for casefile in cases/*.sh; do
-  tests=$(grep -oE '^test_[a-z0-9_]+\(\)' "$casefile" | tr -d '()')
+  tests=$(discover_tests "$casefile")
   for t in $tests; do
-    out=$(
+    out=$( {
       set -e
       source lib.sh
       source "$casefile"
       sandbox_init
       CURRENT_TEST=$t
       "$t"
-    ) 2>&1
+    } 2>&1 )
     rc=$?
     if [ "$rc" = "0" ]; then
       PASS=$((PASS+1))
@@ -59,9 +95,10 @@ for casefile in cases/*.sh; do
 done
 
 # ── 무결성 검증
-SNAP_AFTER=$(snapshot_env)
-if [ "$SNAP_BEFORE" != "$SNAP_AFTER" ]; then
-  echo "INTEGRITY VIOLATION: 테스트가 실제 ~/.claude 또는 작업 repo를 변경했습니다." >&2
+snapshot_detail "$SNAP_AFTER"
+if ! diff -q "$SNAP_BEFORE" "$SNAP_AFTER" >/dev/null 2>&1; then
+  echo "INTEGRITY VIOLATION: 테스트가 보호 대상(~/.claude 배포 파일 또는 작업 repo)을 변경했습니다:" >&2
+  diff "$SNAP_BEFORE" "$SNAP_AFTER" | head -20 >&2
   exit 1
 fi
 

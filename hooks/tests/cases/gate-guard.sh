@@ -30,27 +30,18 @@ test_gt_04() { # [red #9b] docs/plans 안 symlink로 repo 내 코드 탈출 → 
   assert_exit 2 symlink-gated
 }
 
-test_gt_05() { # [green] 병렬 PostToolUse에도 상태 파일 무손상 (원자성)
-  write_state lazy-implements 0
-  mkdir -p "$REPO/src"
-  local i
-  for i in 1 2 3 4 5 6; do
-    printf '%s' "$(json_file PostToolUse Edit "$REPO/src/f$i.c")" | \
-      env HOME="$HOME_DIR" bash "$HOOKS_DIR/gate-guard.sh" >/dev/null 2>&1 &
-  done
-  wait
-  assert_single_line MODE mode-single
-  assert_single_line PENDING_GATE pending-single
-  assert_state PENDING_GATE 1 pending-set
-}
+# gt_05(병렬 원자성)는 phase-03에서 도입 — spec §6 post-fix 절: 현행 sed 구현은 결함 #10 당사자라
+# green 고정 대상이 아니고, 경합 flake가 baseline 정확일치를 오염시킨다 (리뷰 P1-01).
 
 test_gt_06() { # [red #11] 상태 갱신 실패가 조용히 넘어가지 않는다 (fail-closed)
+  # 전제: 비root 실행 (root는 chmod 무시 — lib.sh 헤더 참조)
   write_state lazy-implements 0
   mkdir -p "$REPO/src"
   chmod 444 "$STATE"; chmod 555 "$STATE_DIR"
   run_hook gate-guard.sh "$(json_file PostToolUse Edit "$REPO/src/a.c")"
   chmod 755 "$STATE_DIR"; chmod 644 "$STATE"
   assert_exit 2 update-fail-loud
+  assert_stderr_match '갱신 실패' update-fail-msg
 }
 
 test_gt_07() { # [green] lazy per-diff: PostToolUse → PENDING=1 + 게이트 안내

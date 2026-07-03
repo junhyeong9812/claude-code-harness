@@ -2,6 +2,7 @@
 # hooks/tests/lib.sh — 훅 테스트 sandbox·assert 헬퍼
 # 경계: 케이스 파일은 신뢰 코드(이 repo에서 작성·리뷰됨) — 프로세스 격리(bwrap)는 두지 않는다.
 # 격리: HOME·XDG·git config를 sandbox로 오버라이드해 실제 ~/.claude·전역 git 설정과 절연한다.
+# 환경 전제: git ≥2.28(init -b) · 비root 실행(권한 기반 실패 주입 케이스가 root에선 무의미).
 set -u
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,7 +27,8 @@ sandbox_init() {
   gitq add README.md >/dev/null 2>&1
   gitq commit -qm init >/dev/null 2>&1
   rm -f "/tmp/scope-guard-$SID.warned"   # 현행 scope-guard /tmp 마커 격리 불가 보완
-  trap 'rm -rf "$SANDBOX"' EXIT
+  # 정리: 쓰기불가 상태로 중도 사망해도 잔재가 없도록 u+w 선행, 테스트가 만든 /tmp 마커도 제거 (P1-05)
+  trap 'chmod -R u+w "$SANDBOX" 2>/dev/null; rm -rf "$SANDBOX" "/tmp/scope-guard-$SID.warned"' EXIT
 }
 
 # 훅 실행: run_hook <hook파일명> <stdin-json>  → HOOK_EXIT / HOOK_STDERR
