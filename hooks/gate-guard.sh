@@ -79,9 +79,13 @@ FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
 canon_file() { # echo canonical path | 실패 시 비-0
   local f="$1"
   case "$f" in /*) ;; *) f="$CWD/$f" ;; esac
-  # realpath -m: 미존재 컴포넌트 허용 + **모든 실존 심링크 해소**(leaf 포함) + .. 정규화.
-  # leaf가 코드 파일을 가리키는 심링크여도 해소돼 실제 대상으로 분류된다 (phase-03 리뷰 치명 — 수동 조상 루프의 leaf 누락 교정).
-  realpath -m -- "$f" 2>/dev/null
+  # 미존재 컴포넌트 허용 + **모든 실존 심링크 해소**(leaf 포함) + .. 정규화.
+  # leaf가 코드 파일을 가리키는 심링크여도 해소돼 실제 대상으로 분류 (phase-03 리뷰 치명 — 수동 조상 루프 leaf 누락 교정).
+  # 이식성 폴백(phase-03 loop2 codex): GNU realpath -m 우선 → BSD realpath(존재 경로) → python3.
+  realpath -m -- "$f" 2>/dev/null && return 0
+  realpath -- "$f" 2>/dev/null && return 0
+  python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$f" 2>/dev/null && return 0
+  return 1
 }
 CFILE=$(canon_file "$FILE_PATH") || {
   # 정규화 실패(realpath 부재 등) = 판정 불가 → fail-closed 양 이벤트 (design D3 #23, phase-03 codex#5)
