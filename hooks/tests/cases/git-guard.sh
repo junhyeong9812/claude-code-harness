@@ -239,3 +239,33 @@ test_gg_33() { # [fix-verify P2-23] add -A + pathspec — 판정은 pathspec 한
   run_hook git-guard.sh "$(json_bash 'git add -A docs/ && git commit -m "docs: x"')"
   assert_exit 2 pathspec-limited-docs-block
 }
+
+# ── phase-02 loop3 fix-verification
+
+test_gg_34() { # [fix-verify F-01/L3-02] 혼합 복합(docs 키워드 승인 + push 미승인) — 다음 턴 긍정 1회로 전부 승인
+  mkdir -p "$REPO/docs"; echo d > "$REPO/docs/x.md"; gitq add docs/x.md
+  local cmd='git commit -m "docs: x" && git push origin main'
+  write_sidecar 4 "$(NOW)" "문서 커밋해줘"
+  run_hook git-guard.sh "$(json_bash "$cmd")"
+  assert_exit 2 mixed-first-block
+  [ -f "$STATE_DIR/$SID.pending-push" ] || fail mixed-pending-push
+  [ -f "$STATE_DIR/$SID.pending-docs" ] || fail mixed-pending-docs
+  write_sidecar 5 "$(NOW)" "응"
+  run_hook git-guard.sh "$(json_bash "$cmd")"
+  assert_exit 0 mixed-affirm-allow
+}
+
+test_gg_35() { # [fix-verify L3-01] 실 heredoc 뒤 인용된 << 태그가 후속 push를 은폐하지 않음
+  write_sidecar 2 "$(NOW)" "정리해줘"
+  local nl=$'\n'
+  local cmd="cat << HD > /dev/null${nl}payload${nl}HD${nl}echo 'trailer << FAKE'${nl}git push origin main"
+  run_hook git-guard.sh "$(json_bash "$cmd")"
+  assert_exit 2 real-heredoc-then-quoted-tag
+}
+
+test_gg_36() { # [fix-verify L3-03] add -A -- 인용 pathspec — 판정은 pathspec 한정 (무관 코드 무시)
+  mkdir -p "$REPO/docs" "$REPO/src"; echo d > "$REPO/docs/x.md"; echo c > "$REPO/src/y.c"
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash "git add -A -- 'docs/' && git commit -m 'docs: x'")"
+  assert_exit 2 quoted-pathspec-limited
+}

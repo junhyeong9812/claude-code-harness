@@ -56,9 +56,10 @@ strip_heredocs_comments() {
       scan=$0
       gsub(/'\''[^'\'']*'\''/, "'\''Q'\''", scan); gsub(/"[^"]*"/, "\"Q\"", scan)
       if (match(scan, /(^|[^<(0-9])<<-?[[:space:]]*["'\'']?[A-Za-z_0-9][A-Za-z_0-9-]*["'\'']?/)) {
-        rest = $0; m = ""
-        while (match(rest, /<<-?[[:space:]]*["'\'']?[A-Za-z_0-9][A-Za-z_0-9-]*["'\'']?/)) {
-          m = substr(rest, RSTART, RLENGTH); rest = substr(rest, RSTART + RLENGTH)
+        # 태그는 원본 행의 **첫** << 에서 (실 heredoc은 명령 첫 << — 뒤따르는 인용 <<태그 오선택 방지, loop3 L3-01)
+        m = ""
+        if (match($0, /<<-?[[:space:]]*["'\'']?[A-Za-z_0-9][A-Za-z_0-9-]*["'\'']?/)) {
+          m = substr($0, RSTART, RLENGTH)
         }
         if (m != "") {
           dash = (m ~ /<<-/) ? 1 : 0
@@ -215,8 +216,11 @@ EOF
     case "$a" in
       -A|--all|-a|.|./) TREE_ALL=1 ;;                             # add-all류 → 작업트리 판정 (리뷰 P2-03)
       -u|--update) TREE_TRACKED=1 ;;                              # tracked만 (loop2 P2-23)
+      --) : ;;                                                     # pathspec 구분자
       -*) : ;;
-      *\"*|*\'*) TREE_ALL=1 ;;                                    # 인용 경로(공백 등) → 보수적 트리 판정 (loop2 fable#6)
+      *\"*|*\'*)                                                   # 인용 경로 → 인용 벗겨 pathspec 한정 (loop3 L3-03)
+         unq=$(printf '%s' "$a" | tr -d "\"'")
+         TREE_ALL=1; PATHSPECS="$PATHSPECS $unq" ;;               # 공백 든 경로는 토큰 분리됨(잔여 한계 — 방향은 한정 스캔)
       *[\*\?\[]*) TREE_ALL=1; PATHSPECS="$PATHSPECS $a" ;;        # 글롭 → pathspec 한정 트리 판정
       *) PATHSPECS="$PATHSPECS $a"                                 # 모든 경로 인자는 트리 스캔 한정에도 사용 (gg_33)
          [ -e "$TARGET_DIR/$a" ] && ADD_EXISTING="$ADD_EXISTING$a
@@ -258,9 +262,14 @@ fi
 # ─────────────────────────────────────────────
 if { [ "$PUSH_DETECTED" = "1" ] && [ "$PUSH_OK" != "1" ]; } || { [ "$DOCS_DETECTED" = "1" ] && [ "$DOCS_OK" != "1" ]; }; then
   REASONS=""
-  if [ "$PUSH_DETECTED" = "1" ] && [ "$PUSH_OK" != "1" ]; then record_pending push; REASONS="$REASONS
+  # 차단 확정 시 detected op **전부**(이번 턴 승인된 것 포함)의 pending을 기록한다 — 승인도 명령 지문에
+  # 결속돼 1턴만 이월되므로 오승인 확대 없음. 혼합 승인원(키워드+pending) 복합 명령이 다음 턴 긍정 1회로
+  # 전부 승인되어 교대 livelock을 막는다 (loop3 F-01/L3-02).
+  [ "$PUSH_DETECTED" = "1" ] && record_pending push
+  [ "$DOCS_DETECTED" = "1" ] && record_pending docs
+  if [ "$PUSH_DETECTED" = "1" ] && [ "$PUSH_OK" != "1" ]; then REASONS="$REASONS
   - git push: 사용자 명시 요청 없음"; fi
-  if [ "$DOCS_DETECTED" = "1" ] && [ "$DOCS_OK" != "1" ]; then record_pending docs; REASONS="$REASONS
+  if [ "$DOCS_DETECTED" = "1" ] && [ "$DOCS_OK" != "1" ]; then REASONS="$REASONS
   - docs 단독 commit: 사용자 명시 요청 없음 (대상: $(echo "$DOCS_UNION" | tr '\n' ' '))"; fi
   if [ ! -s "$SIDECAR" ]; then
     HINT="(승인 신호 없음 — 사이드카 부재. 사용자가 요청을 단독 메시지로 다시 보내야 합니다)"

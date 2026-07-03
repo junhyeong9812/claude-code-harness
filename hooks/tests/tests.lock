@@ -1,6 +1,6 @@
 9d66303e48f76b8c8a5af66aea135dacc98ca59cfd8a2cb9d062d71829bf54b5  baseline.manifest
 436fdaa3fdb05ffc404e5a856097ff5d409a998a84572419fc6ac2402fe70a7b  cases/gate-guard.sh
-682bb70e46312cc8e3420fadb52b9c5c2701ffbdb02ce8a3bae122864f79f233  cases/git-guard.sh
+1b042cfbd44157cad4dd18c1bb6a0d46ef0d8c0df6ea5678503e589fc5266bc2  cases/git-guard.sh
 df514bc404f1e8eeaf293b9e405a96ab8fafe052c4f90d1a753165625dcb0d2b  cases/misc-guards.sh
 98c2847014629c31a1940d95806599c7f048dc854e751e71980fa109a47db579  lib.sh
 7d194f60b055c7759d65b782e610b384f75dae1d4b40332322ec9c8218034fd9  run.sh
@@ -40,6 +40,9 @@ df514bc404f1e8eeaf293b9e405a96ab8fafe052c4f90d1a753165625dcb0d2b  cases/misc-gua
 # test: test_gg_31
 # test: test_gg_32
 # test: test_gg_33
+# test: test_gg_34
+# test: test_gg_35
+# test: test_gg_36
 # test: test_gt_01
 # test: test_gt_02
 # test: test_gt_03
