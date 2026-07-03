@@ -38,15 +38,19 @@ INSTALLED=""   # 원복용: 제자리로 옮긴 대상 목록
 rm -rf "$STAGING" "$BACKUP"; mkdir -p "$STAGING" "$BACKUP"
 
 cleanup_fail() {
+  trap - EXIT INT TERM   # 재진입 차단 — 신호 핸들러의 exit가 EXIT 트랩을 다시 부르는 이중 원복 방지 (재점검 Critical)
+  set +e                 # 원복은 하나 실패해도 나머지 전부 시도 (재점검 High)
   echo "[deploy] 실패/중단 — 원복 중..." >&2
   for m in $INSTALLED; do rm -rf "$DEST/$m"; done          # 신규 설치분 제거
   for m in $MANIFEST; do
     [ -e "$BACKUP/$m" ] && { rm -rf "$DEST/$m"; mv "$BACKUP/$m" "$DEST/$m"; }   # 백업에서 원복
   done
   rm -rf "$STAGING"
-  echo "[deploy] 원복 완료." >&2
+  echo "[deploy] 원복 완료(백업 보존됐던 대상은 제자리 복구)." >&2
   exit 1
 }
+# 다중 대상 배포는 두 mv(백업↔제자리) 사이에 대상 부재 구간이 있어 **파일 단위 원자**이지 트리 전체 원자는
+# 아니다(셸 한계 — 트리 전체 원자는 root 심링크 스왑이 필요). 창은 같은 fs 연속 mv로 극소, 실패 시 원복 보장.
 trap cleanup_fail EXIT INT TERM
 
 # ① staging 복사 + 검증 (원본 무손상 단계)
