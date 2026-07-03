@@ -61,7 +61,7 @@ if [ "$IS_BASH" = "1" ]; then
     echo "[gate-guard] write '$B_WP' 단계: Bash로 코드/테스트를 수정하지 마세요(sed -i·tee·redirect 등). 사용자가 필사·수정합니다 — Claude는 읽기·테스트 실행·git diff 만. (write-handoff.md §5)" >&2
   # lazy-implements의 Bash 파일쓰기(sed -i·tee·redirect·heredoc)는 per-diff 게이트를 우회한다 —
   # 하드 차단은 안 한다(테스트 실행·정당한 셸 사용의 FP가 큼, §0.6 정직 경계). 소프트 리마인더만 (design D3 #15).
-  elif [ "$B_MODE" = "lazy-implements" ] && echo "$B_CMD" | grep -qE '(sed[[:space:]]+-i|(^|[^>])>[^>&|]|>>|[[:space:]]tee[[:space:]]|<<[-]?[[:space:]]*["'"'"']?[A-Za-z_])'; then
+  elif [ "$B_MODE" = "lazy-implements" ] && echo "$B_CMD" | grep -qE '(sed([[:space:]]+-[a-zA-Z]+)*[[:space:]]+-i|(^|[[:space:]|;&])tee[[:space:]]|<<[-]?[[:space:]]*["'"'"']?[A-Za-z_])'; then
     echo "[gate-guard] lazy 모드: Bash로 파일을 수정하면 per-diff 이해 게이트가 우회됩니다. 코드 변경은 Edit/Write로 해 게이트를 태우거나, 이 변경도 before/after 스니펫으로 설명·판정하세요. (implementation-lazymode.md §3 — 소프트 리마인더)" >&2
   fi
   exit 0
@@ -77,20 +77,16 @@ FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
 #      repo 있음 → canonical ROOT 기준 내부 확정 후 면제 glob(docs/plans·.claude/lazymode) 재적용
 #   → CWD를 딴 데로 옮기고 절대경로로 쓰는 실수·조작·`..`·symlink 탈출 모두 무효 (design D3 #18·#19·#21)
 canon_file() { # echo canonical path | 실패 시 비-0
-  local f="$1" parent base
+  local f="$1"
   case "$f" in /*) ;; *) f="$CWD/$f" ;; esac
-  base=$(basename -- "$f"); parent=$(dirname -- "$f")
-  # 가장 가까운 실존 조상까지 올라가 realpath
-  local acc="" up="$parent"
-  while [ ! -e "$up" ] && [ "$up" != "/" ] && [ "$up" != "." ]; do
-    acc="/$(basename -- "$up")$acc"; up=$(dirname -- "$up")
-  done
-  local real_up; real_up=$(realpath -- "$up" 2>/dev/null) || return 1
-  printf '%s%s/%s' "$real_up" "$acc" "$base"
+  # realpath -m: 미존재 컴포넌트 허용 + **모든 실존 심링크 해소**(leaf 포함) + .. 정규화.
+  # leaf가 코드 파일을 가리키는 심링크여도 해소돼 실제 대상으로 분류된다 (phase-03 리뷰 치명 — 수동 조상 루프의 leaf 누락 교정).
+  realpath -m -- "$f" 2>/dev/null
 }
 CFILE=$(canon_file "$FILE_PATH") || {
-  [ "$EVENT" = "PreToolUse" ] && echo "[gate-guard] 경로 정규화 실패 — 안전을 위해 차단(fail-closed). 경로: $FILE_PATH" >&2
-  [ "$EVENT" = "PreToolUse" ] && exit 2 || exit 0
+  # 정규화 실패(realpath 부재 등) = 판정 불가 → fail-closed 양 이벤트 (design D3 #23, phase-03 codex#5)
+  echo "[gate-guard] 경로 정규화 실패 — 안전을 위해 차단(fail-closed). 경로: $FILE_PATH" >&2
+  exit 2
 }
 # repo 판정: FILE의 실존 조상에서 toplevel
 CDIR=$(dirname -- "$CFILE")

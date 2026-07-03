@@ -53,11 +53,31 @@ test_gt_11() { # [green phase-03] lazy-implements + Bash sed -i → 소프트 �
   assert_stderr_match 'per-diff' lazy-bash-reminder
 }
 
-test_gt_12() { # [green phase-03] FILE 기준 판정 — 상태는 cwd 소유, 분류는 canonical FILE
+test_gt_12() { # [green phase-03] FILE 기준 판정 — cwd를 비repo로 옮겨도 FILE의 repo로 게이트
+  # 상태는 세션 cwd 소유(elsewhere) — 분류는 canonical FILE(repo 안). cwd 조작으로 면제 못 받음.
   write_state UNSET
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
-  assert_exit 2 file-based-gate
+  local other="$SANDBOX/elsewhere"; mkdir -p "$other/.claude/lazymode" "$REPO/src"
+  cp "$STATE" "$other/.claude/lazymode/$SID"
+  local j; j=$(jq -cn --arg f "$REPO/src/a.c" --arg c "$other" --arg s "$SID" \
+    '{hook_event_name:"PreToolUse", tool_name:"Write", tool_input:{file_path:$f}, cwd:$c, session_id:$s}')
+  run_hook gate-guard.sh "$j"
+  assert_exit 2 cwd-manipulation-gated
+}
+
+test_gt_13() { # [green phase-03] leaf 심링크가 repo 코드를 가리키면 해소돼 게이트 (치명 fix-verify)
+  write_state UNSET
+  mkdir -p "$REPO/docs/plans" "$REPO/src"; echo x > "$REPO/src/a.c"
+  ln -s ../../src/a.c "$REPO/docs/plans/evil"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/plans/evil")"
+  assert_exit 2 leaf-symlink-gated
+}
+
+test_gt_14() { # [green phase-03] 비repo 밖(/tmp) 경로를 가리키는 leaf 심링크도 실제 대상으로 분류(면제)
+  write_state UNSET
+  mkdir -p "$REPO/docs/plans"
+  ln -s "$SANDBOX/outside.txt" "$REPO/docs/plans/link2"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/plans/link2")"
+  assert_exit 0 leaf-symlink-outside-exempt
 }
 
 test_gt_06() { # [red #11] 상태 갱신 실패가 조용히 넘어가지 않는다 (fail-closed)
