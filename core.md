@@ -83,7 +83,7 @@
 
 - **긴급(장애 대응)**: 게이트 왕복은 압축하되 최소 안전선(§4.3)은 생략 불가. 산출물·측정 1행은 사후 소급 기록.
 - **세션 재개**: 진행 중 작업은 대상 프로젝트 `docs/plans` 최신 작업 폴더의 task.md(다단계면 master-plan 승인 상태·최근 gate)부터 읽고 이어간다.
-- **git 워크플로우 (원격 있는 작업)**: 정의 게이트 통과 직후 **이슈 발행 + 작업 브랜치**(개발 진입 전), 기록 단계 종료 후 **커밋 정리 + MR/PR** — 절차·승인 경계는 §6.5 → `playbooks/git-workflow.md`.
+- **git 워크플로우 (원격 있는 작업)**: 정의 게이트 통과 직후 **작업 브랜치**(항상, 개발 진입 전) + **이슈는 요청 시만**, 기록 단계 종료 후 **커밋 정리 + MR/PR** — 절차·승인 경계는 §6.5 → `playbooks/git-workflow.md`.
 
 ### 3.1 정의
 §1의 명확도 6칸. 산출물: 작업 폴더의 `task.md`에 6칸 기록 (높은 stakes는 `definition.md` 분리 — `templates/definition.md`).
@@ -194,14 +194,14 @@
 - **커밋 메시지·코드 주석에 검증 과정 출처 기재 금지** — "codex 지적 반영"·"리뷰 finding 수정"·"교차 검증 결과" 류 언급은 커밋·주석이 아니라 task.md·changelog.md·review-log.md에 목적별로 남긴다(리뷰 finding·처리 이력은 review-log 소유). 커밋은 변경 내용을, 주석은 코드의 "왜"를 말한다.
 - `--force`·`reset --hard`·`branch -D`·`checkout .`은 명시 요청 시만.
 
-> **활성 훅 (배포 단일 출처 = 이 repo 전체 — core·dimensions·templates·playbooks·hooks·settings. `~/.claude/`는 배포본, 변경 후 동기 필수)**: `git-guard`(PreToolUse:Bash — push/docs-commit 승인은 jsonl + **현재 턴 프롬프트 사이드카**로 판정) · `scope-guard`·`template-guard`(PostToolUse:Edit|Write) · **lazy-busy**: `session-mode-guard`(SessionStart) · `reinject-mode`·`capture-prompt`(UserPromptSubmit — capture-prompt는 현재 턴 `.prompt`를 사이드카에 기록해 git-guard jsonl 지연 false-block 방지) · `gate-guard`(PreToolUse·PostToolUse:Edit|Write + PreToolUse:Bash — auto-/lazy- 접두사 분류 + *-write await/verify 코드수정 차단·Bash 소프트 리마인더) · `task-mode-guard`(PostToolUse:Edit|Write) — §1 작업 모드. 상태=`.claude/lazymode/<session_id>`(MODE / PENDING_GATE / WRITE_PHASE) + `<session_id>.prompt`(현재 턴 사이드카, 세션 단위). **제거됨**: prompt-guard(상태머신)·stage-transition·session-context-loader — 네이티브 기능과 중복.
+> **활성 훅 (배포 단일 출처 = 이 repo. `~/.claude/`는 배포본 — `hooks/deploy.sh` 로 동기, CLAUDE.md·settings.json 은 역할 분기라 배포 제외)**: `git-guard`(PreToolUse:Bash — push/docs-commit 승인은 **현재 턴 프롬프트 사이드카**(#turn/#ts) 단일 원천 + 차단→긍정 2턴 pending, jsonl 폴백은 승인 판정에서 제외) · `scope-guard`·`template-guard`(PostToolUse:Edit|Write) · **lazy-busy**: `session-mode-guard`(SessionStart) · `reinject-mode`·`capture-prompt`(UserPromptSubmit — capture-prompt는 현재 턴 `.prompt`를 사이드카에 원자 기록·턴 카운터) · `gate-guard`(PreToolUse·PostToolUse:Edit|Write + PreToolUse:Bash — **canonical 경로 기준 면제**(repo 밖=면제/repo 안=게이트, symlink·.. 해소) + *-write await/verify 코드수정 차단·lazy Bash 소프트 리마인더·상태 flock 원자 갱신) · `task-mode-guard`(PostToolUse:Write — 경로 기반 새 태스크 리셋) — §1 작업 모드. 상태=`.claude/lazymode/<session_id>`(MODE / PENDING_GATE / WRITE_PHASE / TASK_PATH) + `<id>.prompt`·`<id>.turn`·`<id>.pending-{push,docs}`(세션 단위). **제거됨**: prompt-guard·stage-transition·session-context-loader. **훅 테스트**: `hooks/tests/run.sh`(fixture 회귀 — 결함 재현 baseline + 정상 회귀).
 
 ### 6.5 태스크 git 워크플로우 (GitHub·GitLab 원격 작업)
 
 **인식되는 GitHub/GitLab 작업 원격**(사용자 지정 또는 `origin` 기본)이 있는 정의됨 작업은 **작업 브랜치(항상) → 페이즈 커밋 → 커밋 정리 → (요청 시 이슈) → MR/PR**로 진행한다. **브랜치는 항상 생성**(main 직접 작업 금지), **이슈는 사용자가 요청할 때만 발행**(2026-07-03 결정). 인식 원격이 없거나(로컬 전용·미지원 호스트), 트리아지 1행 축약(자명) 작업은 비대상 — 로컬 커밋만. **플랫폼 감지·명령·절차는 `playbooks/git-workflow.md` 단일 출처**(여기엔 불변식만).
 
 - **승인 경계 (불변)**: 외부 발행 — **이슈 생성·push·MR/PR 생성, 그리고 원격 브랜치를 만드는 모든 경로는 각각 사용자 확인 후**(§6.4 push 확인의 연장, 추측 발행 금지). **브랜치 base·이름**과 **MR/PR target·draft 여부**도 사용자에게 확인한다.
-- **브랜치 우선 (불변)**: main(기본 브랜치) 직접 작업 금지 — 이슈를 열고 작업 브랜치로 분기한 뒤 개발한다.
+- **브랜치 우선 (불변)**: main(기본 브랜치) 직접 작업 금지 — 작업 브랜치로 분기한 뒤 개발한다(이슈는 요청 시만, §6.5 위).
 - **커밋 정리 (불변)**: 의미 단위 커밋은 유지, WIP·fixup만 정돈한다. **이미 push된 커밋은 rebase하지 않는다**(history 보존). code/docs 분리·AI trailer 금지·검증 출처 금지(§6.4)는 그대로.
 
 ---
