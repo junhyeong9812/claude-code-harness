@@ -2,7 +2,7 @@
 # capture-prompt.sh — 현재 턴 사용자 프롬프트를 세션 사이드카에 캡처한다. UserPromptSubmit 이벤트.
 # stdin JSON: {prompt, session_id, cwd, ...}
 #
-# 형식: 첫 줄 `#turn=<단조 카운터>` / 둘째 줄 `#ts=<epoch>` / 이후 프롬프트 원문.
+# 형식: 첫 줄 `#turn=<단조 카운터>` / 둘째 줄 `#ts=<epoch>` / 이후 프롬프트 본문(jq -r 경유 — 말미 개행은 정규화됨, 승인 키워드 판정에 영향 없음).
 #   - turn 카운터(<sid>.turn, flock 직렬화)는 git-guard의 pending 2턴 승인 흐름의 턴 결속에 쓰인다.
 #   - ts는 stale 사이드카(비정상 세션 잔재) 무시 판정에 쓰인다.
 # 원자성: temp 파일에 쓴 뒤 mv — 부분 쓰기 노출 없음. 쓰기 실패 시 사이드카를 제거해

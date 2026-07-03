@@ -50,7 +50,7 @@ strip_noncommand() {
   awk '
     inhd { line=$0; if (dash) sub(/^\t+/, "", line); if (line == tag) inhd=0; next }
     {
-      if (match($0, /(^|[^<])<<-?[[:space:]]*["'\'']?[A-Za-z_][A-Za-z_0-9]*["'\'']?/)) {
+      if (match($0, /(^|[^<])<<-?[[:space:]]*["'\'']?[A-Za-z_0-9][A-Za-z_0-9-]*["'\'']?/)) {
         m = substr($0, RSTART, RLENGTH)
         dash = (m ~ /<<-/) ? 1 : 0
         tag = m; sub(/^.*<<-?[[:space:]]*["'\'']?/, "", tag); sub(/["'\'']?$/, "", tag)
@@ -73,7 +73,8 @@ if [ -n "$SID" ] && [ -s "$SIDECAR" ]; then
       SC_TURN="${first#\#turn=}"
       sc_ts=$(sed -n '2s/^#ts=//p' "$SIDECAR" 2>/dev/null || true)
       SC_BODY=$(tail -n +3 "$SIDECAR" 2>/dev/null || true)
-      case "$SC_TURN" in (''|*[!0-9]*) SC_TURN="" ;; esac   # 손상 turn → pending 흐름만 비활성
+      # 손상 turn = 사이드카 파싱 실패 = 승인 없음 — 본문 승인까지 폐기 (감사 이의 P2-08)
+      case "$SC_TURN" in (''|*[!0-9]*) SC_TURN=""; SC_BODY="" ;; esac
       ;;
     *)  # 구형(헤더 없는) 사이드카 — body 전체, 신선도는 mtime
       sc_ts=$(stat -c %Y "$SIDECAR" 2>/dev/null || echo 0)
