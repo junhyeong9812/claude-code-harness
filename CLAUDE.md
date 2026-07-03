@@ -1,6 +1,7 @@
-# 작업 규칙
+# 작업 규칙 (하네스 repo 로컬 CLAUDE.md)
 
-> 상시 규칙은 이 파일과 `core.md` 둘뿐이다. **core.md 전문은 이 파일 끝의 `@core.md` import 로 매 세션 컨텍스트에 자동 인라인된다(상시 선독 — core §1).** 다른 규칙 문서는 core.md §7 트리거에 해당할 때만 읽는다.
+> 상시 규칙은 이 파일과 `core.md` 둘뿐이다. **core.md 전문은 글로벌 `~/.claude/CLAUDE.md`(부트스트랩)의 `@core.md` import 로 모든 프로젝트 세션에 주입된다.** 다른 규칙 문서는 core.md §7 트리거에 해당할 때만 읽는다.
+> **이 파일은 `@core.md` 를 import 하지 않는다** — 이 repo에서 작업할 때 글로벌이 이미 core.md 를 주입하므로, 여기서 또 import 하면 **이중 주입**(core.md 2회 인라인 ~30-40k 토큰)이 된다(2026-07-03 §0.2 위반 교정). 그래서 CLAUDE.md 는 배포 대상에서 제외되고(글로벌은 부트스트랩 역할로 @core.md 를 유지), 이 로컬 파일은 포인터만 둔다.
 
 1. **프로젝트 산출물(코드·설정·문서·스크립트·스키마)을 변경하는 작업은 core.md의 정의 게이트(명확도 6칸)를 통과한 뒤 시작한다.** 한 칸이라도 비면 탐색 중 — 변경하지 않는다.
 2. 산출물 변경이 없는 대화(토론·학습·설계)는 게이트 없이 자유 진행한다. 단 그 결론이 구현의 입력이 되는 순간 실코드로 재확인한다 — 탐색 중 고위험 결론의 검증 의무는 core §2를 따른다.
@@ -11,7 +12,8 @@
 - 이 파일·`core.md`·`dimensions*.md`·`templates/`·`playbooks/`는 같은 디렉토리에 있다. 실제 작업 대상은 Claude가 호출된 프로젝트 디렉토리다.
 
 ## 상시 주입 (core.md)
-<!-- Claude Code 는 CLAUDE.md 의 @상대경로 import 를 매 세션 인라인한다. 아래 한 줄이 core.md 전문을
-     컨텍스트에 강제 주입한다 — repo·~/.claude 양쪽에서 같은 디렉토리의 core.md 로 해석된다.
+<!-- 이 로컬 CLAUDE.md 는 @core.md 를 import 하지 않는다(이중 주입 회피 — 위 헤더 주석 참조).
+     core.md 는 글로벌 ~/.claude/CLAUDE.md 의 @core.md 가 주입한다. 배포 시 CLAUDE.md 는 제외된다
+     (hooks/deploy.sh manifest — 글로벌은 @core.md 부트스트랩, 이 repo 로컬은 포인터).
      dimensions.md 는 상시 주입하지 않는다(정의 게이트 진입 시 core §7 트리거로 Read). -->
-@core.md
+core.md 는 글로벌 부트스트랩이 주입한다 — 이 파일에서 재 import 하지 않는다.

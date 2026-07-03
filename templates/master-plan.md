@@ -70,5 +70,10 @@
 
 ## 기록 (작업 종료 시 — task.md 대체분)
 
+> master-plan이 task.md를 대체할 때 코드 구현 제품 산출물 4종·review-log 체크리스트가 소실되던 것을 복원 (2026-07-03).
+
 - 측정 1행 기입 완료 □ (`docs/measurement-log.md`)
-- learned 판정 (core §3.5 학습 가치 트리거): 풀 작성 □ / 5줄 요약(아래) □
+- **코드 구현 판정** (core §3.5): 코드 구현 있음 □ / 문서-only라 제외 □
+  - 있음 → 4종 모두 작성(stakes 무관 상시): `OVERVIEW.md` □ / `changelog.md` □ / `learned.md` □ / `TECHNICAL.md` □
+  - 없음(문서-only) → 아래 5줄 요약: 변경 / 검증 / 새로 안 것 / 지적받은 것 / 반복 금지
+- **review-log 판정** (core §3.5): 리뷰/codex가 돈 작업(중간↑)? 있음 → `review-log.md` □ (ledger 단일 위치) / 낮음·셀프체크만 제외 □

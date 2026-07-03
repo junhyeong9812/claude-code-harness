@@ -169,12 +169,5 @@ gh pr view <PR#> --repo spring-projects/spring-framework           # 전체 상�
 - **예외 타입의 의미**: "에러 나면 OK"가 아니라 "어떤 에러가 왜"를 봐야 함(B2: 수정 전 `ConversionFailedException` → 수정 후 `ConverterNotFoundException`, 이 변화가 수정의 증거).
 - **JDK 버전 소스셋**: java24 같은 multi-release 소스셋 버그는 해당 JDK(≥24)로만 재현. 빌드가 `--release N` 플래그만 쓰면 더 높은 JDK(25)로도 테스트 가능.
 
-## 8. 진행 현황 (이 세션)
+<!-- 세션별 PR 진행 현황(프로세스 기록)은 이 playbook에 남기지 않는다 — 해당 작업의 docs/plans/에 기록. (2026-07-03 정리) -->
 
-| PR | 버그 | 상태 |
-|---|---|---|
-| #36911 | Property record 접근자 이름(원작업) | OPEN |
-| #36912 | B1 GeneratedClass.reserveMethodNames | OPEN |
-| #36913 | B2 OptionalToObjectConverter 계약 | OPEN |
-| (push 대기) | B3 getTextCharacters AIOOBE (커밋 `9bc9a3dd26`) | 준비완료 |
-| 대기 | B8 require(B3와 분리) · B4 · B5 · B7 · B6 · B9 | — |
