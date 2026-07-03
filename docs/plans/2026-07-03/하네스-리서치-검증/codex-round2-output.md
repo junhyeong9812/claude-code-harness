@@ -1,0 +1,16 @@
+제공된 내용에는 A1~A7의 **주장 문구가 없습니다**. 소스만으로 기존 번호의 의미를 복원하면 오판 위험이 있으므로 각 항목을 확인/반박으로 확정할 수 없습니다. A1~A7 문장만 붙여주면 즉시 최종 매핑하겠습니다. A6은 재현 사실과 소스가 일치하므로 **확인**입니다: 허용 경로 두 종류 외 모든 Write를 산출물로 취급합니다([gate-guard.sh](/home/jun/project/claude-code-harness/hooks/gate-guard.sh:65), [면제 분기](/home/jun/project/claude-code-harness/hooks/gate-guard.sh:74)).
+
+새로 확인된 결함은 다음과 같습니다.
+
+- **Git 명령 우회:** 정규식이 `git push/commit` 직결 형태만 인식합니다. `git -C repo push`, `git -c key=value commit`, git alias는 통과합니다([git-guard.sh:82](/home/jun/project/claude-code-harness/hooks/git-guard.sh:82), [101](/home/jun/project/claude-code-harness/hooks/git-guard.sh:101)).
+- **잘못된 저장소 검사:** `cd other-repo && git commit`도 staged 파일은 훅의 `$CWD` 저장소에서 조회합니다. 실제 커밋 대상과 판정 대상이 달라져 차단을 우회하거나 오차단합니다([git-guard.sh:102](/home/jun/project/claude-code-harness/hooks/git-guard.sh:102)).
+- **승인 정규식 오탐:** “push 하지 마”, 오류 메시지·코드에 포함된 `push`, “배포 방법만 설명해”도 승인으로 처리됩니다. 특히 `배포|올려`는 범위가 지나치게 넓습니다([git-guard.sh:83](/home/jun/project/claude-code-harness/hooks/git-guard.sh:83)).
+- **오래된 승인 재사용:** prompt 기록 실패를 무시하며, git-guard는 파일의 turn ID·mtime 없이 단순히 non-empty인지 확인합니다. 쓰기 실패 시 이전 턴의 “push” 승인이 남아 과허용될 수 있습니다([capture-prompt.sh:30](/home/jun/project/claude-code-harness/hooks/capture-prompt.sh:30), [git-guard.sh:73](/home/jun/project/claude-code-harness/hooks/git-guard.sh:73)).
+- **동시 편집 경합:** 여러 Edit가 동시에 PreToolUse에서 `PENDING=0`을 읽으면 모두 실행되고, PostToolUse가 동일한 `1`만 기록합니다. 여러 diff가 게이트 한 번으로 합쳐집니다([gate-guard.sh:80](/home/jun/project/claude-code-harness/hooks/gate-guard.sh:80), [83](/home/jun/project/claude-code-harness/hooks/gate-guard.sh:83), [132](/home/jun/project/claude-code-harness/hooks/gate-guard.sh:132)).
+- **경로 기반 게이트 우회:** 정규화하지 않은 문자열로 면제 여부를 판정합니다. `docs/plans/.../../../../src/file`이나 plans 아래 symlink가 허용되면 실제 코드 파일도 면제될 수 있습니다([gate-guard.sh:65](/home/jun/project/claude-code-harness/hooks/gate-guard.sh:65), [74](/home/jun/project/claude-code-harness/hooks/gate-guard.sh:74)).
+- **상태 파일 갱신 실패 은폐:** `sed` 실패를 무시한 뒤 PENDING 설정 성공 메시지를 냅니다. 읽기 전용 파일·권한 문제에서는 게이트 빚이 생성되지 않습니다([gate-guard.sh:85](/home/jun/project/claude-code-harness/hooks/gate-guard.sh:85)).
+- **템플릿 오탐/미탐:** 필수 마커가 주석·예시 코드에 있어도 통과하며, 상대경로 `docs/plans/...`는 선행 `/` 요구 때문에 검사되지 않습니다([template-guard.sh:25](/home/jun/project/claude-code-harness/hooks/template-guard.sh:25), [33](/home/jun/project/claude-code-harness/hooks/template-guard.sh:33)).
+- **기존 task 덮어쓰기의 파괴적 리셋:** 신규 생성 여부를 구분하지 않아 기존 `task.md`를 Write하면 MODE뿐 아니라 미처리 PENDING과 WRITE_PHASE까지 초기화합니다([task-mode-guard.sh:21](/home/jun/project/claude-code-harness/hooks/task-mode-guard.sh:21), [37](/home/jun/project/claude-code-harness/hooks/task-mode-guard.sh:37), [46](/home/jun/project/claude-code-harness/hooks/task-mode-guard.sh:46)).
+- **scope 검사 누락:** `git diff --name-only`는 새 untracked 파일을 포함하지 않습니다. 새 코드와 문서를 함께 Write해도 경고가 없을 수 있으며, `/tmp` 마커가 만료되지 않아 재사용된 세션 ID에서는 영구 억제됩니다([scope-guard.sh:31](/home/jun/project/claude-code-harness/hooks/scope-guard.sh:31), [34](/home/jun/project/claude-code-harness/hooks/scope-guard.sh:34)).
+
+우선순위는 바뀝니다. 실재현된 A6과 A8은 추정 리스크가 아니라 현재 기능 결함이므로 먼저 고쳐야 합니다. 다만 보호장치의 실효성을 직접 무너뜨리는 `git -C/-c` 우회, stale 승인 재사용, PENDING 동시성 경합도 같은 P0 묶음입니다. 권장 순서는 **A8 중복 주입 제거 → A6 산출물 분류를 allowlist/명시적 작업파일 기준으로 수정 → git 명령 파싱 및 실제 실행 저장소 판정 → prompt에 turn nonce·원자적 기록 도입 → PENDING 카운터/락 도입**입니다.

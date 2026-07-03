@@ -27,5 +27,5 @@
 ## 4. 독립 검증 배선 (core §5 매핑의 실행)
 
 - 리뷰·codex는 절단 계약(playbooks/orchestration.md §4)대로 — 구현자와 분리, 귀속 증명, stakes별 강도.
-- **높음 stakes 리뷰는 병렬 듀얼 리뷰 루프** — 절차·종료 조건·finding 규칙은 `playbooks/review.md`가 단일 출처 (이 시점에만 로드).
+- **中·높음 stakes 리뷰는 듀얼(Opus 워커 ∥ codex)** — 中=듀얼 1패스, 높음=반복 루프. 절차·종료 조건·finding 규칙은 `playbooks/review.md`가 단일 출처 (이 시점에만 로드).
 - 검증에서 발견된 결함·오탐은 measurement-log 해당 열에 기입 (어느 게이트가 잡았는지 명시).
