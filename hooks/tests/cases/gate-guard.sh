@@ -30,8 +30,35 @@ test_gt_04() { # [red #9b] docs/plans 안 symlink로 repo 내 코드 탈출 → 
   assert_exit 2 symlink-gated
 }
 
-# gt_05(병렬 원자성)는 phase-03에서 도입 — spec §6 post-fix 절: 현행 sed 구현은 결함 #10 당사자라
-# green 고정 대상이 아니고, 경합 flake가 baseline 정확일치를 오염시킨다 (리뷰 P1-01).
+test_gt_05() { # [green phase-03] 병렬 PostToolUse — per-pid 성공 + 상태 무손상 (원자 갱신)
+  write_state lazy-implements 0
+  mkdir -p "$REPO/src"
+  local pids="" i rc=0
+  for i in 1 2 3 4 5 6; do
+    printf '%s' "$(json_file PostToolUse Edit "$REPO/src/f$i.c")" |       env HOME="$HOME_DIR" bash "$HOOKS_DIR/gate-guard.sh" >/dev/null 2>&1 &
+    pids="$pids $!"
+  done
+  for p in $pids; do wait "$p" || rc=1; done
+  [ "$rc" = "0" ] || fail parallel-exit
+  assert_single_line MODE mode-single
+  assert_single_line PENDING_GATE pending-single
+  assert_state PENDING_GATE 1 pending-set
+  grep -qE '^(MODE|PENDING_GATE|WRITE_PHASE)=' "$STATE" || fail state-intact
+}
+
+test_gt_11() { # [green phase-03] lazy-implements + Bash sed -i → 소프트 리마인더 (차단 아님)
+  write_state lazy-implements 0
+  run_hook gate-guard.sh "$(json_bash "sed -i 's/a/b/' src/f.c")"
+  assert_exit 0 lazy-bash-pass
+  assert_stderr_match 'per-diff' lazy-bash-reminder
+}
+
+test_gt_12() { # [green phase-03] FILE 기준 판정 — 상태는 cwd 소유, 분류는 canonical FILE
+  write_state UNSET
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 2 file-based-gate
+}
 
 test_gt_06() { # [red #11] 상태 갱신 실패가 조용히 넘어가지 않는다 (fail-closed)
   # 전제: 비root 실행 (root는 chmod 무시 — lib.sh 헤더 참조)

@@ -56,37 +56,89 @@ fi
 if [ "$IS_BASH" = "1" ]; then
   B_MODE=$(grep -E '^MODE=' "$STATE" 2>/dev/null | head -1 | cut -d= -f2 || true)
   B_WP=$(grep -E '^WRITE_PHASE=' "$STATE" 2>/dev/null | head -1 | cut -d= -f2 || true)
+  B_CMD=$(echo "$HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
   if { [ "$B_MODE" = "auto-write" ] || [ "$B_MODE" = "lazy-write" ]; } && { [ "$B_WP" = "await" ] || [ "$B_WP" = "verify" ]; }; then
     echo "[gate-guard] write '$B_WP' 단계: Bash로 코드/테스트를 수정하지 마세요(sed -i·tee·redirect 등). 사용자가 필사·수정합니다 — Claude는 읽기·테스트 실행·git diff 만. (write-handoff.md §5)" >&2
+  # lazy-implements의 Bash 파일쓰기(sed -i·tee·redirect·heredoc)는 per-diff 게이트를 우회한다 —
+  # 하드 차단은 안 한다(테스트 실행·정당한 셸 사용의 FP가 큼, §0.6 정직 경계). 소프트 리마인더만 (design D3 #15).
+  elif [ "$B_MODE" = "lazy-implements" ] && echo "$B_CMD" | grep -qE '(sed[[:space:]]+-i|(^|[^>])>[^>&|]|>>|[[:space:]]tee[[:space:]]|<<[-]?[[:space:]]*["'"'"']?[A-Za-z_])'; then
+    echo "[gate-guard] lazy 모드: Bash로 파일을 수정하면 per-diff 이해 게이트가 우회됩니다. 코드 변경은 Edit/Write로 해 게이트를 태우거나, 이 변경도 before/after 스니펫으로 설명·판정하세요. (implementation-lazymode.md §3 — 소프트 리마인더)" >&2
   fi
   exit 0
 fi
 
 FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
 [ -z "$FILE_PATH" ] && exit 0   # 파일 경로 없음 → inert (fail-open)
-# 파일 분류:
-#   - 상태 파일(.claude/lazymode/*): 항상 면제(게이트 클리어·스니펫 기록).
-#   - docs/plans/*(task.md 포함): 프로세스/정의 문서 → 완전 면제. **task.md도 면제**(F4 수정):
-#       task.md를 모드 게이트로 막으면, task-mode-guard가 그 task.md에서 모드를 리셋해 이중질문이 난다.
-#       모드 재질문은 task-mode-guard(리셋+리마인더)가 담당하고, 하드 게이트는 첫 *산출물(코드)* 변경에서 건다.
-#   - 그 외(코드 등): 산출물 → 모드 체크 + per-diff 게이트.
-case "$FILE_PATH" in
-  */.claude/lazymode/*) exit 0 ;;
-  */docs/plans/*) exit 0 ;;
-esac
+
+# 파일 분류 — **canonical 경로 기준**(문자열 glob 아님). 목적: 저장소에 쓰는 산출물만 게이트 대상.
+#   1) 상대경로는 CWD 기준 결합 (훅 프로세스 cwd ≠ 입력 CWD 대비 — design D3 #20)
+#   2) FILE의 가장 가까운 실존 조상을 realpath(symlink 해소) + 나머지 결합 — 실패 시 차단(fail-closed)
+#   3) 그 조상에서 git toplevel 판정: repo 없음 → 면제(/tmp·scratchpad·~/.claude 자연 포함),
+#      repo 있음 → canonical ROOT 기준 내부 확정 후 면제 glob(docs/plans·.claude/lazymode) 재적용
+#   → CWD를 딴 데로 옮기고 절대경로로 쓰는 실수·조작·`..`·symlink 탈출 모두 무효 (design D3 #18·#19·#21)
+canon_file() { # echo canonical path | 실패 시 비-0
+  local f="$1" parent base
+  case "$f" in /*) ;; *) f="$CWD/$f" ;; esac
+  base=$(basename -- "$f"); parent=$(dirname -- "$f")
+  # 가장 가까운 실존 조상까지 올라가 realpath
+  local acc="" up="$parent"
+  while [ ! -e "$up" ] && [ "$up" != "/" ] && [ "$up" != "." ]; do
+    acc="/$(basename -- "$up")$acc"; up=$(dirname -- "$up")
+  done
+  local real_up; real_up=$(realpath -- "$up" 2>/dev/null) || return 1
+  printf '%s%s/%s' "$real_up" "$acc" "$base"
+}
+CFILE=$(canon_file "$FILE_PATH") || {
+  [ "$EVENT" = "PreToolUse" ] && echo "[gate-guard] 경로 정규화 실패 — 안전을 위해 차단(fail-closed). 경로: $FILE_PATH" >&2
+  [ "$EVENT" = "PreToolUse" ] && exit 2 || exit 0
+}
+# repo 판정: FILE의 실존 조상에서 toplevel
+CDIR=$(dirname -- "$CFILE")
+seek="$CDIR"; while [ ! -d "$seek" ] && [ "$seek" != "/" ]; do seek=$(dirname -- "$seek"); done
+ROOT=$(git -C "$seek" rev-parse --show-toplevel 2>/dev/null || true)
+if [ -n "$ROOT" ]; then
+  ROOT=$(realpath -- "$ROOT" 2>/dev/null || echo "$ROOT")
+  # repo 밖(prefix 불일치) → 면제
+  case "$CFILE" in
+    "$ROOT"|"$ROOT"/*) ;;                 # repo 내부 → 아래 면제 glob 재적용
+    *) exit 0 ;;
+  esac
+  # repo 내부라도 프로세스/상태 문서는 면제 (canonical 기준 — .. 조작·symlink 탈출은 위 canon으로 이미 무효)
+  case "$CFILE" in
+    "$ROOT"/.claude/lazymode/*) exit 0 ;;
+    "$ROOT"/docs/plans/*) exit 0 ;;
+    */docs/plans/*) exit 0 ;;             # 서브프로젝트(중첩 repo 아님) docs/plans
+  esac
+else
+  exit 0   # repo 아님(임시 디렉토리·~/.claude 등) → 게이트 비대상
+fi
 
 read_state() { grep -E "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2 || true; }
 MODE=$(read_state MODE)
 PENDING=$(read_state PENDING_GATE)
 WRITE_PHASE=$(read_state WRITE_PHASE)
 
+# 상태 갱신은 flock 임계구역 + temp 원자 교체. 실패 = fail-closed(은폐 금지 — design D3 #22·#23)
+set_kv() { # <key> <val>  — 반환 비-0 = 갱신 실패
+  local key="$1" val="$2" lock="$STATE.lock" tmp
+  ( exec 9>>"$lock" 2>/dev/null || exit 1
+    flock -x 9 2>/dev/null || exit 1
+    tmp=$(mktemp "$STATE_DIR/.state.XXXXXX" 2>/dev/null) || exit 1
+    if grep -qE "^$key=" "$STATE" 2>/dev/null; then
+      sed "s/^$key=.*/$key=$val/" "$STATE" > "$tmp" 2>/dev/null || { rm -f "$tmp"; exit 1; }
+    else
+      { cat "$STATE" 2>/dev/null; echo "$key=$val"; } > "$tmp" 2>/dev/null || { rm -f "$tmp"; exit 1; }
+    fi
+    mv -f "$tmp" "$STATE" 2>/dev/null || { rm -f "$tmp"; exit 1; }
+  )
+}
 set_pending() {
-  if grep -qE '^PENDING_GATE=' "$STATE" 2>/dev/null; then
-    sed -i 's/^PENDING_GATE=.*/PENDING_GATE=1/' "$STATE" 2>/dev/null || true
-  else
-    echo "PENDING_GATE=1" >> "$STATE"
+  if ! set_kv PENDING_GATE 1; then
+    echo "[gate-guard] 상태 갱신 실패(PENDING_GATE) — 게이트 빚을 세우지 못했습니다. 상태파일 권한을 확인하세요." >&2
+    return 1
   fi
 }
+STATE_DIR=$(dirname -- "$STATE")
 
 # 1) 모드 미선택 → 산출물(코드) 변경 차단. (task.md·docs/plans는 위에서 면제 — F4: task.md는 안 막는다)
 if [ "$MODE" = "UNSET" ] || [ -z "$MODE" ]; then
@@ -130,7 +182,7 @@ esac
 case "$MODE" in
   lazy-implements|lazy-write)
     if [ "$EVENT" = "PostToolUse" ]; then
-      set_pending
+      if ! set_pending; then exit 2; fi   # 갱신 실패 = fail-closed (design D3 #23 — 은폐 금지)
       echo "[gate-guard] diff 발생 → 이해 게이트 대기(PENDING_GATE=1). before/after 스니펫을 작업 문서에 기록하고, 사용자에게 이 변경을 주관식으로 설명받아 판정 워커로 검증한 뒤 .claude/lazymode/$SESSION_ID 의 PENDING_GATE 를 0 으로 내리세요. (implementation-lazymode.md §3·§4)" >&2
       exit 0
     fi
