@@ -14,14 +14,16 @@ set -eu
 
 HOOK_INPUT=$(cat)
 
-CWD=$(echo "$HOOK_INPUT" | jq -r '.cwd // empty')
+# jq 실패는 inert — UserPromptSubmit에서 비-0 종료는 사용자 프롬프트 차단이 될 수 있다 (리뷰 P2-01)
+jqr() { echo "$HOOK_INPUT" | jq -r "$1" 2>/dev/null || true; }
+CWD=$(jqr '.cwd // empty')
 if [ -z "$CWD" ] || [ ! -d "$CWD" ]; then
   CWD="$PWD"
 fi
-SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty' | tr -cd 'A-Za-z0-9_-')
+SESSION_ID=$(jqr '.session_id // empty' | tr -cd 'A-Za-z0-9_-')
 [ -z "$SESSION_ID" ] && exit 0   # 세션 식별 불가 → inert
 
-PROMPT=$(echo "$HOOK_INPUT" | jq -r '.prompt // empty')
+PROMPT=$(jqr '.prompt // empty')
 
 STATE_DIR="$CWD/.claude/lazymode"
 mkdir -p "$STATE_DIR" 2>/dev/null || true
@@ -30,14 +32,19 @@ TURN_FILE="$STATE_DIR/$SESSION_ID.turn"
 
 # 턴 카운터 증가 (flock 직렬화 — 동시 이벤트에도 단조 증가)
 TURN=$(
-  exec 9>>"$TURN_FILE.lock" 2>/dev/null || { echo 1; exit 0; }
-  flock -x 9 2>/dev/null || true
+  exec 9>>"$TURN_FILE.lock" 2>/dev/null || { echo ""; exit 0; }
+  flock -x 9 2>/dev/null || { echo ""; exit 0; }
   old=$(cat "$TURN_FILE" 2>/dev/null || echo 0)
   case "$old" in ''|*[!0-9]*) old=0 ;; esac
-  new=$((old + 1))
+  new=$((10#$old + 1))
   printf '%s' "$new" > "$TURN_FILE" 2>/dev/null || true
   printf '%s' "$new"
 )
+# 카운터 영속 확인 — 실패 시 중복 turn으로 결속이 깨지므로 사이드카 제거(inert, fail-closed) (리뷰 P2-01·코덱스#2)
+if [ -z "$TURN" ] || [ "$(cat "$TURN_FILE" 2>/dev/null || true)" != "$TURN" ]; then
+  rm -f "$SIDECAR" 2>/dev/null || true
+  exit 0
+fi
 
 # 원자 쓰기 — 실패 시 사이드카 제거 (stale 승인 잔재 방지)
 TMP=$(mktemp "$STATE_DIR/.prompt.XXXXXX" 2>/dev/null) || { rm -f "$SIDECAR" 2>/dev/null || true; exit 0; }

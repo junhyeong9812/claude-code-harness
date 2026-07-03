@@ -123,6 +123,59 @@ test_gg_17() { # [신규] add 인자에 실존 코드 파일 → docs-only 아�
   assert_exit 0 mixed-add-pass
 }
 
+# ── phase-02 loop2 fix-verification (리뷰 P2 채택 finding 재현 — blind 설계 아님, 분류 명시)
+
+test_gg_19() { # [fix-verify P2-04] 부정형 "말라고" → 승인 아님
+  write_sidecar 2 "$(NOW)" "푸시하지 말라고 했잖아"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 neg-malla-block
+}
+
+test_gg_20() { # [fix-verify P2-03] git add -A 복합 — 작업트리가 docs뿐이면 docs-only 판정
+  mkdir -p "$REPO/docs"; echo d > "$REPO/docs/x.md"
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash 'git add -A && git commit -m "docs: x"')"
+  assert_exit 2 add-all-docs-block
+}
+
+test_gg_21() { # [fix-verify P2-10] 인용 문자열 안 "git push"는 명령 아님
+  write_sidecar 2 "$(NOW)" "노트에 적어줘"
+  run_hook git-guard.sh "$(json_bash 'echo "git push origin main" >> notes.txt')"
+  assert_exit 0 quoted-not-command
+}
+
+test_gg_22() { # [fix-verify P2-02] push 승인이 있어도 trailer 커밋은 차단 (복합 명령)
+  echo c > "$REPO/a.c"; gitq add a.c
+  write_sidecar 2 "$(NOW)" "커밋하고 푸시해줘"
+  run_hook git-guard.sh "$(json_bash 'git commit -m "x" -m "Co-Authored-By: Claude <n@a>" && git push origin main')"
+  assert_exit 2 approved-push-no-trailer-skip
+}
+
+test_gg_23() { # [fix-verify P2-05] "나중에 말고 지금 푸시해줘" — 역접 관용구는 승인
+  write_sidecar 2 "$(NOW)" "나중에 말고 지금 푸시해줘"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 0 malgo-idiom-approved
+}
+
+test_gg_24() { # [fix-verify P2-05] "문서만 커밋해줘" — 조사 삽입형 docs 승인
+  mkdir -p "$REPO/docs"; echo d > "$REPO/docs/x.md"; gitq add docs/x.md
+  write_sidecar 2 "$(NOW)" "문서만 커밋해줘"
+  run_hook git-guard.sh "$(json_bash 'git commit -m "docs: x"')"
+  assert_exit 0 docs-man-approved
+}
+
+test_gg_25() { # [fix-verify P2-08] 미래 ts 사이드카는 무효
+  write_sidecar 2 "$(( $(NOW) + 7200 ))" "푸시해줘"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 future-ts-block
+}
+
+test_gg_26() { # [fix-verify P2-04] 질문형 "푸시 방법 설명해줘" → 승인 아님
+  write_sidecar 2 "$(NOW)" "푸시 방법 설명해줘"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 question-not-approval
+}
+
 test_gg_18() { # [신규] heredoc 본문 안 "git push" 문자열은 명령이 아님 — 오탐 금지 (phase-02 실재현)
   write_sidecar 2 "$(NOW)" "테스트 파일 추가해줘"
   local cmd='cat >> notes.txt << '"'"'EOF'"'"'
