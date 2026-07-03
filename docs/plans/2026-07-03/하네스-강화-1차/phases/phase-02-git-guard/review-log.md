@@ -43,5 +43,26 @@
 | P2-28 | 2 | fable | capture 영속 확인 TOCTOU (fable#7) | 채택 | fixed | 2 | re-read를 flock 안으로 이동 |
 | P2-29 | 2 | main-synthesis | gg_33 스캔 한정 누락 | 채택 | fixed | 2 | 실존 경로 인자가 PATHSPECS 미등록 → 모든 경로 인자를 스캔 한정에 사용 (suite unexpected-fail이 검출) |
 
-## verified
-(loop 3에서 신규 0 확인 시 대칭 부담 기록. loop2는 신규 11건 — 비대상)
+| L3-01 | 3 | codex+fable | heredoc 뒤 인용 << 태그 오추출 (codex L3#1·fable 관찰1) | 채택 | fixed | 3 | 마지막 << 태그 추출이 실 heredoc 뒤 인용 <<태그를 선택해 후속 push 은폐 → **첫** << 태그로 변경, gg_35 고정 |
+| L3-02 | 3 | codex+fable | 혼합 복합명령 livelock (codex L3#2·fable F-01 High) | 채택 | fixed | 3 | 한 op만 키워드 승인 시 pending 교대 증발 → "네" 반복해도 영구 차단(문서화된 승인 경로 불능) → 차단 확정 시 detected op **전부** pending 이월, gg_34 고정 |
+| L3-03 | 3 | codex+fable | 인용 pathspec 전체 트리 (codex L3#3·fable 관찰2) | 채택 | fixed | 3 | `add -A -- 'docs/'`가 PATHSPECS 미등록으로 전체 트리 스캔 → 무관 코드 섞여 docs 가드 무력 → 인용 벗겨 pathspec 한정, gg_36 고정 |
+| L3-04 | 3(재점검) | codex | heredoc 앞 인용 <<태그·공백 경로 분할 | open→문서화 | user-deferred | — | 타깃 재점검 2건: ① 첫 태그 추출도 실 heredoc *앞* 인용 <<태그 오선택(마지막 태그와 대칭 엣지 — 셸 파서 없이 완결 불가) ② `add "a b.md"` 공백 경로 pathspec 분할로 docs-only 놓침. **둘 다 부자연 명령 + 저위험 → 잔여 한계로 주석 명기, gate unresolved 잔여에 포함**(무한 루프 회피 — loop3 상한 초과 재점검) |
+
+## 종료 판정 (loop 3 = 상한, unresolved 잔여)
+- **정식 종료 조건 미충족**: loop3에 신규 채택 3건(전부 fixed). review.md §1 상한 규칙상 `review unresolved`.
+- **수렴 관찰**: loop1 18(+감사3) → loop2 11 → loop3 3(High 2 합류). 매 루프 수정이 새 엣지를 노출 — git-guard의 "자연어 승인 + 셸 명령 파싱"이 구조적으로 수렴이 느림(codex 1차도 "셸 regex를 보안 경계로 삼지 말라" 지적).
+- **잔여 리스크(사용자 확인 항목)**: 실사용 경로 결함(F-01 livelock 등)은 전부 해소. 남은 한계(한 줄 다중 heredoc·공백 인용 경로·변수 시프트 `$((x<<y))` 유령 heredoc)는 ① Claude가 부자연스러운 복잡 명령을 짜야 발생 ② 대부분 fail-closed(차단) 방향. 위협 모델(Claude 실수 방지)상 실질 위험 낮음.
+- **사용자 판단(무응답 → 기본 채택)**: 현 수준 통과 + 잔여 문서화. 근본 재검토(승인의 구조화 신호 전환)는 별도 작업 후보로 work-log 기록.
+
+## verified (loop 3 최종 — 대칭 부담)
+
+| lens | applicable | 근거·충족 |
+|------|-----------|-----------|
+| API 단위 | applicable | exit 0/2 계약 — 새 경로 전수 추적, jq/date/산술 조기사망 가드(P2-01·24), capture 전 실패 inert (fable loop3 verified) |
+| 메서드 내부 | applicable | strip 이원화·QMARK 보존·말고 절단·pending 소모 순서 — F-01 외 방향 오류 0 (fable loop3 트레이스) |
+| 네이밍 | applicable | SCAN_NOHD/SCAN_COMMAND·TREE_ALL/TRACKED·pend_file — 역할 일치 |
+| 리포지토리/쿼리 | N/A | DB·ORM 없음 |
+| 완전성 | applicable | "차단 후 정당 승인 경로가 끝까지 통하나" 능동 추적 → F-01 검출·수정 (fable) |
+| 통합·부작용 | applicable | op별 pending 교차소모 제거·.claude 트리 제외·flock TOCTOU 봉합 (양측) |
+| 설계 품질 | applicable | 평가-후-판정 분리 구조적 정당 — 잔여는 파싱 한계(문서화), 근본 재검토는 별도 작업 |
+- **비대칭 없음**: applicable 렌즈를 codex·fable이 합쳐 커버.
