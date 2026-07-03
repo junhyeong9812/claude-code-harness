@@ -28,7 +28,7 @@ sandbox_init() {
   gitq commit -qm init >/dev/null 2>&1
   rm -f "/tmp/scope-guard-$SID.warned"   # 현행 scope-guard /tmp 마커 격리 불가 보완
   # 정리: 쓰기불가 상태로 중도 사망해도 잔재가 없도록 u+w 선행, 테스트가 만든 /tmp 마커도 제거 (P1-05)
-  trap 'chmod -R u+w "$SANDBOX" 2>/dev/null; rm -rf "$SANDBOX" "/tmp/scope-guard-$SID.warned"' EXIT
+  trap 'chmod -R u+rwX "$SANDBOX" 2>/dev/null; rm -rf "$SANDBOX" "/tmp/scope-guard-$SID.warned"' EXIT
 }
 
 # 훅 실행: run_hook <hook파일명> <stdin-json>  → HOOK_EXIT / HOOK_STDERR
