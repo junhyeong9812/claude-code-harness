@@ -80,3 +80,55 @@ test_gg_11() { # [green] pending 긍정이라도 명령 fingerprint 불일치(--
   run_hook git-guard.sh "$(json_bash 'git push --force origin main')"
   assert_exit 2 fingerprint-block
 }
+
+# ── phase-02 신규 케이스 (post-fix 동작 경계 — spec §6 + §8 append)
+
+test_gg_12() { # [신규] "배포" 단독(push 문맥어 없음)은 승인 아님
+  write_sidecar 2 "$(NOW)" "배포 방법만 설명해줘"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 deploy-word-not-approval
+}
+
+test_gg_13() { # [신규] pending은 다음 턴 승인 여부 무관 소모 — 비긍정 턴이면 구 pending 폐기 후 재차단(새 pending=turn5)
+  write_pending 4 push 'git push origin main'
+  write_sidecar 5 "$(NOW)" "그럼 리팩토링부터 하자"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 nonaffirm-block
+  grep -q '^turn=5$' "$STATE_DIR/$SID.pending-approval" || fail old-pending-consumed
+}
+
+test_gg_14() { # [신규] 턴 갭(pending턴+2)의 "응"은 승인 아님
+  write_pending 4 push 'git push origin main'
+  write_sidecar 7 "$(NOW)" "응"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 turn-gap-block
+}
+
+test_gg_15() { # [신규] 사이드카 부재 = 승인 신호 없음(fail-closed, jsonl 승인 폴백 제거)
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 no-sidecar-block
+  assert_stderr_match '사이드카 부재' no-sidecar-msg
+}
+
+test_gg_16() { # [신규] command git push 프리픽스 인식
+  write_sidecar 2 "$(NOW)" "이 함수 정리해줘"
+  run_hook git-guard.sh "$(json_bash 'command git push origin main')"
+  assert_exit 2 command-prefix-detect
+}
+
+test_gg_17() { # [신규] add 인자에 실존 코드 파일 → docs-only 아님(통과)
+  mkdir -p "$REPO/src" "$REPO/docs"; echo c > "$REPO/src/new.c"; echo d > "$REPO/docs/n.md"
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash 'git add src/new.c docs/n.md && git commit -m "feat: x"')"
+  assert_exit 0 mixed-add-pass
+}
+
+test_gg_18() { # [신규] heredoc 본문 안 "git push" 문자열은 명령이 아님 — 오탐 금지 (phase-02 실재현)
+  write_sidecar 2 "$(NOW)" "테스트 파일 추가해줘"
+  local cmd='cat >> notes.txt << '"'"'EOF'"'"'
+example: git push origin main
+EOF
+echo done'
+  run_hook git-guard.sh "$(json_bash "$cmd")"
+  assert_exit 0 heredoc-body-not-command
+}

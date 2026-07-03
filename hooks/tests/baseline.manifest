@@ -1,11 +1,5 @@
 # phase-01 baseline — 현행 훅의 결함 재현(red) 케이스. 형식: <test-id> <assert-id>
 # 수정 페이즈 통과 시 이 파일에서 해당 행을 제거한다(전체 suite green 지향).
-test_gg_03 neg-block
-test_gg_04 affirm-allow
-test_gg_05 git-c-detect
-test_gg_06 docs-compound
-test_gg_08 other-repo-staged
-test_gg_10 stale-ts
 test_gt_01 outside-exempt
 test_gt_02 memory-exempt
 test_gt_03 traversal-gated

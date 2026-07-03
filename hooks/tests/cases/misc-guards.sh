@@ -93,3 +93,13 @@ test_cp_02() { # [green] 정상 캡처 — 프롬프트 본문 보존
   assert_exit 0 capture-exit
   assert_file_contains "$SIDECAR" '이 파일 리팩토링 해줘' capture-body
 }
+
+test_cp_03() { # [신규 phase-02] 헤더 형식 — turn 단조 증가 + ts 존재
+  run_hook capture-prompt.sh "$(json_prompt '첫 요청')"
+  t1=$(sed -n '1s/^#turn=//p' "$SIDECAR")
+  run_hook capture-prompt.sh "$(json_prompt '둘째 요청')"
+  t2=$(sed -n '1s/^#turn=//p' "$SIDECAR")
+  { [ -n "$t1" ] && [ -n "$t2" ]; } || fail turn-header
+  [ "$t2" = "$((t1 + 1))" ] || fail turn-monotonic
+  sed -n '2p' "$SIDECAR" | grep -qE '^#ts=[0-9]+$' || fail ts-header
+}
