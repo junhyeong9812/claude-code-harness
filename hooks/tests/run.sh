@@ -71,7 +71,7 @@ if [ ! -f tests.lock ]; then
   exit 1
 fi
 check_lock_targets || exit 1
-check_intra_file_dups || exit 1
+# 해시 검증을 먼저 — case 파일 source(dup 검사·수집)는 무결성 확인 후에만 (post-fix 재점검: 변조 case의 top-level 실행 차단)
 lock_files=$(grep -v '^# test:' tests.lock | awk '{print $2}' | LC_ALL=C sort)
 # shellcheck disable=SC2086
 real_files=$(find $LOCK_TARGETS -type f | LC_ALL=C sort)
@@ -79,6 +79,7 @@ if [ "$lock_files" != "$real_files" ] || ! grep -v '^# test:' tests.lock | sha25
   echo "tests.lock 불일치 — 테스트/판정기준 파일이 변경·추가·삭제됐습니다. 의도된 변경이면 사유를 gate.md에 기록하고 'run.sh --lock' 재생성." >&2
   exit 1
 fi
+check_intra_file_dups || exit 1
 lock_tests=$(grep '^# test: ' tests.lock | sed 's/^# test: //' | LC_ALL=C sort)
 if [ "$lock_tests" != "$(all_test_ids)" ]; then
   echo "tests.lock 불일치 — 수집된 test-id 집합이 lock과 다릅니다." >&2
@@ -112,7 +113,7 @@ snapshot_detail() { # $1 = 출력 파일
     (cd "$REPO_ROOT" && git ls-files --others --exclude-standard -z 2>/dev/null | LC_ALL=C sort -z \
        | while IFS= read -r -d '' p; do
            if [ -f "$p" ] && [ ! -L "$p" ]; then sha256sum -- "$p" 2>/dev/null
-           else printf 'nonreg %s %s\n' "$(stat -c %F "$p" 2>/dev/null)" "$p"; fi
+           else printf 'nonreg %s %s -> %s\n' "$(stat -c %F "$p" 2>/dev/null)" "$p" "$(readlink -- "$p" 2>/dev/null)"; fi
          done)
   } > "$1"
 }
