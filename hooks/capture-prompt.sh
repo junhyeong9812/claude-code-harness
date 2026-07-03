@@ -31,6 +31,7 @@ SIDECAR="$STATE_DIR/$SESSION_ID.prompt"
 TURN_FILE="$STATE_DIR/$SESSION_ID.turn"
 
 # 턴 카운터 증가 (flock 직렬화 — 동시 이벤트에도 단조 증가)
+# 영속 확인(re-read)도 잠금 안에서 — 잠금 밖 재확인은 동시 증가와 경합해 스퓨리어스 inert (loop2 fable#7)
 TURN=$(
   exec 9>>"$TURN_FILE.lock" 2>/dev/null || { echo ""; exit 0; }
   flock -x 9 2>/dev/null || { echo ""; exit 0; }
@@ -38,10 +39,11 @@ TURN=$(
   case "$old" in ''|*[!0-9]*) old=0 ;; esac
   new=$((10#$old + 1))
   printf '%s' "$new" > "$TURN_FILE" 2>/dev/null || true
+  [ "$(cat "$TURN_FILE" 2>/dev/null || true)" = "$new" ] || { echo ""; exit 0; }
   printf '%s' "$new"
 )
-# 카운터 영속 확인 — 실패 시 중복 turn으로 결속이 깨지므로 사이드카 제거(inert, fail-closed) (리뷰 P2-01·코덱스#2)
-if [ -z "$TURN" ] || [ "$(cat "$TURN_FILE" 2>/dev/null || true)" != "$TURN" ]; then
+# 카운터 영속 실패 — 중복 turn으로 결속이 깨지므로 사이드카 제거(inert, fail-closed) (리뷰 P2-14)
+if [ -z "$TURN" ]; then
   rm -f "$SIDECAR" 2>/dev/null || true
   exit 0
 fi

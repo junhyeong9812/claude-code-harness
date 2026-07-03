@@ -26,7 +26,7 @@ test_gg_04() { # [red #4] 차단(pending) 다음 턴 긍정 단답 → 허용 + 
   write_sidecar 5 "$(NOW)" "응"
   run_hook git-guard.sh "$(json_bash 'git push origin main')"
   assert_exit 0 affirm-allow
-  [ ! -f "$STATE_DIR/$SID.pending-approval" ] || fail pending-consumed
+  [ ! -f "$STATE_DIR/$SID.pending-push" ] || fail pending-consumed
 }
 
 test_gg_05() { # [red #5] git -C 형태 push 인식
@@ -94,7 +94,7 @@ test_gg_13() { # [신규] pending은 다음 턴 승인 여부 무관 소모 — 
   write_sidecar 5 "$(NOW)" "그럼 리팩토링부터 하자"
   run_hook git-guard.sh "$(json_bash 'git push origin main')"
   assert_exit 2 nonaffirm-block
-  grep -q '^turn=5$' "$STATE_DIR/$SID.pending-approval" || fail old-pending-consumed
+  grep -q '^turn=5$' "$STATE_DIR/$SID.pending-push" || fail old-pending-consumed
 }
 
 test_gg_14() { # [신규] 턴 갭(pending턴+2)의 "응"은 승인 아님
@@ -184,4 +184,58 @@ EOF
 echo done'
   run_hook git-guard.sh "$(json_bash "$cmd")"
   assert_exit 0 heredoc-body-not-command
+}
+
+# ── phase-02 loop2 fix-verification
+
+test_gg_27() { # [fix-verify fable#1] "푸시 말고 커밋해줘" — 역접 앞 절은 승인 아님
+  write_sidecar 2 "$(NOW)" "푸시 말고 커밋해줘"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 malgo-front-clause-block
+}
+
+test_gg_28() { # [fix-verify P2-20] "푸시해도 돼?" 질문은 승인 아님
+  write_sidecar 2 "$(NOW)" "푸시해도 돼?"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 question-mark-block
+}
+
+test_gg_29() { # [fix-verify P2-21] "푸시 안해도 됨" 붙는 부정형
+  write_sidecar 2 "$(NOW)" "푸시 안해도 됨"
+  run_hook git-guard.sh "$(json_bash 'git push origin main')"
+  assert_exit 2 attached-neg-block
+}
+
+test_gg_30() { # [fix-verify P2-19] 산술 시프트는 heredoc이 아님 — 후속 push 감지 유지
+  write_sidecar 2 "$(NOW)" "정리해줘"
+  run_hook git-guard.sh "$(json_bash 'x=$((1<<8))
+git push origin main')"
+  assert_exit 2 arith-shift-not-heredoc
+}
+
+test_gg_31() { # [fix-verify P2-22] 복합 docs&&push — 차단 시 양 op pending, 다음 턴 긍정 1회로 전부 승인
+  mkdir -p "$REPO/docs"; echo d > "$REPO/docs/x.md"; gitq add docs/x.md
+  local cmd='git commit -m "docs: x" && git push origin main'
+  write_sidecar 4 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash "$cmd")"
+  assert_exit 2 compound-first-block
+  [ -f "$STATE_DIR/$SID.pending-push" ] || fail compound-pending-push
+  [ -f "$STATE_DIR/$SID.pending-docs" ] || fail compound-pending-docs
+  write_sidecar 5 "$(NOW)" "응"
+  run_hook git-guard.sh "$(json_bash "$cmd")"
+  assert_exit 0 compound-affirm-allow
+}
+
+test_gg_32() { # [fix-verify fable#4] 인용 안 "<< EOF" 텍스트는 heredoc 시작이 아님 — 후속 push 감지 유지
+  write_sidecar 2 "$(NOW)" "정리해줘"
+  run_hook git-guard.sh "$(json_bash "echo 'see << EOF section' > n.txt
+git push origin main")"
+  assert_exit 2 quoted-heredoc-not-start
+}
+
+test_gg_33() { # [fix-verify P2-23] add -A + pathspec — 판정은 pathspec 한정 (다른 untracked 코드 무관)
+  mkdir -p "$REPO/docs" "$REPO/src"; echo d > "$REPO/docs/x.md"; echo c > "$REPO/src/y.c"
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash 'git add -A docs/ && git commit -m "docs: x"')"
+  assert_exit 2 pathspec-limited-docs-block
 }

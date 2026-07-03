@@ -63,8 +63,8 @@ write_state() { # MODE [PENDING] [WRITE_PHASE]
 write_sidecar() { # <turn> <ts> <body>
   printf '#turn=%s\n#ts=%s\n%s' "$1" "$2" "$3" > "$SIDECAR"
 }
-write_pending() { # <turn> <op> <cmd>
-  printf 'turn=%s\nop=%s\ncmd=%s\n' "$1" "$2" "$3" > "$STATE_DIR/$SID.pending-approval"
+write_pending() { # <turn> <op> <cmd> — op별 파일 (phase-02 loop2: 복합 명령 교차 소모 방지)
+  printf 'turn=%s\ncmd=%s\n' "$1" "$3" > "$STATE_DIR/$SID.pending-$2"
 }
 
 # assert — 실패 시 FAIL_ASSERT <test> <assert-id> 출력 후 종료
