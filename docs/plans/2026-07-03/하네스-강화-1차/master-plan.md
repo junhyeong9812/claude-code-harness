@@ -59,7 +59,7 @@
 | 시점 | 호출/워커 | 핵심 지적 | 채택/기각 |
 |------|----------|----------|----------|
 | 계획 검토 (codex) | 2026-07-03 `codex-plan-review-output.md`(scratchpad, 요지 아래) | 18건: 승인 scoped 결속(#1·#2)·allowlist(#3)·정규화 fail-closed(#4)·PENDING boolean(#5)·baseline 러너(#6)·테스트 고정(#7)·전체 회귀(#8)·hermetic(#9)·추적 매트릭스(#10)·API계약 활성(#11)·배포 1회(#12)·배포 원자성(#13)·커밋 승인 경계(#14)·주입 검증(#15)·stale 매핑(#16)·측정 스키마(#17)·파일 allowlist(#18) | **채택 17건**(definition §0·§2·§3·§4 + master-plan 페이즈·게이트에 반영). **부분 기각 1건**: #3 명시 열거 allowlist → "canonical 경로가 프로젝트 루트 밖 = 면제"로 대체 — gate-guard의 보호 대상은 저장소 산출물(core §1)이지 샌드박스가 아님. 정규화 실패는 차단(fail-closed)이라 우회 위험은 #4 채택으로 커버 |
-| 설계 검증 (codex, phase-02 승인모델·테스트 구조) | (phase-01 전 — 대기) | | |
+| 설계 검증 (codex, phase-02 승인모델·테스트 구조) | 2026-07-03 `codex-design-output.md`(scratchpad) | 28건: pending self-approval(#1)·다음턴 무조건 소모(#2)·cmd fingerprint(#3)·compound 다중(#4)·턴내 다회(#5)·repo 결속(#6)·jsonl 폴백(#7)·부정어휘(#8)·긍정 축소(#9)·git 인식 한계(#10)·전역옵션(#11)·add 실존(#12)·케이스 신뢰경계(#13)·git config 격리(#14)·teardown 강화(#15)·baseline signature(#16)·lock 생성법(#17)·CWD 조작(#18)·미존재 canonical(#19)·상대경로(#20)·prefix 경계(#21)·flock(#22)·갱신 fail-closed(#23)·digest 리셋(#24)·JSON 상태(#25)·마커 오염(#26)·deploy trap(#27)·settings jq(#28) | **채택 22**(design.md D2~D7 v2 반영). **부분 채택 3**: #1·#4·#10 — 위협 모델(자기실수 방지, 고의우회는 §0.6 정직 경계)상 패턴 보강까지만. **기각 3**: #6(멀티 repo 일괄 push 실사용 false-block) · #24(재작성마다 모드 재질문 = F4 마찰 재현) · #25(3키 파일에 JSON 과설계, source 미사용으로 주입면 제거) |
 | 페이즈 리뷰 (듀얼 루프) | (각 gate.md에 기록, ledger는 review-log.md) | | |
 
 ---

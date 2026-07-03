@@ -10,7 +10,7 @@
 | hooks/tests/run.sh | 러너 (일반/--baseline 2모드) | 신규 |
 | hooks/tests/lib.sh | sandbox·assert 헬퍼 | 신규 |
 | hooks/tests/baseline.manifest | expected-failure test-id 목록 | 신규 |
-| hooks/tests/cases/**/*.case | 테스트 케이스 | 신규 |
+| hooks/tests/cases/*.sh | 테스트 케이스 (훅별 파일, test_* 함수) | 신규 |
 | hooks/tests/tests.lock | 케이스 hash manifest (gate 통과 시 생성) | 신규 |
 
 ## 3. 변경 금지
@@ -21,14 +21,14 @@
 | ~/.claude/** | 배포는 phase-06 1회 |
 
 ## 4. 완료 조건 (acceptance)
-- `run.sh --baseline` exit 0 — manifest의 13 결함 케이스 전부 red(현행 버그 실증) + manifest 외 케이스 전부 green.
+- `run.sh --baseline` exit 0 — manifest의 red 케이스 16개(결함 13건) 전부 red(현행 버그 실증) + manifest 외 케이스 전부 green.
 - `run.sh`(일반 모드) exit 1 — red 존재를 정직하게 보고.
-- teardown 격리 검증: 실행 전후 실제 `~/.claude`·작업 repo 무변화.
+- teardown 격리 검증: 실행 전후 보호 대상(~/.claude 배포 파일·작업 repo) 무변화.
 
 ## 5. 검증 명령
 ```
-bash hooks/tests/run.sh --baseline   # 기대: "13 expected-failure confirmed, N green, 0 unexpected" + exit 0
-bash hooks/tests/run.sh              # 기대: exit 1 (red 13 보고)
+bash hooks/tests/run.sh --baseline   # 기대: "16 expected-failure confirmed, N green, 0 unexpected" + exit 0
+bash hooks/tests/run.sh              # 기대: exit 1 (red 16 보고)
 ```
 
 ## 6. 테스트 설계 ★훅 수정 diff 미열람 — 리서치 결함 카탈로그·definition·design만 입력★
@@ -79,3 +79,5 @@ hooks/tests/ 폴더 삭제 (신규 파일만 — 기존 파일 무접촉).
 
 ## 8. spec 고정
 이 시점 커밋(docs) 후 구현 진입. 이후 변경은 여기 append.
+
+- [2026-07-03 구현 직전, 설계검증 v2 반영] ① gg-08 시나리오 정정: red 성립 조건은 "대상(-C) repo에 docs-only staged, cwd repo엔 코드" — 현행 훅은 `git -C x commit`을 인식 못 해 exit 0(버그), post-fix는 대상 repo 기준 docs-only 판정 → exit 2. ② #7 재현을 cp-01→gg-10으로 통합: 쓰기 불가 디렉토리에서는 수정 후에도 rm이 같이 실패해 비변별 — 보호는 git-guard의 ts/turn 헤더 검사가 담당(gg-10). cp-01은 "덮어쓰기 정상 동작" green으로 재정의. ③ red = 결함 13건/케이스 16개(#1·#8·#9 각 2케이스). ④ green에 gg-11(fingerprint 불일치 차단 — 현행도 2, post-fix도 2) 추가.
