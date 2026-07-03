@@ -36,5 +36,23 @@
 
 (fable loop2 red/green 전건 재추적: 일치 확인 — 가짜 baseline 없음. codex loop2 동일 확인.)
 
-## verified
-(loop 3에서 신규 0 확인 시 대칭 부담 기록)
+| L3-01 | 3 | codex+fable | run.sh discover_tests (codex#1[중]·fable F-L3-1[low]) | 채택 | fixed | 3 | discovery 강건성 2결함: 동일 파일 중복 선언은 bash 덮어쓰기로 무탐(codex) + source 실패 삼킴으로 green 무신호 소실(fable — L2-E가 도입한 회귀) → 구문 출현수 대조(check_intra_file_dups) + source 실패 전파(fail-closed). 문법 오류 주입 실검증(exit 1) |
+| L3-02 | 3 | codex | run.sh LOCK_TARGETS (codex#2[상]) | 채택 | fixed | 3 | lock 대상 부재·symlink 시 --lock이 성공 가능(find -type f가 symlink 제외) → check_lock_targets 선검증(regular file 강제) |
+| L3-03 | 3 | codex | run.sh untracked 스냅샷 (codex#3[상]) | 부분 채택 | fixed | 3 | FIFO 대기·symlink 역참조·`-`파일명 옵션 해석 → regular만 `sha256sum --`, 비정규는 type 목록. mode 추적은 ~/.claude 보호 대상만(untracked mode는 위협 모델 밖 — 신뢰 repo) |
+
+## 종료 판정 (loop 3 = 상한)
+- **정식 종료 조건 미충족**: loop 3에 신규 채택 3건 발생(전부 fixed_in_loop 3). review.md §1 상한 규칙에 따라 `review unresolved` 상태 — 단 open finding 0, 미수정 없음.
+- 잔여 리스크: loop3 수정분(discovery·lock 선검증·스냅샷)이 정식 재리뷰 루프를 거치지 않음 → **타깃 재점검 1회(codex, loop3 수정 hunks만)로 보완** — 결과 아래 기록. finding 심각도 궤적은 수렴(blocker→P1/P2→low·엣지).
+- 사용자 결정 대기: 이 상태로 phase-01 gate 통과 인정 여부(최종 보고에 명시).
+
+## verified (loop 3 — 신규 최소 상태의 대칭 부담, 양측 원문 인용)
+
+| lens | 근거 | how | source |
+|------|------|-----|--------|
+| API 단위 | lib.sh run_hook stderr-only 캡처·assert_exit — 훅 exit 0/2 계약 28케이스 전수 대조 | 케이스별 exit/stderr 계약 직접 검증 | fable |
+| 메서드 내부 | run.sh lock 3중 검증·baseline 정확일치·mktemp+trap — "수집·lock·snapshot 경로 대조" | 러너 알고리즘 전수 추적 (예외: L3 finding — fixed) | codex+fable |
+| 네이밍 | test-id `test_<훅>_NN`·서술형 assert-id — spec 매트릭스와 일치 | 식별자 대조 | codex+fable |
+| 리포지토리/쿼리 | N/A — DB·ORM 없음 (셸 러너) | — | — |
+| 완전성 | manifest 16행=결함 13건 매핑·gt_05 제외 사유 spec 고정·post-fix 케이스 예정 명기 | red 전수 + green 양방향 커버 확인 | codex+fable |
+| 통합·부작용 | HOME/XDG/git 절연·스냅샷 before/after·trap u+rwX — "실환경 오염" 무혐의 | hermetic 검증 실행 확인 | fable |
+| 설계 품질 | "판정 입력 전체를 lock 포함 + 무lock 실행 거부" 단일 무결성 모델 | L2-A/B 수정의 설계적 폐쇄 확인 | codex+fable |
