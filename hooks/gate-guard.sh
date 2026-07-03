@@ -84,7 +84,7 @@ canon_file() { # echo canonical path | 실패 시 비-0
   # 이식성 폴백(phase-03 loop2 codex): GNU realpath -m 우선 → BSD realpath(존재 경로) → python3.
   realpath -m -- "$f" 2>/dev/null && return 0
   realpath -- "$f" 2>/dev/null && return 0
-  python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$f" 2>/dev/null && return 0
+  python3 -I -S -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$f" 2>/dev/null && return 0  # -I -S: PYTHONPATH·sitecustomize 격리 (재점검)
   return 1
 }
 CFILE=$(canon_file "$FILE_PATH") || {
