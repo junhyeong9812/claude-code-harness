@@ -123,3 +123,41 @@ test_gt_10() { # [green] *-write await 단계 코드 수정 차단 (필사 보�
   assert_exit 2 await-block
   assert_stderr_match 'write 핸드오프' await-msg
 }
+
+test_gt_15() { # [green phase-05] pair 모드 + 테스트파일 컨벤션(Java) → Claude Edit/Write 허용
+  write_state pair
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/FooTest.java")"
+  assert_exit 0 pair-testfile-pre-pass
+  run_hook gate-guard.sh "$(json_file PostToolUse Write "$REPO/src/FooTest.java")"
+  assert_exit 0 pair-testfile-post-pass
+}
+
+test_gt_16() { # [green phase-05] pair 모드 + 로직 파일 → PreToolUse 항상 차단(사용자만 타이핑)
+  write_state pair
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Edit "$REPO/src/Foo.java")"
+  assert_exit 2 pair-logicfile-block
+  assert_stderr_match 'pair 모드' pair-logicfile-msg
+}
+
+test_gt_17() { # [green phase-05] pair 모드 + tests/ 디렉토리 경로 컨벤션 → 허용(확장자 무관)
+  write_state pair
+  mkdir -p "$REPO/tests"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/tests/foo_helper.rb")"
+  assert_exit 0 pair-testdir-pass
+}
+
+test_gt_18() { # [green phase-05] pair 모드 + Python 테스트 컨벤션(test_*.py) → 허용
+  write_state pair
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/test_foo.py")"
+  assert_exit 0 pair-py-testfile-pass
+}
+
+test_gt_19() { # [green phase-05] pair 모드 + 손상 없는 정상 로직파일 PostToolUse → no-op 통과(경로 도달 방어)
+  write_state pair
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PostToolUse Edit "$REPO/src/Foo.java")"
+  assert_exit 0 pair-logicfile-post-noop
+}

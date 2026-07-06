@@ -57,6 +57,8 @@ cat <<MSG
   • lazy-implements — 매 diff 사용자 이해 게이트(주관식→판정 워커). 자율주행 금지.
   • auto-write — auto로 구현·검증·기록 완료 후, 코드/테스트 롤백 + writing.md로 사용자가 직접 필사 → 검증.
   • lazy-write — lazy 게이트로 구현 후, 롤백 + 필사(최대 학습: 읽고 설명 + 직접 타이핑).
+2축 매트릭스 밖의 5번째 독립 모드:
+  • pair — 순수 대화로 요구사항·설계 합의 → TDD(테스트 1개=사이클) → 사용자가 로직 타이핑, Claude는 테스트/보일러플레이트만 작성 + 핑퐁 리뷰. (playbooks/pair-coding.md)
 선택을 받으면 위 세션 상태파일의 MODE 에 그 값을 기록하고 진행하세요. (*-write 는 write-handoff.md. 정책: plans.md §0)
 MSG
 

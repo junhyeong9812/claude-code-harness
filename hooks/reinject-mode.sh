@@ -51,6 +51,9 @@ case "$MODE" in
   lazy-write)
     echo "[lazy-busy] 현재 모드: lazy-write. 세션 상태파일: $STATE (PENDING_GATE=${PENDING:-0}). 구현은 lazy(매 diff 이해 게이트, PENDING=1이면 그 게이트부터). $(write_phase_msg) (implementation-lazymode.md + write-handoff.md)"
     ;;
+  pair)
+    echo "[lazy-busy] 현재 모드: pair. 세션 상태파일: $STATE. 2축 매트릭스 밖의 독립 모드 — 대화로 정의·설계 합의 → TDD(테스트 1개=사이클 경계) → 사용자가 로직 타이핑, Claude는 테스트/보일러플레이트 작성 + 핑퐁 리뷰만. gate-guard가 로직 파일 Edit/Write를 항상 차단. (playbooks/pair-coding.md)"
+    ;;
   *)
     : # UNSET/미정 — 정의됨 진입 시 gate-guard가 질문
     ;;

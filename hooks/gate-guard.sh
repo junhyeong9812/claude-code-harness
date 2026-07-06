@@ -14,6 +14,9 @@
 #   - MODE=lazy-implements|lazy-write:
 #       · PostToolUse(Edit|Write) → PENDING_GATE=1 (diff 발생 = 게이트 빚짐)
 #       · PreToolUse(Edit|Write)  → PENDING_GATE=1 이면 차단(직전 diff 게이트 먼저)
+#   - MODE=pair (5번째 독립 모드, 2축 매트릭스 밖 — playbooks/pair-coding.md):
+#       · 테스트/보일러플레이트 파일(is_test_file 컨벤션) → Claude Edit/Write 허용(게이트 없음)
+#       · 그 외 로직 파일 → PreToolUse 항상 차단(사용자만 타이핑, Claude는 리뷰만 — §0.6 결정론적 패턴 판정)
 #   - 게이트 통과 시 Claude가 PENDING_GATE=0 으로 내린다(워커 verdict=pass 후). state 파일은 면제라 가능.
 #   - **write 핸드오프(*-write 전용)**: WRITE_PHASE={impl|await|verify}. impl=구현 단계(위 접두사 규칙대로).
 #       await(롤백 후 사용자 필사 중)·verify(필사본 검증 중) → **Claude의 코드/테스트 직접 수정 차단**
@@ -113,6 +116,23 @@ else
   exit 0   # repo 아님(임시 디렉토리·~/.claude 등) → 게이트 비대상
 fi
 
+# pair 모드 전용: 테스트/보일러플레이트 파일 컨벤션 판정 (결정론적 패턴 — 의미론 판단 아님, §0.6).
+# 정본: docs/plans/2026-07-06/pair-coding-mode/definition.md §2 패턴 목록.
+is_test_file() { # <canonical-path> → exit 0 이면 테스트 파일(Claude 허용)
+  local f="$1" base
+  base=$(basename -- "$f")
+  case "$f" in
+    */src/test/*|*/tests/*|*/__tests__/*|*/spec/*) return 0 ;;
+  esac
+  case "$base" in
+    *Test.java|*Tests.java|*Spec.java) return 0 ;;
+    *.test.ts|*.test.tsx|*.test.js|*.test.jsx) return 0 ;;
+    *.spec.ts|*.spec.tsx|*.spec.js|*.spec.jsx) return 0 ;;
+    test_*.py|*_test.py|*_test.go|*_spec.rb) return 0 ;;
+  esac
+  return 1
+}
+
 read_state() { grep -E "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2 || true; }
 MODE=$(read_state MODE)
 PENDING=$(read_state PENDING_GATE)
@@ -143,7 +163,19 @@ STATE_DIR=$(dirname -- "$STATE")
 # 1) 모드 미선택 → 산출물(코드) 변경 차단. (task.md·docs/plans는 위에서 면제 — F4: task.md는 안 막는다)
 if [ "$MODE" = "UNSET" ] || [ -z "$MODE" ]; then
   if [ "$EVENT" = "PreToolUse" ]; then
-    echo "[gate-guard] 작업 모드 미선택(MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다 — 사용자에게 auto-implements | lazy-implements | auto-write | lazy-write 를 물어 .claude/lazymode/$SESSION_ID 에 기록한 뒤 다시 시도하세요. (탐색·토론·학습은 자유)" >&2
+    echo "[gate-guard] 작업 모드 미선택(MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다 — 사용자에게 auto-implements | lazy-implements | auto-write | lazy-write | pair 를 물어 .claude/lazymode/$SESSION_ID 에 기록한 뒤 다시 시도하세요. (탐색·토론·학습은 자유)" >&2
+    exit 2
+  fi
+  exit 0
+fi
+
+# 1-b) pair 모드: 2축 매트릭스 밖의 독립 5번째 모드 — 테스트 파일=허용, 로직 파일=차단.
+if [ "$MODE" = "pair" ]; then
+  if is_test_file "$CFILE"; then
+    exit 0
+  fi
+  if [ "$EVENT" = "PreToolUse" ]; then
+    echo "[gate-guard] pair 모드 — 로직 파일은 사용자가 직접 타이핑합니다(Claude는 리뷰만). 테스트/보일러플레이트 파일(*Test.java·*.test.ts·test_*.py 등 컨벤션 — is_test_file)만 Claude가 Edit/Write 가능합니다. (playbooks/pair-coding.md)" >&2
     exit 2
   fi
   exit 0
@@ -200,7 +232,7 @@ esac
 # (PostToolUse 는 차단 불가지만, lazy 계열이어야 할 상태가 손상되면 직전 diff 의 PENDING 빚을
 #  세우지 못한다 — 경고만 남기고 다음 PreToolUse 에서 막는다.)
 if [ "$EVENT" = "PreToolUse" ]; then
-  echo "[gate-guard] 알 수 없는 MODE='$MODE' (.claude/lazymode/$SESSION_ID 손상?). auto-implements | lazy-implements | auto-write | lazy-write 중 하나로 고친 뒤 다시 시도하세요." >&2
+  echo "[gate-guard] 알 수 없는 MODE='$MODE' (.claude/lazymode/$SESSION_ID 손상?). auto-implements | lazy-implements | auto-write | lazy-write | pair 중 하나로 고친 뒤 다시 시도하세요." >&2
   exit 2
 fi
 echo "[gate-guard] 경고: 알 수 없는 MODE='$MODE' — 게이트를 적용 못 했습니다(PostToolUse). 상태파일을 확인하세요." >&2
