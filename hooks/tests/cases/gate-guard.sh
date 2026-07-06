@@ -155,9 +155,45 @@ test_gt_18() { # [green phase-05] pair 모드 + Python 테스트 컨벤션(test_
   assert_exit 0 pair-py-testfile-pass
 }
 
-test_gt_19() { # [green phase-05] pair 모드 + 손상 없는 정상 로직파일 PostToolUse → no-op 통과(경로 도달 방어)
+test_gt_19() { # [green phase-05] pair 모드 + 로직파일 PostToolUse 도달 → 차단은 불가하나 감사 경고 남김(review 발견)
   write_state pair
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PostToolUse Edit "$REPO/src/Foo.java")"
   assert_exit 0 pair-logicfile-post-noop
+  assert_stderr_match '경고' pair-logicfile-post-warn
+}
+
+test_gt_20() { # [green phase-05 review-fix] pair 모드 + Bash sed -i 로직파일 → 소프트 리마인더(하드 차단 없음)
+  write_state pair
+  run_hook gate-guard.sh "$(json_bash "sed -i 's/a/b/' src/Foo.java")"
+  assert_exit 0 pair-bash-pass
+  assert_stderr_match 'pair 모드' pair-bash-reminder
+}
+
+test_gt_20b() { # [green phase-05 재점검 발견] pair 모드 + 패턴 밖 plain redirect(cp 등도 동일 원리) → 무조건 리마인더로 강화됐으니 통과
+  write_state pair
+  run_hook gate-guard.sh "$(json_bash "printf 'x' > src/Foo.java")"
+  assert_exit 0 pair-bash-plain-redirect-pass
+  assert_stderr_match 'pair 모드' pair-bash-plain-redirect-reminder
+}
+
+test_gt_21() { # [green phase-05 review-fix] pair 모드 + 접두어 없는 맨몸 Test.java → 이제 로직파일로 차단(오분류 수정)
+  write_state pair
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/Test.java")"
+  assert_exit 2 pair-bare-testjava-block
+}
+
+test_gt_22() { # [green phase-05] pair 모드 + MultiEdit 도구로 로직파일 → 차단(도구 커버리지)
+  write_state pair
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse MultiEdit "$REPO/src/Foo.java")"
+  assert_exit 2 pair-multiedit-logic-block
+}
+
+test_gt_23() { # [green phase-05] pair 모드 + MultiEdit 도구로 테스트파일 → 허용(도구 커버리지)
+  write_state pair
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse MultiEdit "$REPO/src/FooTest.java")"
+  assert_exit 0 pair-multiedit-testfile-pass
 }

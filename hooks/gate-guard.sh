@@ -16,7 +16,9 @@
 #       · PreToolUse(Edit|Write)  → PENDING_GATE=1 이면 차단(직전 diff 게이트 먼저)
 #   - MODE=pair (5번째 독립 모드, 2축 매트릭스 밖 — playbooks/pair-coding.md):
 #       · 테스트/보일러플레이트 파일(is_test_file 컨벤션) → Claude Edit/Write 허용(게이트 없음)
-#       · 그 외 로직 파일 → PreToolUse 항상 차단(사용자만 타이핑, Claude는 리뷰만 — §0.6 결정론적 패턴 판정)
+#       · 그 외 로직 파일 → **Edit/Write/MultiEdit**은 PreToolUse 항상 차단(사용자만 타이핑, Claude는 리뷰만 — §0.6 결정론적 패턴 판정).
+#         Bash 파일쓰기는 하드 차단 안 함(§0.6 FP 근거, *-write와 동일) — 소프트 리마인더만(review 발견, 아래 IS_BASH 분기).
+#         docs/plans·상태파일은 이 분기 이전에 이미 면제되어 pair에서도 그대로 Claude가 쓸 수 있다(task.md 6칸 라이브 append 용도).
 #   - 게이트 통과 시 Claude가 PENDING_GATE=0 으로 내린다(워커 verdict=pass 후). state 파일은 면제라 가능.
 #   - **write 핸드오프(*-write 전용)**: WRITE_PHASE={impl|await|verify}. impl=구현 단계(위 접두사 규칙대로).
 #       await(롤백 후 사용자 필사 중)·verify(필사본 검증 중) → **Claude의 코드/테스트 직접 수정 차단**
@@ -66,6 +68,11 @@ if [ "$IS_BASH" = "1" ]; then
   # 하드 차단은 안 한다(테스트 실행·정당한 셸 사용의 FP가 큼, §0.6 정직 경계). 소프트 리마인더만 (design D3 #15).
   elif [ "$B_MODE" = "lazy-implements" ] && echo "$B_CMD" | grep -qE '(sed([[:space:]]+-[a-zA-Z]+)*[[:space:]]+-i|(^|[[:space:]|;&])tee[[:space:]]|<<[-]?[[:space:]]*["'"'"']?[A-Za-z_])'; then
     echo "[gate-guard] lazy 모드: Bash로 파일을 수정하면 per-diff 이해 게이트가 우회됩니다. 코드 변경은 Edit/Write로 해 게이트를 태우거나, 이 변경도 before/after 스니펫으로 설명·판정하세요. (implementation-lazymode.md §3 — 소프트 리마인더)" >&2
+  # pair 모드: Bash 파일쓰기는 로직 파일 차단(Edit/Write 전용)을 우회한다 — 하드 차단은 안 한다(§0.6, 위와 동일 근거).
+  # 재점검 발견: 특정 명령 패턴(sed -i·tee·heredoc)만 잡으면 plain `>`·cp·perl -pi·python 파일쓰기 등이
+  # 무경고로 새는 게 확인돼, *-write await/verify(위 65행)와 동일하게 **패턴 무관 무조건** 리마인더로 강화.
+  elif [ "$B_MODE" = "pair" ]; then
+    echo "[gate-guard] pair 모드: Bash로 파일을 쓰면 로직 파일 차단이 우회됩니다. 로직 파일은 사용자가 직접 타이핑해야 합니다 — Claude는 Bash로 코드를 작성하지 마세요(읽기·테스트 실행·git diff만). (playbooks/pair-coding.md §4 — 소프트 리마인더)" >&2
   fi
   exit 0
 fi
@@ -124,11 +131,13 @@ is_test_file() { # <canonical-path> → exit 0 이면 테스트 파일(Claude �
   case "$f" in
     */src/test/*|*/tests/*|*/__tests__/*|*/spec/*) return 0 ;;
   esac
+  # `?*` (1글자 이상) 요구 — review 발견: `*Test.java` 류는 접두어 없는 맨몸 `Test.java`/`Spec.java`도
+  # 매칭해버려(글롭 `*`가 빈 문자열도 매칭) 그런 이름의 도메인 클래스를 오분류할 수 있었다.
   case "$base" in
-    *Test.java|*Tests.java|*Spec.java) return 0 ;;
-    *.test.ts|*.test.tsx|*.test.js|*.test.jsx) return 0 ;;
-    *.spec.ts|*.spec.tsx|*.spec.js|*.spec.jsx) return 0 ;;
-    test_*.py|*_test.py|*_test.go|*_spec.rb) return 0 ;;
+    ?*Test.java|?*Tests.java|?*Spec.java) return 0 ;;
+    ?*.test.ts|?*.test.tsx|?*.test.js|?*.test.jsx) return 0 ;;
+    ?*.spec.ts|?*.spec.tsx|?*.spec.js|?*.spec.jsx) return 0 ;;
+    test_?*.py|?*_test.py|?*_test.go|?*_spec.rb) return 0 ;;
   esac
   return 1
 }
@@ -175,9 +184,12 @@ if [ "$MODE" = "pair" ]; then
     exit 0
   fi
   if [ "$EVENT" = "PreToolUse" ]; then
-    echo "[gate-guard] pair 모드 — 로직 파일은 사용자가 직접 타이핑합니다(Claude는 리뷰만). 테스트/보일러플레이트 파일(*Test.java·*.test.ts·test_*.py 등 컨벤션 — is_test_file)만 Claude가 Edit/Write 가능합니다. (playbooks/pair-coding.md)" >&2
+    echo "[gate-guard] pair 모드 — 로직 파일은 사용자가 직접 타이핑합니다(Claude는 리뷰만). 테스트/보일러플레이트 파일(*Test.java·*.test.ts·test_*.py 등 컨벤션 — is_test_file)과 task.md 등 docs/plans·상태파일(위에서 별도 상시 면제)만 Claude가 Edit/Write 가능합니다. (playbooks/pair-coding.md)" >&2
     exit 2
   fi
+  # PostToolUse 도달 = 통상 위 PreToolUse 차단을 거쳐 여기 오지 않아야 한다.
+  # 도달했다면 Pre 훅 누락·도구 우회 신호일 수 있어 침묵하지 않고 감사 경고를 남긴다(review 발견 — 차단은 불가, 관측만).
+  echo "[gate-guard] 경고: pair 모드에서 로직 파일 변경이 PostToolUse까지 도달했습니다($CFILE). Pre 훅 우회 여부를 확인하세요." >&2
   exit 0
 fi
 
