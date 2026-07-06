@@ -117,7 +117,7 @@ else
 fi
 
 # pair 모드 전용: 테스트/보일러플레이트 파일 컨벤션 판정 (결정론적 패턴 — 의미론 판단 아님, §0.6).
-# 정본: docs/plans/2026-07-06/pair-coding-mode/definition.md §2 패턴 목록.
+# 이 함수가 패턴의 단일 출처다 — playbooks/pair-coding.md는 설명·확장 가이드만, 목록을 복제하지 않는다.
 is_test_file() { # <canonical-path> → exit 0 이면 테스트 파일(Claude 허용)
   local f="$1" base
   base=$(basename -- "$f")

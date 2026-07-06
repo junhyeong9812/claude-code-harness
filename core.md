@@ -35,12 +35,13 @@
 
 게이팅 강도를 정하는 **직교 축**. 훅이 강제 선택한다(session-mode-guard·reinject-mode·task-mode-guard·gate-guard). **전 작업 기본**(2026-06-21 사용자 결정).
 
-- **정의됨 진입 시 2축 4분기**(구현·구현전 계획·설계로 전환 — "구현/설계/계획하자", 보통 task.md 생성 시점): **구현 게이트 축**(auto 자율 / lazy 매 diff 이해 게이트) × **핸드오프 축**(implements 코드 유지 / write 롤백 후 사용자 필사) = `auto-implements` | `lazy-implements` | `auto-write` | `lazy-write`. **개념 탐색·토론·학습(탐색 중)은 모드 없이 자유 — 이때는 묻지 않는다.** 새 task.md 생성 시 task-mode-guard가 모드를 리셋·재질문(리마인더)하고, **gate-guard는 첫 산출물(코드) 변경을 막아 강제한다 — task.md 자체는 막지 않는다**(F4: task.md를 막으면 task-mode-guard 리셋과 충돌해 이중질문). 태스크마다 재질문.
+- **정의됨 진입 시 2축 4분기 + 매트릭스 밖 5번째**(구현·구현전 계획·설계로 전환 — "구현/설계/계획하자", 보통 task.md 생성 시점): **구현 게이트 축**(auto 자율 / lazy 매 diff 이해 게이트) × **핸드오프 축**(implements 코드 유지 / write 롤백 후 사용자 필사) = `auto-implements` | `lazy-implements` | `auto-write` | `lazy-write`, 그리고 이 매트릭스 밖의 독립 모드 `pair`. **개념 탐색·토론·학습(탐색 중)은 모드 없이 자유 — 이때는 묻지 않는다.** 새 task.md 생성 시 task-mode-guard가 모드를 리셋·재질문(리마인더)하고, **gate-guard는 첫 산출물(코드) 변경을 막아 강제한다 — task.md 자체는 막지 않는다**(F4: task.md를 막으면 task-mode-guard 리셋과 충돌해 이중질문). 태스크마다 재질문.
 - **`auto-implements`**: 앞단(정의·계획)을 사용자와 합의한 뒤 **자율 실행** — per-diff 이해 게이트 없음. 검증·codex·테스트는 모드와 무관하게 **stakes 비례**(§5)로 자율적으로 돈다. ("자율주행" = 이해 게이트 부재이지 검증 생략이 아니다.)
 - **`lazy-implements`**: 계획·개발·검증의 매 결정·매 diff에서 사용자 이해를 **주관식으로 검증하며 진행**(자율주행 금지) — 절차는 `playbooks/implementation-lazymode.md`. **게이트 발생은 gate-guard 훅이 강제, 판정은 독립 서브에이전트 워커**(§0.6 발생=훅/판정=문서). 미선택 시 산출물 변경 차단.
 - **`auto-write` · `lazy-write` (write = 필사 핸드오프 축)**: 구현은 접두사대로 **상속**(auto-write=implementation.md, lazy-write=implementation-lazymode.md — 복제 금지). 구현·검증·기록을 마친 뒤 **코드·테스트를 롤백하고 `writing.md` 단일 가이드로 사용자가 직접 타이핑(필사)→Claude가 검증(지적만, 수정은 사용자)**한다 — 읽기가 아니라 **쓰기**로 학습. 절차는 `playbooks/write-handoff.md`. per-diff 게이트는 **접두사로만** 결정(write 무관).
-- **상태 격리·일관성**: 모드는 `.claude/lazymode/<session_id>`에 산다(MODE / PENDING_GATE / **WRITE_PHASE**(impl·await·verify — *-write 생명주기) — 세션 단위, 같은 폴더 동시 세션 격리, resume 시 init-if-absent로 복구·`source=clear`면 리셋). reinject-mode(UserPromptSubmit)가 매 턴 모드·단계·세션 경로를 재주입해 컨텍스트 요약 후에도 일관성 유지(env var 부재 보완). **gate-guard가 *-write의 await·verify에서 Claude의 코드/테스트 직접 수정을 차단**(필사 보호·자율주행 방지).
-- 설계 단일 출처: `docs/plans/2026-06-20/lazy-busy-mode/plans.md` + 택소노미·세션키잉 개편 `docs/plans/2026-06-21/mode-taxonomy-session-keying/` + write 축 `docs/plans/2026-06-22/write-mode/`.
+- **`pair` (2축 매트릭스 밖 독립 모드)**: 정의·설계를 **순수 대화**로 사용자 스스로 도달하게 하고(가이드형 객관식 선제시 금지 — task.md 6칸은 라이브 append), 로직 구현은 **항상 사용자가 직접 타이핑**한다. Claude는 테스트/보일러플레이트 파일만 작성(gate-guard의 `is_test_file()` 패턴 매칭 파일에 한해 Edit/Write 허용, 로직 파일은 PreToolUse에서 항상 차단)하고 핑퐁 스타일로 리뷰한다 — TDD 사이클(테스트 케이스 1개=사이클 경계)로 요구사항 기반 엣지케이스를 하나씩 다룬다. 절차는 `playbooks/pair-coding.md`.
+- **상태 격리·일관성**: 모드는 `.claude/lazymode/<session_id>`에 산다(MODE / PENDING_GATE / **WRITE_PHASE**(impl·await·verify — *-write 생명주기) — 세션 단위, 같은 폴더 동시 세션 격리, resume 시 init-if-absent로 복구·`source=clear`면 리셋). reinject-mode(UserPromptSubmit)가 매 턴 모드·단계·세션 경로를 재주입해 컨텍스트 요약 후에도 일관성 유지(env var 부재 보완). **gate-guard가 *-write의 await·verify에서, 그리고 `pair`의 로직 파일 전반에서 Claude의 코드/테스트 직접 수정을 차단**(필사·타이핑 보호·자율주행 방지).
+- 설계 단일 출처: `docs/plans/2026-06-20/lazy-busy-mode/plans.md` + 택소노미·세션키잉 개편 `docs/plans/2026-06-21/mode-taxonomy-session-keying/` + write 축 `docs/plans/2026-06-22/write-mode/` + pair 축 `docs/plans/2026-07-06/pair-coding-mode/`.
 
 ### 명확도 6칸 (정의 게이트)
 
@@ -215,6 +216,7 @@
 | `playbooks/implementation.md` | 개발 단계(§3.3) 진입 시 |
 | `playbooks/implementation-lazymode.md` | **작업 모드 `lazy-implements`**의 계획·개발·검증 — diff마다 이해 게이트 (§1 작업 모드). `lazy-write`의 구현 단계도 동일 |
 | `playbooks/write-handoff.md` | **작업 모드 `auto-write`·`lazy-write`**의 기록 단계 종료 후 핸드오프 — 코드/테스트 롤백 → writing.md 필사 → 검증 (§1 작업 모드·§3.3) |
+| `playbooks/pair-coding.md` | **작업 모드 `pair`**의 정의·계획·개발 전체 — 대화형 정의게이트(task.md §1 라이브 append)·설계 대화·TDD 사이클(테스트 1개=경계)·핑퐁 리뷰 (§1 작업 모드) |
 | `playbooks/verification.md` | 검증 단계(§3.4) 진입 시 |
 | `playbooks/git-workflow.md` | **원격 있는 정의됨 작업** — 개발 진입 시(이슈·브랜치) + 기록 종료 후(정리·MR/PR). 경량·로컬 전용 제외 (§6.5) |
 | `playbooks/review.md` | **stakes 中·높음의 리뷰 시점(페이즈 구현 완료·커밋 후)** — 中=§1 듀얼 1패스 절차(반복 없음·post-fix 재점검)+§2·§3, 높음=§1 전체 루프(≤3)+설계 선검증·blind 워커. 개발 단계 설계 자문·changelog 리뷰 연습 포인트 작성 시 §3 렌즈·§4 체크리스트만. **낮음 리뷰·일반 검증에서는 로드 안 함** |
