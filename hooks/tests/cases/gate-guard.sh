@@ -1,5 +1,4 @@
-# gate-guard 케이스 — 면제 분류·모드 게이트·상태 갱신
-# red: gt_01 gt_02 gt_03 gt_04 gt_06
+# gate-guard 케이스 — 면제 분류·모드 게이트·상태 갱신 (SCHEMA=3 · 모드 5종)
 
 test_gt_01() { # [red #8a] 프로젝트 밖(임시 디렉토리, repo 아님) Write는 UNSET에서도 면제
   write_state UNSET
@@ -30,8 +29,8 @@ test_gt_04() { # [red #9b] docs/plans 안 symlink로 repo 내 코드 탈출 → 
   assert_exit 2 symlink-gated
 }
 
-test_gt_05() { # [green phase-03] 병렬 PostToolUse — per-pid 성공 + 상태 무손상 (원자 갱신)
-  write_state lazy-implements 0
+test_gt_05() { # [green] 병렬 PostToolUse — per-pid 성공 + 상태 무손상 (원자 갱신)
+  write_state lazy 0
   mkdir -p "$REPO/src"
   local pids="" i rc=0
   for i in 1 2 3 4 5 6; do
@@ -43,11 +42,13 @@ test_gt_05() { # [green phase-03] 병렬 PostToolUse — per-pid 성공 + 상태
   assert_single_line MODE mode-single
   assert_single_line PENDING_GATE pending-single
   assert_state PENDING_GATE 1 pending-set
-  grep -qE '^(MODE|PENDING_GATE|WRITE_PHASE)=' "$STATE" || fail state-intact
+  assert_single_line SCHEMA schema-single
+  assert_state SCHEMA 3 schema-intact
+  grep -qE '^(SCHEMA|MODE|PENDING_GATE)=' "$STATE" || fail state-intact
 }
 
-test_gt_11() { # [green phase-03] lazy-implements + Bash sed -i → 소프트 리마인더 (차단 아님)
-  write_state lazy-implements 0
+test_gt_11() { # [green] lazy + Bash sed -i → 소프트 리마인더 (차단 아님)
+  write_state lazy 0
   run_hook gate-guard.sh "$(json_bash "sed -i 's/a/b/' src/f.c")"
   assert_exit 0 lazy-bash-pass
   assert_stderr_match 'per-diff' lazy-bash-reminder
@@ -80,9 +81,12 @@ test_gt_14() { # [green phase-03] 비repo 밖(/tmp) 경로를 가리키는 leaf 
   assert_exit 0 leaf-symlink-outside-exempt
 }
 
-test_gt_06() { # [red #11] 상태 갱신 실패가 조용히 넘어가지 않는다 (fail-closed)
+test_gt_06() { # [green] 상태 갱신(PENDING_GATE) 실패가 조용히 넘어가지 않는다 (fail-closed)
   # 전제: 비root 실행 (root는 chmod 무시 — lib.sh 헤더 참조)
-  write_state lazy-implements 0
+  # 락 파일을 미리(쓰기가능) 만들어 ensure_valid 는 통과시키고, set_pending 의 temp 생성만 실패하게 한다
+  # (dir 555 → mktemp 불가). ensure_valid 자체가 락을 못 잡으면 PostToolUse 는 경고+통과라 이 케이스와 구분됨.
+  write_state lazy 0
+  : > "$STATE.lock"
   mkdir -p "$REPO/src"
   chmod 444 "$STATE"; chmod 555 "$STATE_DIR"
   run_hook gate-guard.sh "$(json_file PostToolUse Edit "$REPO/src/a.c")"
@@ -92,7 +96,7 @@ test_gt_06() { # [red #11] 상태 갱신 실패가 조용히 넘어가지 않는
 }
 
 test_gt_07() { # [green] lazy per-diff: PostToolUse → PENDING=1 + 게이트 안내
-  write_state lazy-implements 0
+  write_state lazy 0
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PostToolUse Edit "$REPO/src/a.c")"
   assert_exit 0 lazy-post-pass
@@ -100,8 +104,8 @@ test_gt_07() { # [green] lazy per-diff: PostToolUse → PENDING=1 + 게이트 �
   assert_stderr_match 'PENDING_GATE=1' lazy-msg
 }
 
-test_gt_08() { # [green] auto-implements → 게이트 없음
-  write_state auto-implements
+test_gt_08() { # [green] auto → 게이트 없음
+  write_state auto
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
   assert_exit 0 auto-pre-pass
@@ -109,19 +113,21 @@ test_gt_08() { # [green] auto-implements → 게이트 없음
   assert_exit 0 auto-post-pass
 }
 
+test_gt_08b() { # [green] refactor·fast → 게이트 관점 auto와 동일(통과)
+  write_state refactor
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 0 refactor-pre-pass
+  write_state fast
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 0 fast-pre-pass
+}
+
 test_gt_09() { # [green] 정상 docs/plans 경로는 UNSET에서도 면제 (F4)
   write_state UNSET
   mkdir -p "$REPO/docs/plans/x"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/plans/x/task.md")"
   assert_exit 0 plans-exempt
-}
-
-test_gt_10() { # [green] *-write await 단계 코드 수정 차단 (필사 보호)
-  write_state auto-write 0 await
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PreToolUse Edit "$REPO/src/a.c")"
-  assert_exit 2 await-block
-  assert_stderr_match 'write 핸드오프' await-msg
 }
 
 test_gt_15() { # [green phase-05] pair 모드 + 테스트파일 컨벤션(Java) → Claude Edit/Write 허용

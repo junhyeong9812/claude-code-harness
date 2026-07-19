@@ -56,9 +56,9 @@ json_prompt() { # <prompt>
     '{hook_event_name:"UserPromptSubmit", prompt:$p, cwd:$c, session_id:$s}'
 }
 
-# 상태·사이드카 셋업
-write_state() { # MODE [PENDING] [WRITE_PHASE]
-  { echo "MODE=$1"; echo "PENDING_GATE=${2:-0}"; echo "WRITE_PHASE=${3:-impl}"; } > "$STATE"
+# 상태·사이드카 셋업 (SCHEMA=3 — 1행 고정)
+write_state() { # MODE [PENDING] [FAST_DEBT]
+  { echo "SCHEMA=3"; echo "MODE=$1"; echo "PENDING_GATE=${2:-0}"; echo "FAST_DEBT=${3:-0}"; } > "$STATE"
 }
 write_sidecar() { # <turn> <ts> <body>
   printf '#turn=%s\n#ts=%s\n%s' "$1" "$2" "$3" > "$SIDECAR"

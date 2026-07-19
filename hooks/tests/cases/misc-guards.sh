@@ -1,31 +1,31 @@
-# task-mode-guard · template-guard · scope-guard · capture-prompt 케이스
-# red: tm_02 tp_01 tp_02 tp_03 sc_01
+# task-mode-guard · template-guard · scope-guard · capture-prompt 케이스 (SCHEMA=3 · 모드 5종)
 
 test_tm_01() { # [green] 새 task.md 첫 Write → MODE=UNSET 리셋
-  write_state auto-implements
+  write_state auto
   mkdir -p "$REPO/docs/plans/a"; echo t > "$REPO/docs/plans/a/task.md"
   run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/task.md")"
   assert_exit 0 first-reset-exit
   assert_state MODE UNSET first-reset
+  assert_state SCHEMA 3 first-reset-schema
   assert_stderr_match '새 태스크' reset-msg
 }
 
-test_tm_02() { # [red #12] 같은 task.md 재작성은 리셋하지 않는다
-  write_state auto-implements
+test_tm_02() { # [green] 같은 task.md 재작성은 리셋하지 않는다
+  write_state auto
   mkdir -p "$REPO/docs/plans/a"; echo t > "$REPO/docs/plans/a/task.md"
   run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/task.md")"
   # 사용자가 모드를 다시 선택했다고 가정
-  sed -i 's/^MODE=.*/MODE=auto-implements/' "$STATE"
+  sed -i 's/^MODE=.*/MODE=auto/' "$STATE"
   run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/task.md")"
-  assert_state MODE auto-implements no-rereset
+  assert_state MODE auto no-rereset
 }
 
 test_tm_03() { # [green] 다른 task.md 경로 → 새 태스크 리셋
-  write_state auto-implements
+  write_state auto
   mkdir -p "$REPO/docs/plans/a" "$REPO/docs/plans/b"
   echo t > "$REPO/docs/plans/a/task.md"; echo t > "$REPO/docs/plans/b/task.md"
   run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/task.md")"
-  sed -i 's/^MODE=.*/MODE=auto-implements/' "$STATE"
+  sed -i 's/^MODE=.*/MODE=auto/' "$STATE"
   run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/b/task.md")"
   assert_exit 0 new-task-exit
   assert_state MODE UNSET new-task-reset
@@ -113,7 +113,7 @@ test_tp_06() { # [fix-verify] 대문자 확장자 OVERVIEW.MD도 검사 (마커 
 }
 
 test_tm_04() { # [fix-verify] 상대경로 task.md도 새 태스크 리셋 (사전 case 매칭)
-  write_state auto-implements
+  write_state auto
   mkdir -p "$REPO/docs/plans/a"; echo t > "$REPO/docs/plans/a/task.md"
   local j; j=$(jq -cn --arg f "docs/plans/a/task.md" --arg c "$REPO" --arg s "$SID" \
     '{hook_event_name:"PostToolUse", tool_name:"Write", tool_input:{file_path:$f}, cwd:$c, session_id:$s}')
@@ -128,4 +128,39 @@ test_sc_03() { # [fix-verify] docs→code 경계 넘는 rename도 혼재 경고
   echo x > "$REPO/docs/keep.md"; gitq add docs/keep.md
   run_hook scope-guard.sh "$(json_file PostToolUse Edit "$REPO/src/a.c")"
   assert_stderr_match 'docs와 code' rename-boundary
+}
+
+# ── loop3: stdin 파싱 가드 (malformed/빈 stdin → set -e 사망 금지, 비차단 계약대로 경고 1줄 + exit 0)
+
+test_rm_01() { # [loop3] reinject-mode: garbage stdin → rc 0 + 경고
+  run_hook reinject-mode.sh 'not-json {{{'
+  assert_exit 0 reinject-garbage-exit
+  assert_stderr_match 'stdin JSON 파싱 실패' reinject-garbage-warn
+}
+
+test_rm_02() { # [loop3+] 비객체 유효 JSON("x"·[]·1) → set -e 사망 금지, rc 0 + 경고 (4훅 대표 2종)
+  run_hook reinject-mode.sh '"x"'
+  assert_exit 0 reinject-nonobject-exit
+  assert_stderr_match 'stdin JSON 파싱 실패' reinject-nonobject-warn
+  run_hook gate-guard.sh '[]'
+  assert_exit 0 gate-nonobject-exit
+  assert_stderr_match 'stdin JSON 파싱 실패' gate-nonobject-warn
+}
+
+test_sg_01() { # [loop3] session-mode-guard: garbage stdin → rc 0 + 경고
+  run_hook session-mode-guard.sh 'not-json {{{'
+  assert_exit 0 session-garbage-exit
+  assert_stderr_match 'stdin JSON 파싱 실패' session-garbage-warn
+}
+
+test_sg_02() { # [loop3] session-mode-guard: 빈 stdin → rc 0 + 경고 (-z 분기)
+  run_hook session-mode-guard.sh ''
+  assert_exit 0 session-empty-exit
+  assert_stderr_match 'stdin JSON 파싱 실패' session-empty-warn
+}
+
+test_tm_05() { # [loop3] task-mode-guard: garbage stdin → rc 0 + 경고
+  run_hook task-mode-guard.sh 'not-json {{{'
+  assert_exit 0 task-garbage-exit
+  assert_stderr_match 'stdin JSON 파싱 실패' task-garbage-warn
 }
