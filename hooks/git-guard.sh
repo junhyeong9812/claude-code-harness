@@ -1,33 +1,43 @@
 #!/bin/bash
-# git-guard.sh — Bash 도구의 git push / docs-only commit 가드 (scoped one-shot 승인 모델)
+# git-guard.sh — Bash 도구의 git push 가드 (scoped one-shot 승인 모델)
 # PreToolUse(matcher: Bash) 이벤트에서 실행됨.
 # stdin JSON: {tool_name, tool_input: {command, ...}, session_id, cwd, ...}
+#
+# 범위 (master-plan 2026-07-19 D1): 외부 발행인 push만 훅으로 강제한다.
+#   커밋은 로컬·가역이라 승인 경계 밖 — docs-only 커밋 승인 가드는 제거됨(2개월 실측: 가치 0·마찰 1위).
+#   docs/code 혼입 감지는 scope-guard(PostToolUse) 경고가 전담한다 — 이 훅은 관여하지 않는다.
+#   커밋 메시지의 Claude/Codex trailer 금지(§6.4)는 push와 별개로 여기서 계속 즉시 차단한다.
 #
 # 승인 모델 (설계: docs/plans/2026-07-03/하네스-강화-1차/design.md D2 + phase-02 리뷰 loop1·2 반영):
 #   신호 원천 = capture-prompt 사이드카(현재 턴 사용자 프롬프트, #turn/#ts 헤더)뿐.
 #   jsonl(transcript) 폴백은 승인 판정에 쓰지 않는다 — 사이드카 부재 = 승인 없음(fail-closed).
 #   1) 현재 턴 키워드 승인: 절(문장 구분자) 단위 — 각 절에서 마지막 "말고" 이후만 평가(역접 뒤가 실제
 #      요청), 부정·질문 절은 불인정. "배포·올려"는 같은 절의 push 문맥어 동반 시만.
-#   2) 차단→확인→긍정 2턴 흐름: 차단 시 **미승인 op 전부**의 pending(op별 파일)을 기록 →
-#      다음 턴(turn+1) 긍정 단답 + 동일 명령이면 각 op가 자기 pending으로 통과(복합 명령 1회 승인).
-#      pending은 자기 op 가드가 다음 턴에 도달하면 승인 여부 무관 소모.
+#   2) 차단→확인→긍정 2턴 흐름: 차단 시 미승인 push의 pending(op별 파일)을 기록 →
+#      다음 턴(turn+1) 긍정 단답 + 동일 명령이면 pending으로 통과.
+#      pending은 다음 턴에 도달하면 승인 여부 무관 소모.
 #   3) 사이드카 ts는 0 ≤ now-ts ≤ 24h 창 밖이면 무시(미래 ts 포함). 손상 헤더 = 승인 없음.
-#   4) push 승인이 있어도 같은 명령의 commit 가드(trailer·docs-only)는 그대로 평가한다.
-#   위협 모델 = Claude의 실수 방지. 고의 우회(sh -c 래핑·alias·자작 pending)는 훅으로 못 막는다
+#   4) push 승인이 있어도 같은 명령의 커밋 trailer 가드는 그대로 평가한다.
+#   위협 모델 = Claude의 실수 방지. 고의 우회(sh -c 래핑·셸 alias·자작 pending)는 훅으로 못 막는다
 #   — core §0.6 정직 경계. 셸 파서 없이 문자열로 판정하는 데서 오는 잔여 한계(전부 부자연스러운
 #   명령 형태 + 대부분 fail-closed 방향 — 실사용 저위험, 근본 해소는 승인의 구조화 신호 전환이 별도 후보):
 #     · heredoc 태그 추출은 첫 << 를 쓴다 — 실 heredoc *앞/뒤*에 인용된 <<태그가 같은 행에 오면 오선택 가능
 #     · 한 줄 다중 heredoc · 여러 줄 인용 문자열 · 행중 # 주석 · 변수 시프트 $((x<<y))
-#     · git add 의 공백 든 인용 경로("a b.md")는 pathspec 토큰 분할 — docs-only 판정을 놓칠 수 있음
-#     · " -> " 포함 파일명
 #
-# 종료 코드: 0 통과 / 2 차단. 입력 JSON 파싱 실패 = inert(0) — 런타임 제공 입력이라 조작면 아님.
+# 종료 코드: 0 통과 / 2 차단.
+# C2 판정 원칙(r2.3): ① 게이트 대상 여부 자체를 판정 불가(stdin 파싱 실패) → 통과 + stderr 경고 1줄
+#   (fail-closed면 전 Bash 마비 — 런타임 제공 입력이라 조작면 아님). ② 대상이거나 의심되는데
+#   승인/정제 판정 불가(사이드카 부재·정제 결과 공백+raw 의심) → 차단(fail-closed).
 
 set -eu
 
 HOOK_INPUT=$(cat)
 
 jqr() { echo "$HOOK_INPUT" | jq -r "$1" 2>/dev/null || true; }
+if [ -z "$HOOK_INPUT" ] || ! printf '%s' "$HOOK_INPUT" | jq -e . >/dev/null 2>&1; then
+  echo "[git-guard] 경고: stdin JSON 파싱 실패(빈 입력 포함) — 게이트 대상 판정 불가, 통과 처리(C2 ①)" >&2
+  exit 0
+fi
 TOOL_NAME=$(jqr '.tool_name // empty')
 [ "$TOOL_NAME" = "Bash" ] || exit 0
 
@@ -47,7 +57,7 @@ GIT_PRE='(^|[^[:alnum:]_./-])(command[[:space:]]+)?([^[:space:]]*/)?git'
 GIT_OPTS='([[:space:]]+-[^[:space:]]+([[:space:]]+[^[:space:]]+)?)*[[:space:]]+'
 
 # 판정 대상 정제 — 2단계 (리뷰 P2-19·loop2 fable#4):
-#   ① SCAN_NOHD: heredoc 본문·전행 주석 제거, 인용은 유지 (add 인자·전역옵션 추출용)
+#   ① SCAN_NOHD: heredoc 본문·전행 주석 제거, 인용은 유지 (전역옵션 추출용)
 #      heredoc 탐지는 "그 행의 짝 인용을 지운 사본"으로 수행(인용 안 << 오인 방지),
 #      << 직전이 (·숫자면 제외 + 순수 숫자 태그 제외($((1<<8)) 산술 오인 방지).
 #   ② SCAN_COMMAND: ①에서 짝 인용 내용까지 비움 (명령 감지용 — echo "git push" 오탐 방지)
@@ -75,8 +85,22 @@ strip_heredocs_comments() {
     }
   ' | { grep -vE '^[[:space:]]*#' || true; }
 }
-SCAN_NOHD=$(printf '%s\n' "$COMMAND" | strip_heredocs_comments)
-SCAN_COMMAND=$(printf '%s\n' "$SCAN_NOHD" | sed -E "s/'[^']*'/''/g; s/\"[^\"]*\"/\"\"/g")
+# 정제 도구(awk/sed) 실패는 set -e 로 죽지 않게 가드 — 공백으로 수렴시켜 아래 C2 ② 폴백이 받는다
+SCAN_NOHD=$(printf '%s\n' "$COMMAND" | strip_heredocs_comments) || SCAN_NOHD=""
+SCAN_COMMAND=$(printf '%s\n' "$SCAN_NOHD" | sed -E "s/'[^']*'/''/g; s/\"[^\"]*\"/\"\"/g") || SCAN_COMMAND=""
+
+# C2 ② 폴백: 정제 결과가 공백(awk/grep 실패 포함 — 정제 기계 오류 시 출력이 비는 것으로 수렴)인데
+# raw 에 push 가 보이면 판정 불가로 보수 차단. (raw 에 push 없으면 통과 — 주석-only 명령 등)
+if [ -z "$(printf '%s' "$SCAN_COMMAND" | tr -d '[:space:]')" ] && [ -n "$COMMAND" ]; then
+  if printf '%s' "$COMMAND" | grep -qi 'push'; then
+    cat >&2 <<EOF
+[git-guard] 명령 정제 결과가 비어 push 여부 판정 불가 — raw 명령에 push 포함, 보수 차단(C2 ②).
+차단된 명령:
+  $COMMAND
+EOF
+    exit 2
+  fi
+fi
 
 # ─────────────────────────────────────────────
 # 사이드카 파싱 — SC_TURN / SC_BODY (승인 신호의 유일한 원천)
@@ -138,10 +162,6 @@ push_approved() {
   clause_approved "$SC_BODY" '(배포|올려)' '(git|origin|remote|push|푸시|branch|repo|커밋)' && return 0
   return 1
 }
-docs_approved() {
-  [ -n "$SC_BODY" ] || return 1
-  clause_approved "$SC_BODY" '((docs?|문서)(만|들|도|를|은|는)?[[:space:]]*(commit|커밋)|(commit|커밋)[[:space:]]*해.*(docs?|문서))'
-}
 is_affirmative() { # 정규화 후 긍정 단답 exact match (목록 확장은 사용자 정책 — open question P2-16)
   local b; b=$(printf '%s' "$SC_BODY" | tr -d '[:space:][:punct:]')
   case "$b" in 네|응|예|넵|넹|yes|YES|Yes|ok|OK|Ok|ㅇㅋ|좋아|진행|승인|해줘) return 0 ;; esac
@@ -149,7 +169,7 @@ is_affirmative() { # 정규화 후 긍정 단답 exact match (목록 확장은 �
 }
 norm_cmd() { printf '%s' "$1" | tr -s '[:space:]' ' ' | sed 's/^ //;s/ $//'; }
 
-# pending: op별 파일(<sid>.pending-<op>) — 복합 명령에서 타 op 소모 교착 방지 (loop2 P2-22·fable#5)
+# pending: op별 파일(<sid>.pending-<op>) — push 하나만 사용(docs 교차-op는 제거됨, D1)
 pend_file() { echo "$STATE_DIR/$SID.pending-$1"; }
 pending_grants() { # $1=op — 반환 0 = pending 승인. 자기 op 파일만 취급, 다음 턴 도달 시 무조건 소모.
   local pf p_turn p_cmd
@@ -175,12 +195,9 @@ record_pending() { # $1=op
 }
 
 # ─────────────────────────────────────────────
-# 평가 — 모든 가드를 먼저 계산하고 마지막에 판정 (복합 명령에서 미승인 op 전부 pending — loop2 P2-22)
+# 평가 — push 승인 가드 + 커밋 trailer 가드
 # ─────────────────────────────────────────────
 PUSH_DETECTED=0; PUSH_OK=1
-DOCS_DETECTED=0; DOCS_OK=1
-DOCS_UNION=""
-DOCS_RE='^(docs/|README($|[._-])|CHANGELOG($|[._-])|HISTORY($|[._-])|LICENSE($|[._-])|.*\.md$)'
 
 if echo "$SCAN_COMMAND" | grep -qE "${GIT_PRE}${GIT_OPTS}push([[:space:]]|\$)"; then
   PUSH_DETECTED=1; PUSH_OK=0
@@ -201,80 +218,13 @@ if echo "$SCAN_COMMAND" | grep -qE "${GIT_PRE}${GIT_OPTS}commit([[:space:]]|\$)"
 EOF
     exit 2
   fi
-
-  # 전역 옵션 verbatim 캡처 — SCAN 기준. 인용 포함 시 미사용(보수, 리뷰 P2-11)
-  GLOBAL_OPTS=$(printf '%s\n' "$SCAN_COMMAND" | sed -nE "s@.*${GIT_PRE}((${GIT_OPTS# })?)commit([[:space:]].*|\$)@\4@p" | head -1 || true)
-  case "$GLOBAL_OPTS" in *\"*|*\'*) GLOBAL_OPTS="" ;; esac
-
-  # docs-only 판정 — staged ∪ add 실존 인자 ∪ (add-all류면 대상 pathspec 한정 작업트리 변경)
-  # shellcheck disable=SC2086
-  STAGED=$(cd "$CWD" 2>/dev/null && set -f && git $GLOBAL_OPTS diff --cached --name-only 2>/dev/null || true)
-  # add 인자는 인용 유지본(SCAN_NOHD)에서 추출 — 인용 경로 증발 방지 (loop2 fable#6)
-  ADD_ARGS_RAW=$(printf '%s\n' "$SCAN_NOHD" | grep -oE "${GIT_PRE}${GIT_OPTS}add[[:space:]]+[^&|;]*" | head -1 | sed -E 's/.*[[:space:]]add[[:space:]]+//' || true)
-  TARGET_DIR="$CWD"
-  tgt=$(printf '%s' "$GLOBAL_OPTS" | sed -nE 's/.*-C[[:space:]]+([^[:space:]]+).*/\1/p' || true)
-  if [ -n "$tgt" ]; then case "$tgt" in /*) TARGET_DIR="$tgt" ;; *) TARGET_DIR="$CWD/$tgt" ;; esac; fi
-  ADD_EXISTING=""; TREE_ALL=0; TREE_TRACKED=0; PATHSPECS=""
-  set -f
-  for a in $ADD_ARGS_RAW; do
-    case "$a" in
-      -A|--all|-a|.|./) TREE_ALL=1 ;;                             # add-all류 → 작업트리 판정 (리뷰 P2-03)
-      -u|--update) TREE_TRACKED=1 ;;                              # tracked만 (loop2 P2-23)
-      --) : ;;                                                     # pathspec 구분자
-      -*) : ;;
-      *\"*|*\'*)                                                   # 인용 경로 → 인용 벗겨 pathspec 한정 (loop3 L3-03)
-         unq=$(printf '%s' "$a" | tr -d "\"'")
-         TREE_ALL=1; PATHSPECS="$PATHSPECS $unq" ;;               # 공백 든 경로는 토큰 분리됨(잔여 한계 — 방향은 한정 스캔)
-      *[\*\?\[]*) TREE_ALL=1; PATHSPECS="$PATHSPECS $a" ;;        # 글롭 → pathspec 한정 트리 판정
-      *) PATHSPECS="$PATHSPECS $a"                                 # 모든 경로 인자는 트리 스캔 한정에도 사용 (gg_33)
-         [ -e "$TARGET_DIR/$a" ] && ADD_EXISTING="$ADD_EXISTING$a
-" ;;
-    esac
-  done
-  TREE_CHANGES=""
-  if [ "$TREE_ALL" = "1" ] || [ "$TREE_TRACKED" = "1" ]; then
-    uflag="-uall"; [ "$TREE_ALL" = "0" ] && uflag="-uno"          # -u는 untracked 미포함 (loop2 P2-23)
-    # .claude/(하네스 상태)는 커밋 내용물이 아님. quotePath=false로 비ASCII·공백 경로 정합 (loop2 fable#8)
-    # shellcheck disable=SC2086
-    TREE_CHANGES=$(cd "$TARGET_DIR" 2>/dev/null && git -c core.quotePath=false status --porcelain=v1 $uflag ${PATHSPECS:+-- $PATHSPECS} 2>/dev/null \
-      | sed 's/^...//; s/.* -> //; s/^"//; s/"$//' | grep -v '^\.claude/' || true)
-  fi
-  set +f
-  DOCS_UNION=$(printf '%s\n%s\n%s' "$STAGED" "$ADD_EXISTING" "$TREE_CHANGES" | grep -v '^$' | sort -u || true)
-  if [ -n "$DOCS_UNION" ]; then
-    NON_DOCS=$(echo "$DOCS_UNION" | grep -vE "$DOCS_RE" || true)
-    if [ -z "$NON_DOCS" ]; then
-      DOCS_DETECTED=1; DOCS_OK=0
-      pending_grants docs && DOCS_OK=1
-      [ "$DOCS_OK" = "1" ] || { docs_approved && DOCS_OK=1 || true; }
-    fi
-  fi
-
-  # code/docs 혼합 경고 (warn-only)
-  if [ -n "${STAGED:-}" ]; then
-    DOCS_PART=$(echo "$STAGED" | grep -E "$DOCS_RE" || true)
-    CODE_PART=$(echo "$STAGED" | grep -vE "$DOCS_RE" | grep -v '^$' || true)
-    if [ -n "$DOCS_PART" ] && [ -n "$CODE_PART" ]; then
-      echo "[git-guard] 경고: 한 커밋에 code와 docs가 함께 staged 되어 있습니다 (스코프 보존 규칙 4). 의도가 아니면 분리를 검토하세요. (차단 아님)" >&2
-    fi
-  fi
 fi
 
 # ─────────────────────────────────────────────
-# 판정 — 미승인 op가 하나라도 있으면 차단하되, 미승인 op **전부** pending 기록
-# (다음 턴 긍정 1회로 복합 명령의 모든 op 승인 — livelock 방지, loop2 P2-22·fable#5)
+# 판정 — 미승인 push는 차단하되 pending 기록(다음 턴 긍정 1회 승인 흐름)
 # ─────────────────────────────────────────────
-if { [ "$PUSH_DETECTED" = "1" ] && [ "$PUSH_OK" != "1" ]; } || { [ "$DOCS_DETECTED" = "1" ] && [ "$DOCS_OK" != "1" ]; }; then
-  REASONS=""
-  # 차단 확정 시 detected op **전부**(이번 턴 승인된 것 포함)의 pending을 기록한다 — 승인도 명령 지문에
-  # 결속돼 1턴만 이월되므로 오승인 확대 없음. 혼합 승인원(키워드+pending) 복합 명령이 다음 턴 긍정 1회로
-  # 전부 승인되어 교대 livelock을 막는다 (loop3 F-01/L3-02).
-  [ "$PUSH_DETECTED" = "1" ] && record_pending push
-  [ "$DOCS_DETECTED" = "1" ] && record_pending docs
-  if [ "$PUSH_DETECTED" = "1" ] && [ "$PUSH_OK" != "1" ]; then REASONS="$REASONS
-  - git push: 사용자 명시 요청 없음"; fi
-  if [ "$DOCS_DETECTED" = "1" ] && [ "$DOCS_OK" != "1" ]; then REASONS="$REASONS
-  - docs 단독 commit: 사용자 명시 요청 없음 (대상: $(echo "$DOCS_UNION" | tr '\n' ' '))"; fi
+if [ "$PUSH_DETECTED" = "1" ] && [ "$PUSH_OK" != "1" ]; then
+  record_pending push
   if [ ! -s "$SIDECAR" ]; then
     HINT="(승인 신호 없음 — 사이드카 부재. 사용자가 요청을 단독 메시지로 다시 보내야 합니다)"
   else
@@ -282,12 +232,12 @@ if { [ "$PUSH_DETECTED" = "1" ] && [ "$PUSH_OK" != "1" ]; } || { [ "$DOCS_DETECT
   fi
   cat >&2 <<EOF
 [git-guard] 승인이 필요한 git 동작이 차단되었습니다. $HINT
-$REASONS
+  - git push: 사용자 명시 요청 없음
 
 차단된 명령:
   $COMMAND
 
-정책: 사용자가 이번 턴에 명시 요청("푸시해줘"·"docs 커밋해줘")했거나, 이 차단 직후 턴에 긍정 단답("네")으로
+정책: 사용자가 이번 턴에 명시 요청("푸시해줘")했거나, 이 차단 직후 턴에 긍정 단답("네")으로
 동일 명령을 승인하면 진행됩니다. 사용자에게 확인을 요청하세요.
 EOF
   exit 2

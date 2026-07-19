@@ -1,5 +1,7 @@
-# git-guard 케이스 — 승인 모델·docs 가드·trailer
-# red(수정 전 실패)는 baseline.manifest에 등재: gg_03 gg_04 gg_05 gg_06 gg_08 gg_10
+# git-guard 케이스 — push 승인 모델·커밋 trailer 가드
+# docs-only 커밋 승인 가드는 제거됨(master-plan 2026-07-19 D1) — 관련 케이스(구 gg_06·07·08·17·20·24·31·33·34·36)는
+# 명시 삭제, docs/code 혼입 감지는 scope-guard가 전담(test_sc_*). 아래 gg_37~43은 제거가 push 방어선을 훼손하지
+# 않음을 증명하는 negative test. baseline.manifest 는 비어 있음(전건 green 지향).
 
 NOW() { date +%s; }
 
@@ -15,13 +17,13 @@ test_gg_02() { # [green] 무관 프롬프트 → push 차단
   assert_exit 2 unapproved-block
 }
 
-test_gg_03() { # [red #3] 부정문 "푸시하지 마" → 승인 아님
+test_gg_03() { # [green] 부정문 "푸시하지 마" → 승인 아님
   write_sidecar 2 "$(NOW)" "지금은 푸시하지 마"
   run_hook git-guard.sh "$(json_bash 'git push origin main')"
   assert_exit 2 neg-block
 }
 
-test_gg_04() { # [red #4] 차단(pending) 다음 턴 긍정 단답 → 허용 + pending 소모
+test_gg_04() { # [green] 차단(pending) 다음 턴 긍정 단답 → 허용 + pending 소모
   write_pending 4 push 'git push origin main'
   write_sidecar 5 "$(NOW)" "응"
   run_hook git-guard.sh "$(json_bash 'git push origin main')"
@@ -29,46 +31,20 @@ test_gg_04() { # [red #4] 차단(pending) 다음 턴 긍정 단답 → 허용 + 
   [ ! -f "$STATE_DIR/$SID.pending-push" ] || fail pending-consumed
 }
 
-test_gg_05() { # [red #5] git -C 형태 push 인식
+test_gg_05() { # [green] git -C 형태 push 인식
   write_sidecar 2 "$(NOW)" "이 함수 정리해줘"
   run_hook git-guard.sh "$(json_bash 'git -C sub push origin main')"
   assert_exit 2 git-c-detect
 }
 
-test_gg_06() { # [red #2] add&&commit 복합 — add 인자가 실존 docs뿐 → docs-only 승인 요구
-  mkdir -p "$REPO/docs"; echo n > "$REPO/docs/note.md"
-  write_sidecar 2 "$(NOW)" "작업 진행해줘"
-  run_hook git-guard.sh "$(json_bash 'git add docs/note.md && git commit -m "docs: note"')"
-  assert_exit 2 docs-compound
-}
-
-test_gg_07() { # [green] 선-staged docs-only commit → 승인 요구
-  mkdir -p "$REPO/docs"; echo n > "$REPO/docs/note.md"
-  gitq add docs/note.md
-  write_sidecar 2 "$(NOW)" "작업 진행해줘"
-  run_hook git-guard.sh "$(json_bash 'git commit -m "docs: note"')"
-  assert_exit 2 staged-docs-block
-}
-
-test_gg_08() { # [red #6] git -C <타 repo> commit — 판정은 대상 repo 기준 (대상=docs-only → 승인 요구)
-  local other="$SANDBOX/other"; mkdir -p "$other/docs"
-  git -C "$other" init -q -b main
-  echo d > "$other/docs/d.md"
-  git -C "$other" add docs/d.md
-  echo c > "$REPO/src.c"; gitq add src.c   # cwd repo엔 코드 staged (현행이 참조하는 잘못된 대상)
-  write_sidecar 2 "$(NOW)" "작업 진행해줘"
-  run_hook git-guard.sh "$(json_bash "git -C $other commit -m docs")"
-  assert_exit 2 other-repo-staged
-}
-
-test_gg_09() { # [green] Claude trailer 커밋 차단
+test_gg_09() { # [green] Claude trailer 커밋 차단 (push와 별개 — §6.4, 유지)
   echo x > "$REPO/a.c"; gitq add a.c
   write_sidecar 2 "$(NOW)" "커밋해줘"
   run_hook git-guard.sh "$(json_bash 'git commit -m "feat: x" -m "Co-Authored-By: Claude <noreply@anthropic.com>"')"
   assert_exit 2 trailer-block
 }
 
-test_gg_10() { # [red #7] stale 사이드카(25h 전 ts)의 "푸시해줘" → 불인정
+test_gg_10() { # [green] stale 사이드카(25h 전 ts)의 "푸시해줘" → 불인정
   write_sidecar 3 "$(( $(NOW) - 90000 ))" "푸시해줘"
   run_hook git-guard.sh "$(json_bash 'git push origin main')"
   assert_exit 2 stale-ts
@@ -116,26 +92,12 @@ test_gg_16() { # [신규] command git push 프리픽스 인식
   assert_exit 2 command-prefix-detect
 }
 
-test_gg_17() { # [신규] add 인자에 실존 코드 파일 → docs-only 아님(통과)
-  mkdir -p "$REPO/src" "$REPO/docs"; echo c > "$REPO/src/new.c"; echo d > "$REPO/docs/n.md"
-  write_sidecar 2 "$(NOW)" "작업 진행해줘"
-  run_hook git-guard.sh "$(json_bash 'git add src/new.c docs/n.md && git commit -m "feat: x"')"
-  assert_exit 0 mixed-add-pass
-}
-
 # ── phase-02 loop2 fix-verification (리뷰 P2 채택 finding 재현 — blind 설계 아님, 분류 명시)
 
 test_gg_19() { # [fix-verify P2-04] 부정형 "말라고" → 승인 아님
   write_sidecar 2 "$(NOW)" "푸시하지 말라고 했잖아"
   run_hook git-guard.sh "$(json_bash 'git push origin main')"
   assert_exit 2 neg-malla-block
-}
-
-test_gg_20() { # [fix-verify P2-03] git add -A 복합 — 작업트리가 docs뿐이면 docs-only 판정
-  mkdir -p "$REPO/docs"; echo d > "$REPO/docs/x.md"
-  write_sidecar 2 "$(NOW)" "작업 진행해줘"
-  run_hook git-guard.sh "$(json_bash 'git add -A && git commit -m "docs: x"')"
-  assert_exit 2 add-all-docs-block
 }
 
 test_gg_21() { # [fix-verify P2-10] 인용 문자열 안 "git push"는 명령 아님
@@ -155,13 +117,6 @@ test_gg_23() { # [fix-verify P2-05] "나중에 말고 지금 푸시해줘" — �
   write_sidecar 2 "$(NOW)" "나중에 말고 지금 푸시해줘"
   run_hook git-guard.sh "$(json_bash 'git push origin main')"
   assert_exit 0 malgo-idiom-approved
-}
-
-test_gg_24() { # [fix-verify P2-05] "문서만 커밋해줘" — 조사 삽입형 docs 승인
-  mkdir -p "$REPO/docs"; echo d > "$REPO/docs/x.md"; gitq add docs/x.md
-  write_sidecar 2 "$(NOW)" "문서만 커밋해줘"
-  run_hook git-guard.sh "$(json_bash 'git commit -m "docs: x"')"
-  assert_exit 0 docs-man-approved
 }
 
 test_gg_25() { # [fix-verify P2-08] 미래 ts 사이드카는 무효
@@ -213,19 +168,6 @@ git push origin main')"
   assert_exit 2 arith-shift-not-heredoc
 }
 
-test_gg_31() { # [fix-verify P2-22] 복합 docs&&push — 차단 시 양 op pending, 다음 턴 긍정 1회로 전부 승인
-  mkdir -p "$REPO/docs"; echo d > "$REPO/docs/x.md"; gitq add docs/x.md
-  local cmd='git commit -m "docs: x" && git push origin main'
-  write_sidecar 4 "$(NOW)" "작업 진행해줘"
-  run_hook git-guard.sh "$(json_bash "$cmd")"
-  assert_exit 2 compound-first-block
-  [ -f "$STATE_DIR/$SID.pending-push" ] || fail compound-pending-push
-  [ -f "$STATE_DIR/$SID.pending-docs" ] || fail compound-pending-docs
-  write_sidecar 5 "$(NOW)" "응"
-  run_hook git-guard.sh "$(json_bash "$cmd")"
-  assert_exit 0 compound-affirm-allow
-}
-
 test_gg_32() { # [fix-verify fable#4] 인용 안 "<< EOF" 텍스트는 heredoc 시작이 아님 — 후속 push 감지 유지
   write_sidecar 2 "$(NOW)" "정리해줘"
   run_hook git-guard.sh "$(json_bash "echo 'see << EOF section' > n.txt
@@ -233,27 +175,7 @@ git push origin main")"
   assert_exit 2 quoted-heredoc-not-start
 }
 
-test_gg_33() { # [fix-verify P2-23] add -A + pathspec — 판정은 pathspec 한정 (다른 untracked 코드 무관)
-  mkdir -p "$REPO/docs" "$REPO/src"; echo d > "$REPO/docs/x.md"; echo c > "$REPO/src/y.c"
-  write_sidecar 2 "$(NOW)" "작업 진행해줘"
-  run_hook git-guard.sh "$(json_bash 'git add -A docs/ && git commit -m "docs: x"')"
-  assert_exit 2 pathspec-limited-docs-block
-}
-
 # ── phase-02 loop3 fix-verification
-
-test_gg_34() { # [fix-verify F-01/L3-02] 혼합 복합(docs 키워드 승인 + push 미승인) — 다음 턴 긍정 1회로 전부 승인
-  mkdir -p "$REPO/docs"; echo d > "$REPO/docs/x.md"; gitq add docs/x.md
-  local cmd='git commit -m "docs: x" && git push origin main'
-  write_sidecar 4 "$(NOW)" "문서 커밋해줘"
-  run_hook git-guard.sh "$(json_bash "$cmd")"
-  assert_exit 2 mixed-first-block
-  [ -f "$STATE_DIR/$SID.pending-push" ] || fail mixed-pending-push
-  [ -f "$STATE_DIR/$SID.pending-docs" ] || fail mixed-pending-docs
-  write_sidecar 5 "$(NOW)" "응"
-  run_hook git-guard.sh "$(json_bash "$cmd")"
-  assert_exit 0 mixed-affirm-allow
-}
 
 test_gg_35() { # [fix-verify L3-01] 실 heredoc 뒤 인용된 << 태그가 후속 push를 은폐하지 않음
   write_sidecar 2 "$(NOW)" "정리해줘"
@@ -263,9 +185,77 @@ test_gg_35() { # [fix-verify L3-01] 실 heredoc 뒤 인용된 << 태그가 후�
   assert_exit 2 real-heredoc-then-quoted-tag
 }
 
-test_gg_36() { # [fix-verify L3-03] add -A -- 인용 pathspec — 판정은 pathspec 한정 (무관 코드 무시)
-  mkdir -p "$REPO/docs" "$REPO/src"; echo d > "$REPO/docs/x.md"; echo c > "$REPO/src/y.c"
+# ── task-02 negative test: docs-commit 가드 제거가 push 방어선을 훼손하지 않음 증명 (D1-20)
+#   ①② docs 단독/혼합 커밋은 git-guard 무차단  ③ 그 맥락에서도 push 미승인 차단·우회 4종 차단 전건 불변
+
+test_gg_37() { # [neg ①] docs 단독 staged 커밋 → git-guard 무차단 (승인 게이트 제거 증명, 구 gg_07 반전)
+  mkdir -p "$REPO/docs"; echo n > "$REPO/docs/note.md"; gitq add docs/note.md
   write_sidecar 2 "$(NOW)" "작업 진행해줘"
-  run_hook git-guard.sh "$(json_bash "git add -A -- 'docs/' && git commit -m 'docs: x'")"
-  assert_exit 2 quoted-pathspec-limited
+  run_hook git-guard.sh "$(json_bash 'git commit -m "docs: note"')"
+  assert_exit 0 docs-only-commit-unblocked
+}
+
+test_gg_38() { # [neg ②] docs+code 혼합 staged 커밋 → git-guard 무차단 (혼입 경고는 scope-guard 소관)
+  mkdir -p "$REPO/docs" "$REPO/src"; echo d > "$REPO/docs/n.md"; echo c > "$REPO/src/a.c"
+  gitq add docs/n.md src/a.c
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash 'git commit -m "mix"')"
+  assert_exit 0 mixed-commit-unblocked
+  # 혼입 경고가 git-guard 에서 나오면 안 됨 (scope-guard 전담 증명 — 거짓 통과 방지)
+  if printf '%s' "$HOOK_STDERR" | grep -q '\[git-guard\]'; then
+    echo "  [dbg] stderr=$(printf '%s' "$HOOK_STDERR" | head -c 240)"; fail mixed-commit-no-guard-warn
+  fi
+}
+
+test_gg_44() { # [C2 ①] malformed stdin JSON → 통과(0) + 경고 1줄 (fail-open 문서화 예외)
+  run_hook git-guard.sh '{broken json'
+  assert_exit 0 malformed-stdin-inert
+  assert_stderr_match '\[git-guard\] 경고: stdin JSON 파싱 실패' malformed-stdin-warned
+}
+
+test_gg_45() { # [C2 ②] 정제 결과 공백 + raw 에 push → 판정 불가 보수 차단
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash '# git push origin main')"
+  assert_exit 2 empty-scan-raw-push-blocked
+  assert_stderr_match '판정 불가.*보수 차단' empty-scan-blocked-msg
+}
+
+test_gg_46() { # [C2 ①] 빈 stdin → 통과(0) + 경고 (무경고 통과 금지 — loop2 codex)
+  run_hook git-guard.sh ''
+  assert_exit 0 empty-stdin-inert
+  assert_stderr_match '\[git-guard\] 경고: stdin JSON 파싱 실패' empty-stdin-warned
+}
+
+test_gg_39() { # [neg ③] docs 커밋 복합에 섞인 미승인 push → push는 여전히 차단
+  mkdir -p "$REPO/docs"; echo n > "$REPO/docs/note.md"
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash 'git add docs/note.md && git commit -m "docs: note" && git push origin main')"
+  assert_exit 2 docs-compound-push-blocked
+}
+
+test_gg_40() { # [neg ③ 우회 git -C] docs staged 맥락에서도 git -C push 미승인 차단
+  mkdir -p "$REPO/docs"; echo n > "$REPO/docs/note.md"; gitq add docs/note.md
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash 'git -C . push origin main')"
+  assert_exit 2 gitc-push-blocked
+}
+
+test_gg_41() { # [neg ③ 우회 cd] cd 후 push 미승인 차단
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash 'cd sub && git push origin main')"
+  assert_exit 2 cd-push-blocked
+}
+
+test_gg_42() { # [neg ③ 우회 heredoc] heredoc 본문에 push 텍스트가 있어도 실제 후속 push는 차단
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  local nl=$'\n'
+  local cmd="cat << HD > /dev/null${nl}example: git push origin main${nl}HD${nl}git push origin main"
+  run_hook git-guard.sh "$(json_bash "$cmd")"
+  assert_exit 2 heredoc-then-push-blocked
+}
+
+test_gg_43() { # [neg ③ 우회 alias] command(=git 바이너리 alias) 프리픽스 push 미승인 차단
+  write_sidecar 2 "$(NOW)" "작업 진행해줘"
+  run_hook git-guard.sh "$(json_bash 'command git push origin main')"
+  assert_exit 2 command-alias-push-blocked
 }
