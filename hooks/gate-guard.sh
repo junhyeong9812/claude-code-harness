@@ -324,7 +324,14 @@ set_pending() {
 # 1) 모드 미선택 → 산출물(코드) 변경 차단. (task.md·docs/plans는 위에서 면제 — task.md 자체는 안 막는다)
 if [ "$MODE" = "UNSET" ] || [ -z "$MODE" ]; then
   if [ "$EVENT" = "PreToolUse" ]; then
-    echo "[gate-guard] 작업 모드 미선택(MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다 — 사용자에게 auto | lazy | pair | refactor | fast 중 하나를 물어 .claude/lazymode/$SESSION_ID 에 기록한 뒤 다시 시도하세요. (탐색·토론·학습은 자유)" >&2
+    cat >&2 <<MSG
+[gate-guard] 작업 모드 미선택(MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다 — 사용자에게 아래 5종 중 하나를 물어 .claude/lazymode/$SESSION_ID 의 MODE 에 기록한 뒤 다시 시도하세요. (탐색·토론·학습은 모드 없이 자유)
+  • auto — 앞단(정의·계획) 합의 후 Claude 자율 실행 (per-diff 이해 게이트 없음).
+  • lazy — 매 diff 사용자 이해 게이트(주관식→판정 워커). 자율주행 금지. (implementation-lazymode.md)
+  • pair — 대화로 정의·설계 합의 → TDD(테스트 1개=사이클) → 사용자가 로직 타이핑, Claude는 테스트/보일러플레이트+핑퐁 리뷰만. (pair-coding.md)
+  • refactor — 보존 동작 합의 → 특성테스트 baseline green → 소단위 변환 → 종료 증명(동작 diff 0).
+  • fast — 스모크(실행 확인) 즉시, 정의·계획·리뷰·테스트·문서는 빚 후불(진입 확인+불가역 데이터 턱). 빚 해소 전 완료 선언 금지·차기 정의됨 진입 시 빚 우선.
+MSG
     exit 2
   fi
   exit 0

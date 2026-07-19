@@ -573,3 +573,20 @@ test_gt_54b() { # [green 정합#5] 정상 회귀: repo-밖 스크래치패드(�
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$SANDBOX/outside/packet.md")"
   assert_exit 0 scratchpad-regression-L0-pass
 }
+
+test_gt_55() { # [task-03c] UNSET L1 차단 = 5택 전부(stderr) + 구 모드명 부재
+  write_state UNSET
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 2 unset-5choice-block
+  assert_stderr_match 'auto' choice-auto
+  assert_stderr_match 'lazy' choice-lazy
+  assert_stderr_match 'pair' choice-pair
+  assert_stderr_match 'refactor' choice-refactor
+  assert_stderr_match 'fast' choice-fast
+  # 03c 확장(단일줄→5줄 설명)을 실제로 구별 — 구 메시지엔 없던 설명 문구 (Opus F1: revert 시 red 보장)
+  assert_stderr_match '이해 게이트' choice-lazy-desc
+  assert_stderr_match 'TDD' choice-pair-desc
+  assert_stderr_match '특성테스트' choice-refactor-desc
+  assert_stderr_no_match 'auto-implements|lazy-implements|auto-write|lazy-write|WRITE_PHASE|write-handoff' choice-no-old-mode
+}

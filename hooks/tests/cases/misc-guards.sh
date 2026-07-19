@@ -147,6 +147,42 @@ test_rm_02() { # [loop3+] 비객체 유효 JSON("x"·[]·1) → set -e 사망 �
   assert_stderr_match 'stdin JSON 파싱 실패' gate-nonobject-warn
 }
 
+# ── task-03c: fast 빚 재주입 (reinject-mode stdout) + 재질문 5택 통일
+
+test_rm_03() { # [task-03c] MODE=fast + FAST_DEBT=1 → 빚 1줄 재주입(stdout) + base fast 라인
+  write_state fast 0 1
+  run_hook_stdout reinject-mode.sh "$(json_prompt '계속 진행해줘')"
+  assert_exit 0 reinject-fast-debt-exit
+  assert_stdout_match '현재: fast' reinject-fast-base
+  assert_stdout_match 'fast 빚 미해소' reinject-fast-debt-line
+  assert_stdout_match '차기 정의됨 진입 시 빚 우선' reinject-fast-debt-priority
+}
+
+test_rm_04() { # [task-03c] MODE=fast + FAST_DEBT=0 → base fast 라인만, 빚 줄 미표시
+  write_state fast 0 0
+  run_hook_stdout reinject-mode.sh "$(json_prompt '계속')"
+  assert_exit 0 reinject-fast-nodebt-exit
+  assert_stdout_match '현재: fast' reinject-fast-nodebt-base
+  assert_stdout_no_match 'fast 빚 미해소' reinject-fast-nodebt-hidden
+}
+
+test_rm_05() { # [task-03c+codex High 교정] MODE=auto + FAST_DEBT=1 → auto 라인 + 빚 줄 **표시**
+  # (빚은 크로스-태스크 의무 — 새 태스크에서 다음 모드 선택 후에도 보여야 D5 "차기 진입 시 우선" 성립)
+  write_state auto 0 1
+  run_hook_stdout reinject-mode.sh "$(json_prompt '계속')"
+  assert_exit 0 reinject-auto-exit
+  assert_stdout_match '현재: auto' reinject-auto-base
+  assert_stdout_match 'fast 빚 미해소' reinject-auto-debt-shown
+  assert_stdout_match '차기 정의됨.*빚 우선' reinject-auto-debt-priority
+}
+
+test_rm_06() { # [codex High 교정] MODE=UNSET + FAST_DEBT=1 → 빚 줄 표시(새 태스크 리셋 후에도 안 사라짐)
+  write_state UNSET 0 1
+  run_hook_stdout reinject-mode.sh "$(json_prompt '계속')"
+  assert_exit 0 reinject-unset-exit
+  assert_stdout_match 'fast 빚 미해소' reinject-unset-debt-shown
+}
+
 test_sg_01() { # [loop3] session-mode-guard: garbage stdin → rc 0 + 경고
   run_hook session-mode-guard.sh 'not-json {{{'
   assert_exit 0 session-garbage-exit
@@ -163,4 +199,16 @@ test_tm_05() { # [loop3] task-mode-guard: garbage stdin → rc 0 + 경고
   run_hook task-mode-guard.sh 'not-json {{{'
   assert_exit 0 task-garbage-exit
   assert_stderr_match 'stdin JSON 파싱 실패' task-garbage-warn
+}
+
+test_tm_06() { # [task-03c] 새 태스크 재질문 메시지 = 5종 전부(stderr) + 구 모드명 부재
+  write_state auto
+  mkdir -p "$REPO/docs/plans/z"; echo t > "$REPO/docs/plans/z/task.md"
+  run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/z/task.md")"
+  assert_stderr_match 'auto' tm-choice-auto
+  assert_stderr_match 'lazy' tm-choice-lazy
+  assert_stderr_match 'pair' tm-choice-pair
+  assert_stderr_match 'refactor' tm-choice-refactor
+  assert_stderr_match 'fast' tm-choice-fast
+  assert_stderr_no_match 'auto-implements|lazy-implements|auto-write|lazy-write|WRITE_PHASE|write-handoff' tm-no-old-mode
 }

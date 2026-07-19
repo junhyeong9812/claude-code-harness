@@ -7,7 +7,9 @@
 #     알도록 매 턴 주입한다 — 컨텍스트가 요약돼도 모드·경로·PENDING 복구(일관성).
 #   - 상태: <project>/.claude/lazymode/<session_id> — SCHEMA=3(state-lib.sh 소유).
 #   - 손상 상태는 quarantine + UNSET 재생성(자동 변환 금지) — 다음 게이트가 모드 재질문.
-#   - fast 빚(FAST_DEBT) 재주입은 task-03c 소관 — 여기서는 상태 계층 + 모드명 전환까지만.
+#   - fast 빚(FAST_DEBT) 재주입(task-03c): **모드 무관** FAST_DEBT=1 이면 **매 턴 빚 1줄**을 덧붙인다
+#     (해소 전 완료 선언 금지·차기 정의됨 진입 시 빚 우선 — core.md §1 fast·D5). FAST_DEBT=0 이면 미표시.
+#     빚 정본은 task-process(문서) — 훅은 상태 저장·재주입만 하고 FAST_DEBT 자동 토글은 하지 않는다(§0.6 판단은 문서).
 #
 # 종료 코드: 0 (stdout이 컨텍스트로 주입됨)
 
@@ -43,6 +45,7 @@ fi
 
 MODE=$(state_get "$STATE" MODE)
 PENDING=$(state_get "$STATE" PENDING_GATE)
+FAST_DEBT=$(state_get "$STATE" FAST_DEBT)
 
 case "$MODE" in
   lazy)
@@ -58,11 +61,18 @@ case "$MODE" in
     echo "[모드] 현재: refactor. 세션 상태파일: $STATE. 보존 동작 합의 → 특성테스트 baseline green(그린위장 점검) → 소단위 변환(매 단위 green 유지) → 종료 증명(특성테스트 전건 green + 계약 표면 diff 0). 동작 변경 필요 발견 시 보고 후 모드 재질문. (playbooks/refactoring.md)"
     ;;
   fast)
-    echo "[모드] 현재: fast. 세션 상태파일: $STATE. 스모크(실행 확인) 즉시 — 정의·리뷰·테스트·문서는 빚 후불. 빚 해소 전 '작업 완료' 선언 금지. (fast 빚 세부 재주입은 task-03c에서 추가)"
+    echo "[모드] 현재: fast. 세션 상태파일: $STATE. 스모크(실행 확인) 즉시 — 정의·계획·리뷰·테스트·문서는 빚 후불(진입 확인+불가역 데이터 턱). 빚 해소 전 '작업 완료' 선언 금지·차기 정의됨 진입 시 빚 우선. (core.md §1 fast·D5)"
     ;;
   *)
     : # UNSET/미정 — 정의됨(L1) 진입 시 gate-guard가 질문
     ;;
 esac
+
+# fast 빚 미해소 표시 — **모드 무관** FAST_DEBT=1 이면 매 턴 1줄(03c codex High 교정: 빚은 크로스-태스크
+# 의무 → 새 태스크 UNSET 리셋·다음 모드 선택 후에도 계속 보여야 D5 "차기 정의됨 진입 시 빚 우선" 성립.
+# 정본은 task-process, 토글은 절차/모델 판단 — 훅은 읽기·재주입만, state_set 없음 §0.6).
+if [ "$FAST_DEBT" = "1" ]; then
+  echo "[모드] fast 빚 미해소: 정의·계획·리뷰·테스트·문서 후불 — 해소 전 '작업 완료' 선언 금지, 차기 정의됨(L1) 진입 시 빚 우선. (core.md §1 fast·D5 — 빚 정본은 task-process)"
+fi
 
 exit 0

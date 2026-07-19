@@ -42,6 +42,19 @@ run_hook() {
   set -e
 }
 
+# 훅 stdout 캡처 변형: run_hook_stdout <hook> <stdin-json> → HOOK_EXIT / HOOK_STDOUT
+# reinject-mode·session-mode-guard 등 컨텍스트를 stdout으로 주입하는 훅의 출력 검사용
+# (run_hook 은 stdout을 /dev/null 로 버려 이들 메시지를 못 잡는다).
+run_hook_stdout() { # <hook파일명> <stdin-json>
+  local hook=$1 json=$2
+  set +e
+  HOOK_STDOUT=$(printf '%s' "$json" | env HOME="$HOME_DIR" GIT_CONFIG_NOSYSTEM=1 \
+    GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$XDG_DIR" \
+    bash "$HOOKS_DIR/$hook" 2>/dev/null)
+  HOOK_EXIT=$?
+  set -e
+}
+
 # JSON 빌더
 json_file() { # <event> <tool> <file_path>
   jq -cn --arg e "$1" --arg t "$2" --arg f "$3" --arg c "$REPO" --arg s "$SID" \
@@ -74,6 +87,15 @@ assert_exit() { # <want> <assert-id>
 }
 assert_stderr_match() { # <ERE> <assert-id>
   printf '%s' "$HOOK_STDERR" | grep -qE "$1" || { echo "  [dbg] stderr=$(printf '%s' "$HOOK_STDERR" | head -c 240)"; fail "$2"; }
+}
+assert_stderr_no_match() { # <ERE> <assert-id>
+  if printf '%s' "$HOOK_STDERR" | grep -qE "$1"; then echo "  [dbg] stderr=$(printf '%s' "$HOOK_STDERR" | head -c 240)"; fail "$2"; fi
+}
+assert_stdout_match() { # <ERE> <assert-id>
+  printf '%s' "$HOOK_STDOUT" | grep -qE "$1" || { echo "  [dbg] stdout=$(printf '%s' "$HOOK_STDOUT" | head -c 240)"; fail "$2"; }
+}
+assert_stdout_no_match() { # <ERE> <assert-id>
+  if printf '%s' "$HOOK_STDOUT" | grep -qE "$1"; then echo "  [dbg] stdout=$(printf '%s' "$HOOK_STDOUT" | head -c 240)"; fail "$2"; fi
 }
 assert_state() { # <key> <want> <assert-id>
   local got; got=$(grep -E "^$1=" "$STATE" 2>/dev/null | head -1 | cut -d= -f2- || true)

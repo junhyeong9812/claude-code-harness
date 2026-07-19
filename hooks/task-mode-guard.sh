@@ -78,7 +78,7 @@ cat >&2 <<MSG
   • lazy — 이해 게이트 모드: diff마다 주관식 검증 (playbooks/implementation-lazymode.md).
   • pair — 대화로 정의·설계 합의 → TDD(테스트 1개=경계) → 사용자가 로직 타이핑, Claude는 테스트/보일러플레이트+핑퐁 리뷰만 (playbooks/pair-coding.md).
   • refactor — 보존 동작 합의 → 특성테스트 baseline green → 소단위 변환 → 종료 증명(동작 diff 0) (playbooks/refactoring.md).
-  • fast — 스모크 즉시, 정의·리뷰·테스트·문서는 빚 후불. 빚 해소 전 완료 선언 금지.
+  • fast — 스모크(실행 확인) 즉시, 정의·계획·리뷰·테스트·문서는 빚 후불(진입 확인+불가역 데이터 턱). 빚 해소 전 완료 선언 금지·차기 정의됨 진입 시 빚 우선.
 선택을 받으면 .claude/lazymode/$SESSION_ID 의 MODE 를 그 값으로 기록하고 진행하세요. (core.md §1)
 MSG
 
