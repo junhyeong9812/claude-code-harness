@@ -28,3 +28,5 @@
 | 〃 | task-01 조사 (read-only) | 글로벌·프로젝트 core.md diff = IDENTICAL(배포 동기). 글로벌 CLAUDE.md 17행 bare `@core.md`(정상 주입 경로) 확인. 프로젝트 CLAUDE.md 주석 내 bare 토큰 가설 수립 → 공식 문서 확인(claude-code-guide): 주석 스트립·백틱 불평가·"anywhere" 평가 주장 |
 | 〃 | task-01 실측 실험 (scratchpad 최소 재현 7종, CLI 2.1.216 headless·haiku) | **줄 시작 bare @만 발화** — HTML 주석·백틱·줄 중간 bare 전부 불발화(문서 "anywhere"와 상충), cwd core.md(+CLAUDE.md·+git) 조합 전부 미주입. **가설 전부 기각 — 현행 CLI로 이중 주입 재현 불가** |
 | 〃 | task-01 결론 | 이중 주입 = 이 세션 런타임 고유 동작(버전·모드 특이 — 코드 수준 특정 불가). 확정 관측: repo 루트 core.md 실파일이 project instructions로 주입됨. **소재지 결정: 주입 본체 = 글로벌 ~/.claude/core.md 1벌(@core.md 유지) + repo 배포 소스는 루트 밖으로 이동(`src/core.md` 권고 — deploy.sh MANIFEST 갱신, task-05 반영). 최종 판정 = task-06 신규 세션 주입량 실측** |
+| 〃 | 구현 진입 | 브랜치 `feat/harness-v4-slimdown` 생성 · 모드 질문(gate-guard) → **사용자 auto 선택**(set-mode 기록) · import 실측 메모리 저장 |
+| 〃 | task-02 완료 | templates/requirement-spec.md(6칸 고정·빈칸 금지·자율성 별도·가정 조기실증) + templates/log.md(타임라인+ledger 필드 보존+생략검증 빚 섹션) 신설 — 커밋 6e476dc (docs는 2d3e02f 분리) |
