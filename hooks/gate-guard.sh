@@ -3,40 +3,27 @@
 # PreToolUse 와 PostToolUse(matcher: Edit|Write|MultiEdit) 양쪽 + PreToolUse:Bash 에 등록한다.
 # stdin JSON: {hook_event_name, tool_name, tool_input:{file_path,command}, cwd, session_id, ...}
 #
-# 정책 (core.md §1 C1·C2·C3 + 구현 모드 5종):
-#   상태: <project>/.claude/lazymode/<session_id> — SCHEMA=3 flat KEY=value(state-lib.sh 소유).
+# 정책 (core v4 §1 — 게이트 상태 전이 SPEC→MODE):
+#   상태: <project>/.claude/lazymode/<session_id> — SCHEMA=4 flat KEY=value(state-lib.sh 소유).
+#   키: MODE ∈ {UNSET,auto,lazy} · SPEC(명세 합의) · PENDING_GATE(lazy) · DEBT(긴급 빚) · TASK_PATH.
 #   - session_id 없음(빈·허용 외 문자 → sanitize 빈 문자열) → inert(exit 0). 롤아웃 안전(fail-open — 세션 식별 불가 시 강제 못 함).
-#   - **L0/L1 분류를 상태검증보다 먼저** 한다(task-03b): L0(문서 등)는 상태가 손상돼도 상태검증 없이 즉시 통과 —
+#   - **L0/L1 분류를 상태검증보다 먼저** 한다: L0(문서 등)는 상태가 손상돼도 상태검증 없이 즉시 통과 —
 #     docs 쓰기가 상태 손상으로 차단되면 안 된다. 상태 파일 확정(부재→시드/손상→격리)은 **L1일 때만**.
 #   - 상태 파일 부재 → 같은 임계구역에서 UNSET 시드 + 게이트(fail-safe, init-if-absent — inert 아님).
-#     서브에이전트는 자체 SessionStart 시드로 동일 게이트에 걸린다 — 워커 모드는 브리핑 승인 하에 자가 기록(orchestration.md).
-#   - 상태 파일이 존재하나 손상(타입이상·미지 SCHEMA·구 모드값) → quarantine + UNSET 재생성(state-lib) → 아래 UNSET 차단.
-#   - C1 L0/L1 분류(classify_l0l1 — **불변식 반전: L1이 기본, L0은 명확·무조건 양성조건에서만**, task-03b 재설계):
-#       · L0(통과)는 아래 둘 중 하나가 완전히 성립할 때만 —
-#           (A) repo 내부 순수 문서: ROOT canon 성공+CFILE 조상 AND 리터럴 `docs/` 컴포넌트 AND 정책 아님. + 상태파일(.claude/lazymode/*).
-#           (B) 어떤 repo 에도 안 속함(.git 조상 전무·bare 아님) AND is_claude_deploy_path rc 1(배포·정책 대상 아님).
-#       · L1(게이트)은 그 외 전부: canon/git/준비 실패 · bare repo · rc=0 빈/비조상 ROOT · **realpath 실패**(원문 대체 금지) ·
-#                     /.git/ 포함(내부·실행 훅, dangling symlink 포함) · **원본 file_path 의 .git 컴포넌트**(canon 전 검사, task-03b#2) ·
-#                     canon 비절대(빈/상대) 출력(#1) · invalid cwd+상대경로(#3) · HOME 루트(/)붕괴(#4) · 정책·배포 경로(~/.claude·docs 내 정책) · repo 내 비-docs.
-#       · git rc≠0(128 포함)은 "repo 아님" 확정이 아니다(dubious ownership·corrupt·권한·GIT_CEILING·로케일·bare).
-#         bare 는 is-bare-repository=true 로, 그 밖은 CFILE 조상 체인 .git(dir/file/**dangling symlink**) 탐색으로 repo 컨텍스트=L1.
-#         잔여 리스크(task-03b#6, 닫지 않음): bare repo 에서 git 명령 실패 시 L0 가능(스크래치패드와 구분 불가) — bare repo 내 파일 직접 편집은 드묾.
-#       · case-fold 는 **L1 판정(정책·~/.claude 매칭)에만** — L0 부여의 docs/ 컴포넌트 판정엔 fold 금지(DOCS/→L0 회귀 차단).
-#   - MODE=UNSET           → 산출물 변경 차단(모드 먼저 — 5택).                    [session/task-mode-guard teeth]
-#   - MODE=auto|refactor|fast → 구현 게이트 없음(앞단 합의 후 Claude 자율 변환/실행 — refactor·fast 도 게이트 관점은 auto와 동일).
+#   - 손상(타입이상·미지/구 SCHEMA·구 모드값 pair/refactor/fast) → quarantine + UNSET 재생성(state-lib) → 아래 차단.
+#   - C1 L0/L1 분류(classify_l0l1 — 불변식 반전: L1이 기본, L0은 명확·무조건 양성조건에서만): v3 task-03b 로직 그대로 유지.
+#   - **SPEC≠1 → L1 차단**: 인터뷰→요구사항 명세서(requirement-spec.md) 사용자 합의가 선행 —
+#     합의 답변을 받으면 `set-state.sh spec-approved` 로 기록. 긴급 수정은 새 작업 폴더에 log.md 생성(리셋 발동) 후
+#     긴급 확인 답변을 받아 `set-state.sh emergency`(MODE=auto·SPEC=1·DEBT=1 원자 기록)로 진입 — 차단 우회 아님.
+#     기록 실패 시 차단 유지(fail-open 금지 — C2 원칙②).
+#   - MODE=UNSET(SPEC=1 이후) → 자율성 2택(auto/lazy) 질문 후 `set-state.sh mode <선택>` 기록.
+#   - MODE=auto → 게이트 없음(명세 합의 후 자율 실행 — 검증·리뷰는 stakes 비례, 자율 ≠ 검증 생략).
 #   - MODE=lazy:
 #       · PostToolUse(Edit|Write) → PENDING_GATE=1 (diff 발생 = 게이트 빚짐)
-#       · PreToolUse(Edit|Write)  → PENDING_GATE=1 이면 차단(직전 diff 게이트 먼저)
-#   - MODE=pair (사용자가 로직 타이핑 — playbooks/pair-coding.md):
-#       · 테스트/보일러플레이트 파일(is_test_file 컨벤션) → Claude Edit/Write 허용(게이트 없음)
-#       · 그 외 로직 파일 → **Edit/Write/MultiEdit**은 PreToolUse 항상 차단(사용자만 타이핑, Claude는 리뷰만).
-#         Bash 파일쓰기는 하드 차단 안 함(§0.6 FP 근거) — 소프트 리마인더만(아래 IS_BASH 분기).
-#         docs/plans는 이 분기 이전에 이미 면제(task.md 6칸 라이브 append 용도).
+#       · PreToolUse(Edit|Write)  → PENDING_GATE=1 이면 차단(직전 diff 게이트 먼저) — 통과 시 `set-state.sh gate-pass`
 #   - 상태파일(.claude/lazymode/*) Edit/Write/MultiEdit → classify 이전에 **하드 거부(exit 2, MODE 무관)**:
-#       상태는 훅(state-lib)이 flock 원자쓰기로 소유한다. Claude가 Edit/Write 도구로 MODE 등을 직접 써서
-#       모드 게이트·fast 빚을 우회하는 것을 차단(#1). Bash 경로는 훅 bash 쓰기와 구분 불가라 소프트 리마인더만(§0.6 FP).
-#   - 게이트 통과 시 PENDING_GATE=0 은 Bash로 state-lib(state_set) 경유해 내린다(lazy 워커 verdict=pass 후 —
-#       Edit/Write 직접 편집은 위 #1로 하드거부되므로 상태 변경은 반드시 state-lib를 탄다).
+#       상태는 훅(state-lib)이 flock 원자쓰기로 소유 — Claude가 SPEC/MODE/DEBT 를 직접 써서 게이트를
+#       우회하는 것을 차단. Bash 경로는 훅 bash 쓰기와 구분 불가라 소프트 리마인더만(§0.6 FP).
 #
 # 종료 코드: 0 통과 / 2 차단(PreToolUse)
 
@@ -63,7 +50,7 @@ TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool_name // empty')
 IS_BASH=0
 case "$TOOL_NAME" in
   Edit|Write|MultiEdit) ;;
-  Bash) IS_BASH=1 ;;   # lazy/pair 소프트 리마인더용 (PreToolUse:Bash)
+  Bash) IS_BASH=1 ;;   # lazy 소프트 리마인더용 (PreToolUse:Bash)
   *) exit 0 ;;
 esac
 
@@ -150,24 +137,6 @@ is_docs_exempt() { # <canonical file> <repo root> → rc 0/1
   esac
   return 0
 }
-# pair 모드 전용: 테스트/보일러플레이트 파일 컨벤션 판정 (결정론적 패턴 — 의미론 판단 아님, §0.6).
-# 이 함수가 패턴의 단일 출처다 — playbooks/pair-coding.md는 설명·확장 가이드만, 목록을 복제하지 않는다.
-is_test_file() { # <canonical-path> → exit 0 이면 테스트 파일(Claude 허용)
-  local f="$1" base
-  base=$(basename -- "$f")
-  case "$f" in
-    */src/test/*|*/tests/*|*/__tests__/*|*/spec/*) return 0 ;;
-  esac
-  # `?*` (1글자 이상) 요구 — 맨몸 Test.java/Spec.java(접두어 없는 도메인 클래스) 오분류 방지.
-  case "$base" in
-    ?*Test.java|?*Tests.java|?*Spec.java) return 0 ;;
-    ?*.test.ts|?*.test.tsx|?*.test.js|?*.test.jsx) return 0 ;;
-    ?*.spec.ts|?*.spec.tsx|?*.spec.js|?*.spec.jsx) return 0 ;;
-    test_?*.py|?*_test.py|?*_test.go|?*_spec.rb) return 0 ;;
-  esac
-  return 1
-}
-
 # ── C1 L0/L1 분류 (task-03b 재설계 — 불변식 반전: **L1이 기본**, L0은 아래 두 양성경로가 완전히 성립할 때만) ──
 # 반환: rc 0 = L0(면제) · rc 1 = L1(게이트). 인자: <canonical file>.
 #   (A) repo 내부 순수 문서: git toplevel(ROOT) canon 성공 AND ROOT 가 CFILE 조상 AND rel 이 리터럴 `docs/`
@@ -228,7 +197,7 @@ classify_l0l1() { # <canonical file> → rc 0(L0) / 1(L1)
   return 1
 }
 
-# ── Bash 경로: file_path가 없어 산출물 분류가 안 맞는다 — lazy/pair 소프트 리마인더만 (하드 차단 없음, §0.6) ──
+# ── Bash 경로: file_path가 없어 산출물 분류가 안 맞는다 — lazy 소프트 리마인더만 (하드 차단 없음, §0.6) ──
 # (Bash 하드 차단은 안 한다: 테스트 실행·정당한 셸 사용의 FP가 큼. 프로토콜+reinject로 보강.)
 if [ "$IS_BASH" = "1" ]; then
   if ! state_ensure_valid "$STATE"; then
@@ -240,9 +209,6 @@ if [ "$IS_BASH" = "1" ]; then
   # lazy 의 Bash 파일쓰기(sed -i·tee·redirect·heredoc)는 per-diff 게이트를 우회한다 — 소프트 리마인더만.
   if [ "$B_MODE" = "lazy" ] && echo "$B_CMD" | grep -qE '(sed([[:space:]]+-[a-zA-Z]+)*[[:space:]]+-i|(^|[[:space:]|;&])tee[[:space:]]|<<[-]?[[:space:]]*["'"'"']?[A-Za-z_])'; then
     echo "[gate-guard] lazy 모드: Bash로 파일을 수정하면 per-diff 이해 게이트가 우회됩니다. 코드 변경은 Edit/Write로 해 게이트를 태우거나, 이 변경도 before/after 스니펫으로 설명·판정하세요. (implementation-lazymode.md §3 — 소프트 리마인더)" >&2
-  # pair 모드: Bash 파일쓰기는 로직 파일 차단(Edit/Write 전용)을 우회한다 — 패턴 무관 무조건 리마인더.
-  elif [ "$B_MODE" = "pair" ]; then
-    echo "[gate-guard] pair 모드: Bash로 파일을 쓰면 로직 파일 차단이 우회됩니다. 로직 파일은 사용자가 직접 타이핑해야 합니다 — Claude는 Bash로 코드를 작성하지 마세요(읽기·테스트 실행·git diff만). (playbooks/pair-coding.md §4 — 소프트 리마인더)" >&2
   fi
   exit 0
 fi
@@ -302,7 +268,7 @@ esac
 case "$CFILE" in
   */.claude/lazymode/*)
     if [ "$EVENT" = "PreToolUse" ]; then
-      echo "[gate-guard] 상태파일은 훅 소유(state-lib) — Claude 직접 편집(Edit/Write) 금지. 모드는 사용자에게 물은 뒤 'bash ~/.claude/hooks/set-mode.sh <선택> .claude/lazymode/$SESSION_ID' 로 기록하세요(자동 기록 훅 없음 — 이 명령이 유일한 기록 경로). PENDING_GATE 등 다른 상태도 Bash로 state-lib 경유." >&2
+      echo "[gate-guard] 상태파일은 훅 소유(state-lib) — Claude 직접 편집(Edit/Write) 금지. 상태 기록은 사용자 답변 후 'bash ~/.claude/hooks/set-state.sh <명령> .claude/lazymode/$SESSION_ID' 가 유일한 경로입니다(spec-approved | mode <auto|lazy> | emergency | debt-clear | gate-pass)." >&2
       exit 2
     fi
     echo "[gate-guard] 경고: 상태파일 변경이 PostToolUse까지 도달($CFILE) — Claude 직접 편집은 금지입니다(state-lib 소유). Pre 훅 우회 여부를 확인하세요." >&2
@@ -330,6 +296,7 @@ if ! state_ensure_valid "$STATE"; then
 fi
 
 MODE=$(state_get "$STATE" MODE)
+SPEC=$(state_get "$STATE" SPEC)
 PENDING=$(state_get "$STATE" PENDING_GATE)
 
 # PENDING_GATE 세팅 (state-lib 원자 writer 경유 — flock+temp+mv). 실패 = fail-closed.
@@ -340,54 +307,51 @@ set_pending() {
   fi
 }
 
-# 1) 모드 미선택 → 산출물(코드) 변경 차단. (task.md·docs/plans는 위에서 면제 — task.md 자체는 안 막는다)
-if [ "$MODE" = "UNSET" ] || [ -z "$MODE" ]; then
+# 1) 명세 미합의(SPEC≠1) → L1 차단. 인터뷰→명세서 합의가 유일한 진입 게이트(core v4 §1).
+if [ "$SPEC" != "1" ]; then
   if [ "$EVENT" = "PreToolUse" ]; then
     cat >&2 <<MSG
-[gate-guard] 작업 모드 미선택(MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다. (탐색·토론·학습은 모드 없이 자유)
-복구 순서: ① 아래 5종을 사용자에게 물어라(AskUserQuestion 권장) → ② 사용자가 고른 값을 아래 명령으로 기록 → ③ 이 도구 호출을 다시 시도.
-  ▶ 기록 명령(유일한 기록 경로 — 상태파일 Edit 금지, 이 훅은 프롬프트를 읽어 자동기록하지 않음):
-      bash ~/.claude/hooks/set-mode.sh <선택한_모드> .claude/lazymode/$SESSION_ID
-  • auto — 앞단(정의·계획) 합의 후 Claude 자율 실행 (per-diff 이해 게이트 없음).
-  • lazy — 매 diff 사용자 이해 게이트(주관식→판정 워커). 자율주행 금지. (implementation-lazymode.md)
-  • pair — 대화로 정의·설계 합의 → TDD(테스트 1개=사이클) → 사용자가 로직 타이핑, Claude는 테스트/보일러플레이트+핑퐁 리뷰만. (pair-coding.md)
-  • refactor — 보존 동작 합의 → 특성테스트 baseline green → 소단위 변환 → 종료 증명(동작 diff 0).
-  • fast — 스모크(실행 확인) 즉시, 정의·계획·리뷰·테스트·문서는 빚 후불(진입 확인+불가역 데이터 턱). 빚 해소 전 완료 선언 금지·차기 정의됨 진입 시 빚 우선.
+[gate-guard] 요구사항 명세 미합의(SPEC=0) — L1(실행물 변경) 진입 차단.
+복구 순서: ① 전수 인터뷰 → requirement-spec.md 작성(필수 6칸 — 빈 칸 금지, templates/requirement-spec.md)
+  → ② 사용자 합의 답변을 받으면: bash ~/.claude/hooks/set-state.sh spec-approved .claude/lazymode/$SESSION_ID
+  → ③ 자율성 2택(auto/lazy)을 물어 기록 → ④ 이 도구 호출 재시도.
+긴급 수정(장애 대응)은 유일 예외: 새 작업 폴더에 log.md 생성 → 사용자 긴급 확인(+불가역 데이터 턱) →
+  bash ~/.claude/hooks/set-state.sh emergency .claude/lazymode/$SESSION_ID  (MODE=auto·SPEC=1·DEBT=1 — 스모크 즉시, 생략분은 log.md '생략한 검증'에)
 MSG
     exit 2
   fi
   exit 0
 fi
 
-# 2) pair 모드: 테스트 파일=허용, 로직 파일=차단(사용자만 타이핑).
-if [ "$MODE" = "pair" ]; then
-  if is_test_file "$CFILE"; then
-    exit 0
-  fi
+# 2) 자율성 미선택(MODE=UNSET) → 차단 + 2택 질문.
+if [ "$MODE" = "UNSET" ] || [ -z "$MODE" ]; then
   if [ "$EVENT" = "PreToolUse" ]; then
-    echo "[gate-guard] pair 모드 — 로직 파일은 사용자가 직접 타이핑합니다(Claude는 리뷰만). 테스트/보일러플레이트 파일(*Test.java·*.test.ts·test_*.py 등 컨벤션 — is_test_file)과 task.md 등 docs/plans·상태파일(위에서 별도 상시 면제)만 Claude가 Edit/Write 가능합니다. (playbooks/pair-coding.md)" >&2
+    cat >&2 <<MSG
+[gate-guard] 자율성 미선택(MODE=UNSET). 사용자에게 2택을 물어(AskUserQuestion 권장) 아래 명령으로 기록 후 재시도:
+      bash ~/.claude/hooks/set-state.sh mode <auto|lazy> .claude/lazymode/$SESSION_ID
+  • auto — 명세 합의 후 Claude 자율 실행 (기본 권장 — 검증·리뷰는 stakes 비례).
+  • lazy — 매 diff 사용자 이해 게이트(주관식→판정 워커) — 학습·OSS 기여용. (implementation-lazymode.md)
+MSG
     exit 2
   fi
-  # PostToolUse 도달 = 통상 위 PreToolUse 차단을 거쳐 오지 않아야 한다. 도달 시 감사 경고(차단 불가·관측만).
-  echo "[gate-guard] 경고: pair 모드에서 로직 파일 변경이 PostToolUse까지 도달했습니다($CFILE). Pre 훅 우회 여부를 확인하세요." >&2
   exit 0
 fi
 
-# 3) auto|refactor|fast → 구현 게이트 없음 (앞단 합의 후 Claude 자율 변환/실행)
-case "$MODE" in
-  auto|refactor|fast) exit 0 ;;
-esac
+# 3) auto → 구현 게이트 없음 (명세 합의 후 자율 실행 — 검증·리뷰는 stakes 비례)
+if [ "$MODE" = "auto" ]; then
+  exit 0
+fi
 
-# 4) lazy → per-diff 게이트 (task.md 등 docs/plans는 위에서 이미 면제)
+# 4) lazy → per-diff 게이트 (docs/plans는 위에서 이미 면제)
 if [ "$MODE" = "lazy" ]; then
   if [ "$EVENT" = "PostToolUse" ]; then
     if ! set_pending; then exit 2; fi   # 갱신 실패 = fail-closed (은폐 금지)
-    echo "[gate-guard] diff 발생 → 이해 게이트 대기(PENDING_GATE=1). before/after 스니펫을 작업 문서에 기록하고, 사용자에게 이 변경을 주관식으로 설명받아 판정 워커로 검증한 뒤 .claude/lazymode/$SESSION_ID 의 PENDING_GATE 를 0 으로 내리세요. (implementation-lazymode.md §3·§4)" >&2
+    echo "[gate-guard] diff 발생 → 이해 게이트 대기(PENDING_GATE=1). before/after 스니펫을 작업 문서에 기록하고, 사용자에게 이 변경을 주관식으로 설명받아 판정 워커로 검증한 뒤 'bash ~/.claude/hooks/set-state.sh gate-pass' 로 내리세요. (implementation-lazymode.md §3·§4)" >&2
     exit 0
   fi
   if [ "$EVENT" = "PreToolUse" ]; then
     if [ "$PENDING" = "1" ]; then
-      echo "[gate-guard] 직전 diff의 이해 게이트가 미처리(PENDING_GATE=1)입니다. 먼저 (1) before/after 스니펫 기록 → (2) 사용자 주관식 설명 → (3) 판정 워커 verdict=pass 를 거치고, 통과하면 .claude/lazymode/$SESSION_ID 의 PENDING_GATE 를 0 으로 내린 뒤 다시 시도하세요. (implementation-lazymode.md §1·§4)" >&2
+      echo "[gate-guard] 직전 diff의 이해 게이트가 미처리(PENDING_GATE=1)입니다. 먼저 (1) before/after 스니펫 기록 → (2) 사용자 주관식 설명 → (3) 판정 워커 verdict=pass 를 거치고, 통과하면 'bash ~/.claude/hooks/set-state.sh gate-pass .claude/lazymode/$SESSION_ID' 로 내린 뒤 다시 시도하세요. (implementation-lazymode.md §1·§4)" >&2
       exit 2
     fi
     exit 0
@@ -397,7 +361,7 @@ fi
 # 여기 도달 = 예상 밖 MODE. state_ensure_valid가 enum 밖을 이미 UNSET로 격리하므로 정상 경로에선 불가하나,
 # 방어적으로 fail-closed(게이트를 조용히 끄지 않는다).
 if [ "$EVENT" = "PreToolUse" ]; then
-  echo "[gate-guard] 예상 밖 MODE='$MODE' (.claude/lazymode/$SESSION_ID 확인). auto | lazy | pair | refactor | fast 중 하나로 고친 뒤 다시 시도하세요." >&2
+  echo "[gate-guard] 예상 밖 MODE='$MODE' (.claude/lazymode/$SESSION_ID 확인). auto | lazy 중 하나를 set-state.sh 로 기록한 뒤 다시 시도하세요." >&2
   exit 2
 fi
 echo "[gate-guard] 경고: 예상 밖 MODE='$MODE' — 게이트를 적용 못 했습니다(PostToolUse). 상태파일을 확인하세요." >&2

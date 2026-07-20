@@ -1,19 +1,19 @@
-# state-lib.sh — lazy-busy 모드 상태 계층 공용 라이브러리 (SCHEMA=3).
-# 소유: task-03a (상태 스키마 C3). MODE 상태(.claude/lazymode/<session_id>)를 읽거나 쓰는 훅이 source 한다:
-#   session-mode-guard / gate-guard / task-mode-guard / reinject-mode.
+# state-lib.sh — 게이트 상태 계층 공용 라이브러리 (SCHEMA=4 — v4 2026-07-21).
+# 소유: harness-v4-slimdown task-04 (게이트 상태 전이 — core v4 §1). 상태를 읽거나 쓰는 훅이 source 한다:
+#   session-mode-guard / gate-guard / task-mode-guard / reinject-mode / set-state(CLI).
 # 이 파일은 실행 훅이 아니라 라이브러리다(settings.json 등록 금지 — 함수 정의만, source 시 부작용 없음).
 #
 # 계약 (core.md §1 C2·C3 · master-plan §2 C3):
-#   위치 <project>/.claude/lazymode/<session_id> — flat KEY=value, **1행 SCHEMA=3**.
-#   키: MODE ∈ {UNSET,auto,lazy,pair,refactor,fast} · PENDING_GATE ∈ {0,1} · TASK_PATH · FAST_DEBT ∈ {0,1}.
+#   위치 <project>/.claude/lazymode/<session_id> — flat KEY=value, **1행 SCHEMA=4**.
+#   키: MODE ∈ {UNSET,auto,lazy} · SPEC ∈ {0,1}(명세 합의) · PENDING_GATE ∈ {0,1}(lazy) · DEBT ∈ {0,1}(긴급 빚) · TASK_PATH.
 #   쓰기 = temp + mv 원자 교체 + **전 writer 동일 flock(-w 2 재시도)**. 읽기 = grep 파서(source·eval 금지).
 #   session_id = **[A-Za-z0-9-] 만**(경로 traversal·구분자 차단). 허용 외 문자가 있으면 그 세션은 **stateless**
 #     로 간주 — sanitize 가 빈 문자열을 반환하고 호출부의 'sid 없음' 조기 경로(inert/스킵)를 탄다(cksum 변환 없음).
-#   손상(파싱불가·타입이상(파일 자리 디렉토리/심링크)·미지 SCHEMA·구 모드값·PENDING/FAST_DEBT enum 위반/유실·키 중복)
+#   손상(파싱불가·타입이상(파일 자리 디렉토리/심링크)·미지/구 SCHEMA(=3 포함)·구 모드값(pair/refactor/fast 포함)·비트 enum 위반/유실·키 중복)
 #     → quarantine(<path>.corrupt-<epoch> rename) → UNSET 재생성 → 게이트가 모드 재질문. **자동 변환 금지.**
 #   flock 획득 실패(재시도 후)·재생성 실패 = **판정 불가** → 함수 rc 1 (호출부 fail-closed: Pre 차단 / Post·Prompt 경고+통과).
 
-STATE_SCHEMA=3
+STATE_SCHEMA=4
 
 # session_id sanitize — 파일명 안전 문자만. 계약: [A-Za-z0-9-] (underscore·슬래시·점 등 제거).
 # 허용 외 문자가 하나라도 있으면(제거 발생) 그 세션은 **stateless** 로 간주해 **빈 문자열**을 반환한다 —
@@ -30,15 +30,15 @@ state_sanitize_sid() {
   fi
 }
 
-# MODE enum 검증 — 유효 5종 + UNSET. 구 모드값(auto-implements·lazy-write 등)은 여기서 탈락 → 손상 처리.
+# MODE enum 검증 — auto|lazy + UNSET. 구 모드값(pair·refactor·fast 및 v2 계열)은 여기서 탈락 → 손상 처리(quarantine).
 state_valid_mode() {
   case "${1:-}" in
-    UNSET|auto|lazy|pair|refactor|fast) return 0 ;;
+    UNSET|auto|lazy) return 0 ;;
     *) return 1 ;;
   esac
 }
 
-# 비트 enum 검증 — PENDING_GATE·FAST_DEBT ∈ {0,1}.
+# 비트 enum 검증 — SPEC·PENDING_GATE·DEBT ∈ {0,1}.
 state_valid_bit() {
   case "${1:-}" in
     0|1) return 0 ;;
@@ -56,7 +56,7 @@ state_get() {
 _state_seed_unset() {
   local p="$1" tmp
   tmp=$(mktemp "$(dirname -- "$p")/.state.XXXXXX" 2>/dev/null) || return 1
-  printf 'SCHEMA=%s\nMODE=UNSET\nPENDING_GATE=0\nFAST_DEBT=0\n' "$STATE_SCHEMA" > "$tmp" 2>/dev/null \
+  printf 'SCHEMA=%s\nMODE=UNSET\nSPEC=0\nPENDING_GATE=0\nDEBT=0\n' "$STATE_SCHEMA" > "$tmp" 2>/dev/null \
     || { rm -f "$tmp"; return 1; }
   mv -f "$tmp" "$p" 2>/dev/null || { rm -f "$tmp"; return 1; }
 }
@@ -105,7 +105,7 @@ state_set() {
       if [ -f "$p" ]; then
         grep -vE "^($keyre)=" "$p" 2>/dev/null || true
       else
-        printf 'MODE=UNSET\nPENDING_GATE=0\nFAST_DEBT=0\n' | grep -vE "^($keyre)=" || true
+        printf 'MODE=UNSET\nSPEC=0\nPENDING_GATE=0\nDEBT=0\n' | grep -vE "^($keyre)=" || true
       fi
       # 대상 key 들 반영(말미) — 원자 1회
       i=0
@@ -116,8 +116,8 @@ state_set() {
 }
 
 # 손상 검사 + 격리·재생성 + 부재-시드. state_ensure_valid <path>
-#   판정: ① 타입 이상(존재하나 정규 파일 아님 = 디렉토리/fifo, 또는 심링크) ② 1행 SCHEMA≠3(미지·구 스키마)
-#         ③ MODE 값이 enum 밖(구 모드값 포함) ④ PENDING_GATE/FAST_DEBT 가 **정확히 1회** 존재하지 않음(유실=0회 또는
+#   판정: ① 타입 이상(존재하나 정규 파일 아님 = 디렉토리/fifo, 또는 심링크) ② 1행 SCHEMA≠4(미지·구 스키마 — =3 포함)
+#         ③ MODE 값이 enum 밖(구 모드값 포함) ④ SPEC/PENDING_GATE/DEBT 가 **정확히 1회** 존재하지 않음(유실=0회 또는
 #            중복=2회+) 또는 값 enum 위반 ⑤ 알려진 키 중복(2회+) → 손상 → <path>.corrupt-<epoch> rename → UNSET 새 파일.
 #   부재: 같은 flock 안에서 UNSET 재생성(init-if-absent — rename→재생성 TOCTOU 공백 창 제거).
 #   전 과정 flock(-w 2, quarantine·재생성이 원자적으로 보이도록) — 동시 훅의 이중 격리 방지.
@@ -145,14 +145,14 @@ state_ensure_valid() {
       if [ "$schema" != "SCHEMA=$STATE_SCHEMA" ] || ! state_valid_mode "$mode"; then corrupt=1; fi
       # 알려진 키 중복(2회+) = 손상
       if [ "$corrupt" = 0 ]; then
-        for k in SCHEMA MODE PENDING_GATE FAST_DEBT TASK_PATH; do
+        for k in SCHEMA MODE SPEC PENDING_GATE DEBT TASK_PATH; do
           c=$(grep -cE "^$k=" "$p" 2>/dev/null || true)
           if [ "${c:-0}" -gt 1 ]; then corrupt=1; break; fi
         done
       fi
-      # PENDING_GATE·FAST_DEBT: **정확히 1회 존재 필수** — 중복(2회+)은 위 루프가, 유실(0회)은 여기서 잡는다.
+      # SPEC·PENDING_GATE·DEBT: **정확히 1회 존재 필수** — 중복(2회+)은 위 루프가, 유실(0회)은 여기서 잡는다.
       #   grep -c 로 정확히 1을 요구하고, 값이 bit enum(0/1)인지 검증. 유실=손상(손상된 부분 갱신·수기 편집 방어).
-      for k in PENDING_GATE FAST_DEBT; do
+      for k in SPEC PENDING_GATE DEBT; do
         [ "$corrupt" = 0 ] || break
         c=$(grep -cE "^$k=" "$p" 2>/dev/null || true)
         if [ "${c:-0}" != 1 ]; then corrupt=1; break; fi

@@ -1,4 +1,6 @@
-# gate-guard 케이스 — 면제 분류·모드 게이트·상태 갱신 (SCHEMA=3 · 모드 5종)
+# gate-guard 케이스 — 면제 분류·게이트(SPEC→MODE)·상태 갱신 (v4 SCHEMA=4 · auto/lazy)
+# v4 삭제 매핑(task-04 acceptance): gt_15~23(pair 모드 삭제 — is_test_file·로직 차단·Bash 리마인더) ·
+#   gt_08b(refactor/fast 모드값 삭제 — 구 값은 quarantine, ss_18/ss_19 가 후신).
 
 test_gt_01() { # [red #8a] 프로젝트 밖(임시 디렉토리, repo 아님) Write는 UNSET에서도 면제
   write_state UNSET
@@ -43,7 +45,7 @@ test_gt_05() { # [green] 병렬 PostToolUse — per-pid 성공 + 상태 무손�
   assert_single_line PENDING_GATE pending-single
   assert_state PENDING_GATE 1 pending-set
   assert_single_line SCHEMA schema-single
-  assert_state SCHEMA 3 schema-intact
+  assert_state SCHEMA 4 schema-intact
   grep -qE '^(SCHEMA|MODE|PENDING_GATE)=' "$STATE" || fail state-intact
 }
 
@@ -113,95 +115,11 @@ test_gt_08() { # [green] auto → 게이트 없음
   assert_exit 0 auto-post-pass
 }
 
-test_gt_08b() { # [green] refactor·fast → 게이트 관점 auto와 동일(통과)
-  write_state refactor
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
-  assert_exit 0 refactor-pre-pass
-  write_state fast
-  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
-  assert_exit 0 fast-pre-pass
-}
-
 test_gt_09() { # [green] 정상 docs/plans 경로는 UNSET에서도 면제 (F4)
   write_state UNSET
   mkdir -p "$REPO/docs/plans/x"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/plans/x/task.md")"
   assert_exit 0 plans-exempt
-}
-
-test_gt_15() { # [green phase-05] pair 모드 + 테스트파일 컨벤션(Java) → Claude Edit/Write 허용
-  write_state pair
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/FooTest.java")"
-  assert_exit 0 pair-testfile-pre-pass
-  run_hook gate-guard.sh "$(json_file PostToolUse Write "$REPO/src/FooTest.java")"
-  assert_exit 0 pair-testfile-post-pass
-}
-
-test_gt_16() { # [green phase-05] pair 모드 + 로직 파일 → PreToolUse 항상 차단(사용자만 타이핑)
-  write_state pair
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PreToolUse Edit "$REPO/src/Foo.java")"
-  assert_exit 2 pair-logicfile-block
-  assert_stderr_match 'pair 모드' pair-logicfile-msg
-}
-
-test_gt_17() { # [green phase-05] pair 모드 + tests/ 디렉토리 경로 컨벤션 → 허용(확장자 무관)
-  write_state pair
-  mkdir -p "$REPO/tests"
-  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/tests/foo_helper.rb")"
-  assert_exit 0 pair-testdir-pass
-}
-
-test_gt_18() { # [green phase-05] pair 모드 + Python 테스트 컨벤션(test_*.py) → 허용
-  write_state pair
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/test_foo.py")"
-  assert_exit 0 pair-py-testfile-pass
-}
-
-test_gt_19() { # [green phase-05] pair 모드 + 로직파일 PostToolUse 도달 → 차단은 불가하나 감사 경고 남김(review 발견)
-  write_state pair
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PostToolUse Edit "$REPO/src/Foo.java")"
-  assert_exit 0 pair-logicfile-post-noop
-  assert_stderr_match '경고' pair-logicfile-post-warn
-}
-
-test_gt_20() { # [green phase-05 review-fix] pair 모드 + Bash sed -i 로직파일 → 소프트 리마인더(하드 차단 없음)
-  write_state pair
-  run_hook gate-guard.sh "$(json_bash "sed -i 's/a/b/' src/Foo.java")"
-  assert_exit 0 pair-bash-pass
-  assert_stderr_match 'pair 모드' pair-bash-reminder
-}
-
-test_gt_20b() { # [green phase-05 재점검 발견] pair 모드 + 패턴 밖 plain redirect(cp 등도 동일 원리) → 무조건 리마인더로 강화됐으니 통과
-  write_state pair
-  run_hook gate-guard.sh "$(json_bash "printf 'x' > src/Foo.java")"
-  assert_exit 0 pair-bash-plain-redirect-pass
-  assert_stderr_match 'pair 모드' pair-bash-plain-redirect-reminder
-}
-
-test_gt_21() { # [green phase-05 review-fix] pair 모드 + 접두어 없는 맨몸 Test.java → 이제 로직파일로 차단(오분류 수정)
-  write_state pair
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/Test.java")"
-  assert_exit 2 pair-bare-testjava-block
-}
-
-test_gt_22() { # [green phase-05] pair 모드 + MultiEdit 도구로 로직파일 → 차단(도구 커버리지)
-  write_state pair
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PreToolUse MultiEdit "$REPO/src/Foo.java")"
-  assert_exit 2 pair-multiedit-logic-block
-}
-
-test_gt_23() { # [green phase-05] pair 모드 + MultiEdit 도구로 테스트파일 → 허용(도구 커버리지)
-  write_state pair
-  mkdir -p "$REPO/src"
-  run_hook gate-guard.sh "$(json_file PreToolUse MultiEdit "$REPO/src/FooTest.java")"
-  assert_exit 0 pair-multiedit-testfile-pass
 }
 
 # ── C1 L0/L1 분류 매트릭스 (task-03b) ──────────────────────────────────────────
@@ -575,21 +493,52 @@ test_gt_54b() { # [green 정합#5] 정상 회귀: repo-밖 스크래치패드(�
   assert_exit 0 scratchpad-regression-L0-pass
 }
 
-test_gt_55() { # [task-03c] UNSET L1 차단 = 5택 전부(stderr) + 구 모드명 부재
+test_gt_55() { # [v4] SPEC=1·MODE=UNSET L1 차단 = 자율성 2택(auto/lazy) 안내 + 구 모드명 부재
   write_state UNSET
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
-  assert_exit 2 unset-5choice-block
+  assert_exit 2 unset-2choice-block
+  assert_stderr_match 'MODE=UNSET' choice-state
   assert_stderr_match 'auto' choice-auto
   assert_stderr_match 'lazy' choice-lazy
-  assert_stderr_match 'pair' choice-pair
-  assert_stderr_match 'refactor' choice-refactor
-  assert_stderr_match 'fast' choice-fast
-  # 03c 확장(단일줄→5줄 설명)을 실제로 구별 — 구 메시지엔 없던 설명 문구 (Opus F1: revert 시 red 보장)
   assert_stderr_match '이해 게이트' choice-lazy-desc
-  assert_stderr_match 'TDD' choice-pair-desc
-  assert_stderr_match '특성테스트' choice-refactor-desc
-  assert_stderr_no_match 'auto-implements|lazy-implements|auto-write|lazy-write|WRITE_PHASE|write-handoff' choice-no-old-mode
+  assert_stderr_match 'set-state' choice-record-cmd
+  assert_stderr_no_match 'pair|refactor|fast|auto-implements|lazy-write|WRITE_PHASE' choice-no-old-mode
+}
+
+test_gt_58() { # [v4] SPEC=0 → L1 차단: 인터뷰→명세 합의 안내 + 긴급 경로 안내 (모드보다 선행)
+  write_state UNSET 0 0 0
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 2 spec0-block
+  assert_stderr_match 'SPEC=0' spec0-state
+  assert_stderr_match 'spec-approved' spec0-record-cmd
+  assert_stderr_match 'requirement-spec' spec0-doc
+  assert_stderr_match 'emergency' spec0-emergency-path
+}
+
+test_gt_58b() { # [v4] SPEC=0 + MODE=auto (직전 모드 잔존) → 여전히 차단 — SPEC 게이트가 모드보다 선행
+  write_state auto 0 0 0
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 2 spec0-mode-set-still-block
+  assert_stderr_match 'SPEC=0' spec0-mode-set-msg
+}
+
+test_gt_58c() { # [v4] SPEC=0 PostToolUse → 비차단(exit 0) — Post 는 관측만
+  write_state UNSET 0 0 0
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PostToolUse Write "$REPO/src/a.c")"
+  assert_exit 0 spec0-post-pass
+}
+
+test_gt_59() { # [v4] 긴급 전이 시나리오: set-state emergency 후 → L1 통과 (fail-open 아닌 명시적 상태 기록)
+  write_state UNSET 0 0 0
+  set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" emergency "$STATE" >/dev/null 2>&1; set -e
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 0 emergency-then-pass
+  assert_state DEBT 1 emergency-debt-standing
 }
 
 # ── 최종 감사 blocker #1: 상태파일 Claude Edit/Write 하드 거부 (state-lib 소유) ──────────

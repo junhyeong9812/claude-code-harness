@@ -3,11 +3,11 @@
 # stdin JSON: {session_id, cwd, source, ...}
 #
 # 정책 (core.md §1 C3):
-#   - 상태 파일: <project>/.claude/lazymode/<session_id> — SCHEMA=3 flat KEY=value(state-lib.sh 소유).
-#   - **init-if-absent**: 파일 있으면 손상 검사 후 보존(resume → 모드/PENDING 복구), 없으면 UNSET 생성.
-#   - 손상(타입이상·미지 SCHEMA·구 모드값 auto-implements·*-write 등) → quarantine + UNSET 재생성(자동 변환 금지).
+#   - 상태 파일: <project>/.claude/lazymode/<session_id> — SCHEMA=4 flat KEY=value(state-lib.sh 소유).
+#   - **init-if-absent**: 파일 있으면 손상 검사 후 보존(resume → SPEC/MODE/PENDING/DEBT 복구), 없으면 UNSET 생성.
+#   - 손상(타입이상·미지/구 SCHEMA·구 모드값 pair/refactor/fast 등) → quarantine + UNSET 재생성(자동 변환 금지).
 #   - source=clear → 강제 리셋(새 작업; id 유지 여부와 무관하게 새로 묻는다).
-#   - 시작 때 모드를 묻지 않는다 — 탐색·토론·학습 자유. 차단은 gate-guard가 정의됨 진입 시.
+#   - 시작 때 게이트 질문을 하지 않는다 — 탐색·토론·학습(L0) 자유. 차단은 gate-guard가 L1 진입 시(SPEC→MODE).
 #   - stale 세션 파일은 30일 경과분 prune(session_id 재사용 시 옛 모드 부활 방지).
 #   - session_id 는 파일명 sanitize([A-Za-z0-9-] 만). 빈 id면 inert.
 #
@@ -71,16 +71,16 @@ CURRENT=$(state_get "$STATE" MODE)
 
 # Claude에게 주입할 지시 — 지금은 묻지 말고, 정의됨 진입(L1) 시점에 묻게
 cat <<MSG
-[모드] 활성. 현재 구현 모드: ${CURRENT:-UNSET}. 세션 상태파일: .claude/lazymode/$SESSION_ID
-★ 지금(세션 시작) 모드를 묻지 마세요. 개념 탐색·토론·리서치·분석(L0)은 모드 없이 자유 — 이때 모드 질문 금지.
-**'이걸 구현/설계/계획하자'며 L1(구현)에 진입할 때** 모드를 묻습니다 — 새 task.md 생성 시 task-mode-guard가 모드 선택을 띄우고, gate-guard가 첫 산출물(코드) 변경을 막아 강제합니다(task.md 자체는 안 막음).
-구현 모드 5종(평평한 레퍼토리 — 완결 프로토콜, 태스크마다 재질문):
-  • auto — 앞단(정의·계획) 합의 후 Claude 자율 실행. per-diff 이해 게이트 없음(검증·codex는 stakes 규칙대로).
-  • lazy — 매 diff 사용자 이해 게이트(주관식→판정 워커). 자율주행 금지. (implementation-lazymode.md)
-  • pair — 대화로 정의·설계 합의 → TDD(테스트 1개=사이클) → 사용자가 로직 타이핑, Claude는 테스트/보일러플레이트+핑퐁 리뷰만. (pair-coding.md)
-  • refactor — 보존 동작 합의 → 특성테스트 baseline green → 소단위 변환 → 종료 증명(동작 diff 0). (refactoring.md)
-  • fast — 스모크(실행 확인) 즉시, 정의·계획·리뷰·테스트·문서는 빚 후불(진입 확인+불가역 데이터 턱). 빚 해소 전 완료 선언 금지·차기 정의됨 진입 시 빚 우선.
-선택을 받으면 위 세션 상태파일의 MODE 에 그 값을 기록하고 진행하세요. (정책: core.md §1)
+[게이트] 활성. 현재 상태: MODE=${CURRENT:-UNSET}. 세션 상태파일: .claude/lazymode/$SESSION_ID
+★ 지금(세션 시작) 게이트 질문을 하지 마세요. 탐색·토론·리서치·분석(L0)은 자유 — docs/** 기록 포함.
+**실행물을 만들거나 바꾸려는 순간(L1)** 게이트가 발동합니다 (core v4 §1):
+  ① 전수 인터뷰 → requirement-spec.md(필수 6칸 — 빈 칸 금지) 작성 → 사용자 합의
+     → bash ~/.claude/hooks/set-state.sh spec-approved .claude/lazymode/$SESSION_ID
+  ② 자율성 2택 질문 — auto(합의 후 자율 실행, 기본 권장) / lazy(매 diff 이해 게이트 — 학습·OSS)
+     → bash ~/.claude/hooks/set-state.sh mode <선택> .claude/lazymode/$SESSION_ID
+  긴급 수정(유일 예외): 새 작업 폴더에 log.md 생성 → 사용자 긴급 확인(+불가역 데이터 턱)
+     → set-state.sh emergency (스모크 즉시, 생략분은 log.md '생략한 검증' 빚 — 해소 전 완료 선언 금지)
+gate-guard 가 SPEC=0 또는 MODE=UNSET 인 L1 쓰기를 차단해 이 순서를 강제합니다.
 MSG
 
 exit 0

@@ -1,10 +1,10 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
 f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-scan.sh
-43f905e9c69793aef2f3b317916139a66720231d96882acdf349b14e1921b3ea  cases/gate-guard.sh
+b75d77f90763e128a5356f7332a2e27d38d75572017b89cd910da81721b5cb62  cases/gate-guard.sh
 7e4a9e1911da9318b7c57d49da2fac658b7627ec9f4cf2e4c72d2b2f2f0b97a0  cases/git-guard.sh
-4446ede0b74fe7ef40e1dec93b04452ab941f007b7e6d8951cc09ac277c974a9  cases/misc-guards.sh
-1ada4a030e7fa6ae449b2e96bf5e353f62df843ad41dee204e9db693cca1e754  cases/state-schema.sh
-5ba9c2f259e24985b5db12042f32cb4f10a791c8b1d039bb779b792d6283139e  lib.sh
+fcb75afc4bc3ca7d82bff657a7926bd1f70a1eb91b33af9f65e51a6cbd1c23bc  cases/misc-guards.sh
+6e001b48b0ca83e1bc2145177040027b446b7f4011a158d14ea4ff45116799d7  cases/state-schema.sh
+6a778fcb02db6ec70cf1b1d559ac8e28463c93d1339d66be2f85698ac26f6565  lib.sh
 7d194f60b055c7759d65b782e610b384f75dae1d4b40332322ec9c8218034fd9  run.sh
 # test: test_cp_01
 # test: test_cp_02
@@ -65,22 +65,11 @@ f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-sc
 # test: test_gt_06
 # test: test_gt_07
 # test: test_gt_08
-# test: test_gt_08b
 # test: test_gt_09
 # test: test_gt_11
 # test: test_gt_12
 # test: test_gt_13
 # test: test_gt_14
-# test: test_gt_15
-# test: test_gt_16
-# test: test_gt_17
-# test: test_gt_18
-# test: test_gt_19
-# test: test_gt_20
-# test: test_gt_20b
-# test: test_gt_21
-# test: test_gt_22
-# test: test_gt_23
 # test: test_gt_24
 # test: test_gt_25
 # test: test_gt_26
@@ -125,17 +114,16 @@ f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-sc
 # test: test_gt_56c
 # test: test_gt_57
 # test: test_gt_57b
+# test: test_gt_58
+# test: test_gt_58b
+# test: test_gt_58c
+# test: test_gt_59
 # test: test_rm_01
 # test: test_rm_02
 # test: test_rm_03
 # test: test_rm_04
 # test: test_rm_05
 # test: test_rm_06
-# test: test_sc_01
-# test: test_sc_02
-# test: test_sc_03
-# test: test_setmode_records_valid
-# test: test_setmode_rejects_invalid
 # test: test_sg_01
 # test: test_sg_02
 # test: test_ss_01
@@ -155,6 +143,15 @@ f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-sc
 # test: test_ss_15
 # test: test_ss_16
 # test: test_ss_17
+# test: test_ss_18
+# test: test_ss_19
+# test: test_ss_20
+# test: test_st_01
+# test: test_st_02
+# test: test_st_03
+# test: test_st_04
+# test: test_st_05
+# test: test_st_06
 # test: test_tm_01
 # test: test_tm_02
 # test: test_tm_03
@@ -164,17 +161,3 @@ f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-sc
 # test: test_tm_07
 # test: test_tm_08
 # test: test_tm_09
-# test: test_tm_10
-# test: test_tm_11
-# test: test_tp_01
-# test: test_tp_01b
-# test: test_tp_02
-# test: test_tp_03
-# test: test_tp_04
-# test: test_tp_05
-# test: test_tp_06
-# test: test_tp_07
-# test: test_tp_08
-# test: test_tp_09
-# test: test_tp_10
-# test: test_tp_11

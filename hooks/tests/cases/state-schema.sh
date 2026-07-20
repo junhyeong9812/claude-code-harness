@@ -1,12 +1,12 @@
-# state-schema.sh — 상태 스키마 C3 케이스 (task-03a)
-#   손상(디렉토리·깨진 내용·구 모드값·미지 SCHEMA) → quarantine + UNSET 재생성 + 게이트 재질문
-#   중단된 쓰기(temp 잔재) 무손상 / 동시 세션 격리 / session_id sanitize / init SCHEMA=3
+# state-schema.sh — 상태 스키마 케이스 (v4 SCHEMA=4 — harness-v4-slimdown task-04)
+#   손상(디렉토리·깨진 내용·구 모드값·구/미지 SCHEMA) → quarantine + UNSET 재생성 + 게이트 재질문
+#   중단된 쓰기(temp 잔재) 무손상 / 동시 세션 격리 / session_id sanitize / init SCHEMA=4
 
 # 손상 상태에서 gate-guard PreToolUse(코드 파일)를 돌리면: quarantine 파일 생성 + STATE는 UNSET 정규파일 + 차단.
 _assert_quarantined_to_unset() { # <assert-prefix>
   ls -d "$STATE".corrupt-* >/dev/null 2>&1 || fail "$1-no-quarantine"
   [ -f "$STATE" ] || fail "$1-not-regular"
-  assert_state SCHEMA 3 "$1-schema"
+  assert_state SCHEMA 4 "$1-schema"
   assert_state MODE UNSET "$1-mode"
 }
 
@@ -45,7 +45,23 @@ test_ss_04() { # 미지 SCHEMA(SCHEMA=2) → quarantine + UNSET + 차단
   _assert_quarantined_to_unset unknown-schema
 }
 
-test_ss_05() { # 유효 SCHEMA=3 + 유효 MODE → quarantine 없음(무손상 통과)
+test_ss_18() { # [v4 마이그레이션] 구 SCHEMA=3 파일(pair 등 구 모드값 포함) → quarantine + UNSET + 차단 (자동 변환 금지)
+  printf 'SCHEMA=3\nMODE=pair\nPENDING_GATE=0\nFAST_DEBT=1\n' > "$STATE"
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 2 v3-schema-block
+  _assert_quarantined_to_unset v3-schema
+}
+
+test_ss_19() { # [v4] SCHEMA=4 인데 구 모드값(refactor) → enum 밖 → quarantine + UNSET + 차단
+  printf 'SCHEMA=4\nMODE=refactor\nSPEC=1\nPENDING_GATE=0\nDEBT=0\n' > "$STATE"
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 2 v4-oldmode-block
+  _assert_quarantined_to_unset v4-oldmode
+}
+
+test_ss_05() { # 유효 SCHEMA=4 + 유효 MODE(+SPEC=1) → quarantine 없음(무손상 통과)
   write_state auto
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
@@ -70,7 +86,7 @@ test_ss_07() { # 동시 세션 격리: 다른 session_id 상태는 서로 간섭
   write_state auto                                   # SID = auto
   local sid2="${SID}x2"
   local st2="$STATE_DIR/$sid2"
-  { echo "SCHEMA=3"; echo "MODE=lazy"; echo "PENDING_GATE=0"; echo "FAST_DEBT=0"; } > "$st2"
+  { echo "SCHEMA=4"; echo "MODE=lazy"; echo "SPEC=1"; echo "PENDING_GATE=0"; echo "DEBT=0"; } > "$st2"
   mkdir -p "$REPO/src"
   local j2; j2=$(jq -cn --arg f "$REPO/src/a.c" --arg c "$REPO" --arg s "$sid2" \
     '{hook_event_name:"PostToolUse", tool_name:"Edit", tool_input:{file_path:$f}, cwd:$c, session_id:$s}')
@@ -99,26 +115,28 @@ test_ss_08() { # [loop3] session_id sanitize 정책: 허용 외 문자 → state
   return 0
 }
 
-test_ss_09() { # session-mode-guard init: SCHEMA=3·UNSET 생성, WRITE_PHASE 없음
+test_ss_09() { # session-mode-guard init: SCHEMA=4·UNSET·SPEC=0 생성, WRITE_PHASE 없음
   rm -f "$STATE"                                      # 없는 상태에서 init
   local j; j=$(jq -cn --arg c "$REPO" --arg s "$SID" \
     '{hook_event_name:"SessionStart", session_id:$s, cwd:$c, source:"startup"}')
   run_hook session-mode-guard.sh "$j"
   assert_exit 0 init-exit
-  assert_state SCHEMA 3 init-schema
+  assert_state SCHEMA 4 init-schema
   assert_state MODE UNSET init-mode
+  assert_state SPEC 0 init-spec
+  assert_state DEBT 0 init-debt
   if grep -q '^WRITE_PHASE=' "$STATE"; then fail init-no-write-phase; fi
   return 0
 }
 
-test_ss_10() { # source=clear → 유효 상태도 강제 UNSET 리셋(SCHEMA=3 유지)
+test_ss_10() { # source=clear → 유효 상태도 강제 UNSET 리셋(SCHEMA=4 유지)
   write_state auto
   local j; j=$(jq -cn --arg c "$REPO" --arg s "$SID" \
     '{hook_event_name:"SessionStart", session_id:$s, cwd:$c, source:"clear"}')
   run_hook session-mode-guard.sh "$j"
   assert_exit 0 clear-exit
   assert_state MODE UNSET clear-reset
-  assert_state SCHEMA 3 clear-schema
+  assert_state SCHEMA 4 clear-schema
 }
 
 test_ss_11() { # [Fix9] 동일 SID 병렬 state_set 다수 → 최종 파일 유효(SCHEMA 1행·키 단일, 손상 아님)
@@ -126,15 +144,15 @@ test_ss_11() { # [Fix9] 동일 SID 병렬 state_set 다수 → 최종 파일 유
   write_state auto
   local pids="" i p
   for i in 0 1 0 1 0 1 0 1; do
-    ( state_set "$STATE" PENDING_GATE "$i" FAST_DEBT "$i" ) &   # 다중 KEY=V 원자 쌍
+    ( state_set "$STATE" PENDING_GATE "$i" DEBT "$i" ) &   # 다중 KEY=V 원자 쌍
     pids="$pids $!"
   done
   for p in $pids; do wait "$p"; done
   assert_single_line SCHEMA par-schema-single
   assert_single_line MODE par-mode-single
   assert_single_line PENDING_GATE par-pending-single
-  assert_single_line FAST_DEBT par-fastdebt-single
-  assert_state SCHEMA 3 par-schema
+  assert_single_line DEBT par-debt-single
+  assert_state SCHEMA 4 par-schema
   # 최종 상태는 손상이 아니어야 한다 — ensure_valid(gate PreToolUse auto) 통과 + quarantine 없음
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
@@ -143,7 +161,7 @@ test_ss_11() { # [Fix9] 동일 SID 병렬 state_set 다수 → 최종 파일 유
 }
 
 test_ss_12() { # [Fix9] PENDING_GATE=2 (비트 enum 밖) → quarantine + UNSET + 차단
-  printf 'SCHEMA=3\nMODE=auto\nPENDING_GATE=2\nFAST_DEBT=0\n' > "$STATE"
+  printf 'SCHEMA=4\nMODE=auto\nSPEC=1\nPENDING_GATE=2\nDEBT=0\n' > "$STATE"
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
   assert_exit 2 pending2-block
@@ -187,18 +205,26 @@ test_ss_17() { # [loop3+] sid 끝 개행("abc\n") — 명령치환 strip 우회 
   [ ! -e "$REPO/.claude/lazymode/abc" ] || fail newline-sid-no-collision-file
 }
 
-test_ss_15() { # [loop3] PENDING_GATE·FAST_DEBT 유실(SCHEMA·MODE만) → quarantine + UNSET + 차단 (부분갱신·수기편집 방어)
-  printf 'SCHEMA=3\nMODE=lazy\n' > "$STATE"           # PENDING_GATE·FAST_DEBT 둘 다 유실
+test_ss_15() { # [loop3] SPEC·PENDING_GATE·DEBT 유실(SCHEMA·MODE만) → quarantine + UNSET + 차단 (부분갱신·수기편집 방어)
+  printf 'SCHEMA=4\nMODE=lazy\n' > "$STATE"           # SPEC·PENDING_GATE·DEBT 전부 유실
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
   assert_exit 2 keyloss-block
   _assert_quarantined_to_unset keyloss
 }
 
-test_ss_16() { # [loop3] FAST_DEBT 만 유실(PENDING_GATE 존재) → quarantine + UNSET + 차단
-  printf 'SCHEMA=3\nMODE=auto\nPENDING_GATE=0\n' > "$STATE"   # FAST_DEBT 유실
+test_ss_16() { # [loop3] DEBT 만 유실(SPEC·PENDING_GATE 존재) → quarantine + UNSET + 차단
+  printf 'SCHEMA=4\nMODE=auto\nSPEC=1\nPENDING_GATE=0\n' > "$STATE"   # DEBT 유실
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
-  assert_exit 2 fastdebt-loss-block
-  _assert_quarantined_to_unset fastdebt-loss
+  assert_exit 2 debt-loss-block
+  _assert_quarantined_to_unset debt-loss
+}
+
+test_ss_20() { # [v4] SPEC 만 유실 → quarantine + UNSET + 차단 (SPEC 도 정확히 1회 필수)
+  printf 'SCHEMA=4\nMODE=auto\nPENDING_GATE=0\nDEBT=0\n' > "$STATE"   # SPEC 유실
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 2 spec-loss-block
+  _assert_quarantined_to_unset spec-loss
 }

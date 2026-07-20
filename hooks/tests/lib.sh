@@ -26,9 +26,8 @@ sandbox_init() {
   echo base > "$REPO/README.md"
   gitq add README.md >/dev/null 2>&1
   gitq commit -qm init >/dev/null 2>&1
-  rm -f "/tmp/scope-guard-$SID.warned"   # 현행 scope-guard /tmp 마커 격리 불가 보완
   # 정리: 쓰기불가 상태로 중도 사망해도 잔재가 없도록 u+w 선행, 테스트가 만든 /tmp 마커도 제거 (P1-05)
-  trap 'chmod -R u+rwX "$SANDBOX" 2>/dev/null; rm -rf "$SANDBOX" "/tmp/scope-guard-$SID.warned"' EXIT
+  trap 'chmod -R u+rwX "$SANDBOX" 2>/dev/null; rm -rf "$SANDBOX"' EXIT
 }
 
 # 훅 실행: run_hook <hook파일명> <stdin-json>  → HOOK_EXIT / HOOK_STDERR
@@ -69,9 +68,9 @@ json_prompt() { # <prompt>
     '{hook_event_name:"UserPromptSubmit", prompt:$p, cwd:$c, session_id:$s}'
 }
 
-# 상태·사이드카 셋업 (SCHEMA=3 — 1행 고정)
-write_state() { # MODE [PENDING] [FAST_DEBT]
-  { echo "SCHEMA=3"; echo "MODE=$1"; echo "PENDING_GATE=${2:-0}"; echo "FAST_DEBT=${3:-0}"; } > "$STATE"
+# 상태·사이드카 셋업 (SCHEMA=4 — 1행 고정. SPEC 기본 1: 기존 "모드만 세팅" 케이스의 게이트 의미 보존)
+write_state() { # MODE [PENDING] [DEBT] [SPEC]
+  { echo "SCHEMA=4"; echo "MODE=$1"; echo "SPEC=${4:-1}"; echo "PENDING_GATE=${2:-0}"; echo "DEBT=${3:-0}"; } > "$STATE"
 }
 write_sidecar() { # <turn> <ts> <body>
   printf '#turn=%s\n#ts=%s\n%s' "$1" "$2" "$3" > "$SIDECAR"
