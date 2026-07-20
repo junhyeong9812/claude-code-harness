@@ -1,20 +1,20 @@
-# Claude Code 작업 하네스 (v2)
+# Claude Code 작업 하네스 (v3)
 
 Claude Code가 즉흥적으로 산출물을 만지지 않고, **정의 → 계획 → 개발 → 검증 → 기록**을 거치도록 하는 설정 패키지.
-v2(2026-06-10, Fable 5)는 v1의 "절차를 촘촘히 강제하는 외골격"을 **"판단 기준을 제공하는 단일 핵심 문서 + 강제가 필요한 곳만 훅/네이티브 도구"**로 전면 개편한 버전이다.
+v3(2026-07-19)는 2개월 실측을 근거로 v2의 [탐색중]↔[정의됨] 2상태를 **L0(자율)/L1(구현) 경계 + 구현 모드 5종**으로 재설계하고, 기록을 라이브 타임라인(master-plan + task-process)으로 단순화한 버전이다. (v2의 "판단 기준을 제공하는 단일 핵심 문서 + 강제가 필요한 곳만 훅/네이티브 도구" 철학은 유지.)
 
 ---
 
 ## 핵심 철학
 
 1. **상시 선독은 core 하나.** 세션마다 읽는 규칙은 `CLAUDE.md`(11줄, 부트스트랩) + `core.md`(~200줄)뿐. 나머지는 트리거 시에만 읽는 조건부 문서다. (v1: 매 구현 세션 ~50k 토큰 선독)
-2. **모드가 아니라 테스크 상태.** 토론/구현 라우팅을 없애고, 작업은 [탐색 중] ↔ [정의됨] 두 상태만 가진다. 경계는 발화 동사가 아니라 **명확도 6칸**(목표·대상 / 경계·불변식 / 기준소스 / 금지영역 / 검증 방법 / stakes)의 충족 여부다.
+2. **L0/L1 상태 경계.** 작업은 [L0 자율](대화·리서치·분석·설계 + 그 기록 docs/**)과 [L1 구현](실행·적용되는 것 전부 — 코드·설정·스키마 + 실행 정책 파일)으로 나뉜다. 경계는 발화 동사가 아니라 실행물 변경 여부이고, L1 진입은 **명확도 6칸**(목표·대상 / 경계·불변식 / 기준소스 / 금지영역 / 검증 방법 / stakes) 충족 + **구현 모드 5택**을 요구한다.
 3. **검증은 stakes 비례.** stakes(틀렸을 때 손실·낯섦·모호성·불가역 — "변경 크기" 아님)가 외부 검색·codex 교차 검증·워커 분리·산출물 강도를 정한다. 균일 의무는 없되, 머지 전 최소 안전선은 stakes 무관 항상.
 4. **정책은 남기고 보상은 버린다.** 사용자 권한·책임 경계(승인 게이트·기준소스 확정·금지영역)는 모델 무관 유지. 구모델 약점 보상 규칙(전부 읽기 강제·단계 상태머신·페르소나 라이브러리)은 제거. 규칙 증감은 측정(`measurement-log`) 근거로만.
 5. **절단은 구조로.** 생성≠검증(테스트 설계는 구현 diff 미열람, 리뷰는 구현자와 분리)을 산문 규칙이 아니라 **네이티브 서브에이전트의 컨텍스트 격리**로 집행한다. 대규모 fan-out은 Workflow 도구(opt-in).
-6. **learned.md·changelog.md는 제품이다.** 사용자의 학습 산출물 — 프로세스 기록이 아니므로 간소화 대상이 아니다. learned = 전이 가능한 새 지식(트리거: 학습 가치) / changelog = 이번 diff의 의사결정 로그(트리거: 코드 구현 — 대안 비교·근거·리뷰 연습 포인트로 사용자의 코드 리뷰 능력을 훈련).
-7. **질문이 본체다 — "무엇을 보나"의 기준화.** 시니어가 변경을 볼 때 도는 점검 차원(입력 검증·권한·정합성·동시성·예외·성능·장애·운영·보안·계약·도메인 규칙·모델링·비용·가시성 14개 + 표면별 팩)을 `dimensions.md`로 명시하고, **모든 정의됨 작업에서 전수 트리아지**(해당/비해당 + 증거 인용)한다. stakes도 감이 아니라 활성 차원에서 도출된다. 프로세스는 이 질문들이 빠짐없이 던져지게 하는 장치다. (근거: docs/16, 인간용 질문 원문: docs/17·18)
-8. **작업 모드(lazy-busy)는 직교 축이다 — 학습을 위한 강제.** 게이팅 강도를 정하는 별도 축. 정의됨 진입 시 훅이 **2축 4분기**를 강제 선택시킨다: 구현 게이트 축(`auto` 자율 / `lazy` 매 diff 주관식 이해 게이트 — 판정은 독립 워커) × 핸드오프 축(`implements` 코드 유지 / `write` 구현·기록 후 코드 롤백 → 사용자가 `writing.md` 보고 직접 필사 → 검증). AI 시대의 핵심은 '검증할 사람'인데 자율주행은 학습이 안 남는다 → 읽기(lazy)·쓰기(write)로 이해를 강제한다. **발생은 훅(gate-guard 등 5종), 판정은 문서/워커.** 토큰 비용은 의도된 비용.
+6. **학습 산출물은 라이브 타임라인 + 옵트인 노트다.** 코드 구현마다 `task-process.md` **완료 요약**(무엇이 됐나·핵심 diff before/after 스니펫·배운 것·남은 빚)이 리뷰 훈련 겸 기록을 맡고, 그 위의 개념·동작 모델·전이 지식 정리는 **`learning-note`(옵트인)** — 사용자가 요청하거나 높음+학습 가치가 클 때만 작성한다(구 OVERVIEW·changelog·learned·TECHNICAL 4종의 통합 후신).
+7. **질문이 본체다 — "무엇을 보나"의 기준화.** 시니어가 변경을 볼 때 도는 점검 차원(입력 검증·권한·정합성·동시성·예외·성능·장애·운영·보안·계약·도메인 규칙·모델링·비용·가시성 14개 + 표면별 팩)을 `dimensions.md`로 명시하고, **모든 L1(구현) 작업에서 전수 트리아지**(해당/비해당 + 증거 인용)한다. stakes도 감이 아니라 활성 차원에서 도출된다. 프로세스는 이 질문들이 빠짐없이 던져지게 하는 장치다. (근거: docs/16, 인간용 질문 원문: docs/17·18)
+8. **구현 모드는 5종 평평한 레퍼토리다 — 학습·속도의 완결 프로토콜.** L1 진입 시 훅이 태스크마다 하나를 강제 선택시킨다: `auto`(Claude 구현·자율) · `lazy`(매 diff 주관식 이해 게이트 — 판정은 독립 워커) · `pair`(로직은 사용자가 타이핑, Claude는 테스트·보일러플레이트만 + TDD 핑퐁 리뷰) · `refactor`(특성테스트 baseline green → 동작 보존 변환 → 계약 표면 diff 0 종료 증명) · `fast`(스모크만 즉시, 리뷰·테스트·문서는 빚 — 해소 전 "완료" 금지). 직교 축이 아니라 **완결 프로토콜 5개**다. AI 시대의 핵심은 '검증할 사람'이라 lazy·pair가 이해를 강제하고, fast는 그 반대편의 속도 경로다. **발생은 훅(gate-guard 등), 판정은 문서/워커.**
 
 ---
 
@@ -27,29 +27,28 @@ claude-code-harness/
 ├── dimensions.md              # 개발 차원 지도 (정의 게이트마다) — 14차원 트리아지 표 + 단계 질문(P/I/V) + stakes 도출 + 질문 보정 루프
 ├── dimensions-{batch,frontend,infra}.md  # 확장팩 — surface detector가 조건부 로드 (각 ≤60줄)
 ├── playbooks/                 # 조건부 (트리거 시만 읽음, 각 ≤80줄)
-│   ├── orchestration.md       #   메인=관리감독, 워커 위임·브리핑·절단 계약·렌즈·Workflow
-│   ├── implementation.md      #   설계 §0(렌즈 선적용·자문 4질문·높음은 설계 codex 검증)·읽기·범위 통제·예외처리 일관성·페이즈/커밋 규율
-│   ├── implementation-lazymode.md #   작업 모드 lazy-*: 매 diff 주관식 이해 게이트(판정 독립 워커·before/after 스니펫·최대 2회)
-│   ├── write-handoff.md       #   작업 모드 *-write: 구현·기록 후 코드/테스트 롤백 → writing.md 필사 → 검증(지적만). 구현은 auto/lazy 상속
-│   ├── review.md              #   中=듀얼 1패스(반복 없음·post-fix 재점검) / 높음=병렬 듀얼 리뷰 루프(≤3) — Opus∥codex → 종합 → codex 감사 → 수정 + 판단 렌즈(diff정확성 4 + 완전성·운영성/통합·부작용 2 + 설계취향)·대칭 부담·자원속도 체크 8문항
-│   ├── verification.md        #   stakes 비례 회귀·예외 경로 테스트·플로우 디버깅(API/서비스 간/비동기)·데이터 특칙
-│   ├── git-workflow.md        #   원격 있는 작업: 이슈 → 작업 브랜치 → 페이즈 커밋 → 커밋 정리 → MR/PR (gh/glab, 외부 발행은 사용자 확인)
-│   └── open-source.md         #   오픈소스 기여 프로세스
+│   ├── orchestration.md       #   메인=관리감독, 워커(Opus)·브리핑·절단 계약·렌즈·depth-2·Workflow
+│   ├── implementation.md      #   설계 §0(렌즈 선적용·자문 6질문·높음은 설계 codex 검증)·읽기·범위 통제·예외처리 일관성·페이즈/커밋 규율
+│   ├── implementation-lazymode.md #   모드 lazy: 매 diff 주관식 이해 게이트(판정 독립 워커·before/after 스니펫·최대 2회)
+│   ├── pair-coding.md         #   모드 pair: 로직은 사용자 타이핑, Claude는 테스트/보일러플레이트만 + TDD 사이클·핑퐁 리뷰
+│   ├── refactoring.md         #   모드 refactor: 특성테스트 baseline green → 소단위 동작 보존 변환 → 계약 표면 diff 0 종료 증명
+│   ├── fast-mode.md           #   모드 fast: 스모크만 즉시, 리뷰·테스트·문서는 빚(task-process ## fast 빚) — 해소 전 완료 금지
+│   ├── review.md              #   中=듀얼 1패스(반복 없음·post-fix 재점검) / 높음=병렬 듀얼 리뷰 루프(≤3) — Opus∥codex → 종합 → codex 감사 → 수정 + 판단 렌즈·대칭 부담·codex 호출/보안 스캔(§5)
+│   ├── verification.md        #   stakes 비례 회귀·예외 경로 테스트·플로우 디버깅(API/서비스 간/비동기)·그린 위장 점검·데이터 특칙
+│   ├── git-workflow.md        #   원격 있는 작업: 작업 브랜치 → 페이즈 커밋 → 커밋 정리 → (요청 시 이슈) → MR/PR (gh/glab, 외부 발행은 사용자 확인)
+│   ├── design-taste.md        #   설계 품질·취향 렌즈 카탈로그 (8앵커·Fowler 코드냄새·DDD)
+│   └── open-source.md         #   오픈소스(upstream) 기여 프로세스
 ├── templates/
-│   ├── task.md                #   기본 산출물 1파일 (정의+계획+검증+기록)
-│   ├── changelog.md           #   코드 구현 작업마다 — 의사결정 로그 (J/M/G 전수 분류·대안 비교·근거 출처·라인별 해설·리뷰 연습 포인트)
-│   ├── overview.md            #   코드 구현 작업마다 — 추상 진입점 (주요 포인트 + 워크플로우 ASCII 다이어그램 + 딥다이브 인덱스)
-│   ├── technical.md           #   코드 구현 작업마다 — diff 비종속 동작 모델 (개념·불변조건·상태 소유권·실패모드 메커니즘)
-│   ├── learned.md (+example)  #   코드 구현 작업마다 — 학습 기록 풀 10항목 (사용자 공부용 제품)
-│   ├── review-log.md          #   리뷰/codex가 돈 작업(중간↑) — finding ledger (출처·file:line·채택/기각·해소)
-│   ├── writing.md             #   작업 모드 *-write — 필사 가이드 (앵커별 before/after + 설명 + 테스트)
+│   ├── master-plan.md         #   모든 L1 작업의 진입점 (문제 분석 + 6칸 + task 분해)
+│   ├── task-process.md        #   ★ 라이브 타임라인 (사건별 append + 완료 요약·fast 빚 — 단일 writer)
+│   ├── task.md                #   다단계 task 분리 시 (범위·검증)
 │   ├── definition.md          #   높은 stakes 정의 (경계×불변식×실패 의미론, 애매성 0)
-│   ├── master-plan.md         #   높은 stakes 다단계·대규모 (task.md 대체)
-│   ├── phase.md               #   페이즈 3파일 양식 (spec/changes/gate)
-│   └── measurement-log.md     #   작업당 측정 1행 (규칙 증감의 근거 데이터)
+│   ├── review-log.md          #   리뷰/codex가 돈 작업(중간↑ 필수) — finding ledger (출처·file:line·채택/기각·해소)
+│   ├── learning-note.md       #   학습노트 옵트인 — 개념·동작 모델·전이 지식 (구 OVERVIEW·changelog·learned·TECHNICAL 통합 후신)
+│   └── measurement-log.md     #   작업당 측정 1행 (규칙 증감의 근거 데이터 — 사용 워커 모델 포함)
 ├── hooks/                     # 강제(발생)만 결정론적으로:
-│   │                          #   git-guard(push·docs커밋 가드 — 현재 턴 프롬프트 + jsonl) · scope-guard(docs/code 혼합 경고) · template-guard(산출물 템플릿 미준수 경고)
-│   │                          #   작업 모드(lazy-busy): session-mode-guard·reinject-mode·capture-prompt·gate-guard·task-mode-guard
+│   │                          #   git-guard(push 가드 — 현재 턴 사이드카, push-only) · scope-guard(docs/code 혼합 경고) · template-guard(산출물 템플릿 미준수 경고)
+│   │                          #   구현 모드: session-mode-guard·reinject-mode·capture-prompt·gate-guard·task-mode-guard
 ├── settings.json              # 훅 8종 배선 (SessionStart·UserPromptSubmit·PreToolUse·PostToolUse)
 ├── archive/                   # v1 전체(2026-06-10-opus-harness) + 하네스 v2 스냅샷(2026-06-20-harness-v2)
 └── docs/                      # 설계 이력 (08~16 + HISTORY) + plans/ (작업별 산출물·설계) + 학습 제품 (17·18 개발 핵심질문)
@@ -60,35 +59,36 @@ claude-code-harness/
 ```
 사용자 입력
   │
-  ├─ 산출물 변경 없음(토론·학습·설계) → 자유 진행 [탐색 중]
+  ├─ [L0 자율] 대화·리서치·분석·설계 + 그 기록(docs/**) → 게이트 없음, 자유 진행
   │    └─ 결론이 구현 입력이 되는 순간 실코드 재확인 / 고위험 결론은 확정 전 교차 검증
   │
-  └─ 산출물 변경 → 정의 게이트(명확도 6칸 + 14차원 트리아지 + 사용자 합의) [정의됨]
-       → 작업 모드 선택(훅 강제: auto-implements | lazy-implements | auto-write | lazy-write)
-       → 계획(사용자 승인) → 개발(설계: 렌즈 선적용 → 절단: 구현 ∥ 테스트설계 → 리뷰; lazy면 매 diff 이해 게이트) → 검증(stakes 비례 + 활성 차원 렌즈) → 기록(측정 1행 + 산출물 판정)
-       → (*-write면) 코드/테스트 롤백 → 사용자 필사(writing.md) → 검증·피드백
+  └─ 실행물을 만들거나 바꾸려는 순간 = [L1 구현] 진입
+       → 정의 게이트(명확도 6칸 + 14차원 트리아지 + 사용자 합의)
+       → 구현 모드 5택(훅 강제): auto | lazy | pair | refactor | fast
+       → 계획(사용자 승인) → 개발(설계: 렌즈 선적용 → 절단: 구현 ∥ 테스트설계 → 리뷰; lazy면 매 diff 이해 게이트) → 검증(stakes 비례 + 활성 차원 렌즈) → 기록(측정 1행 + task-process 완료 요약)
+          · pair = 로직은 사용자 타이핑 / refactor = 특성테스트 baseline → 동작 보존 변환 / fast = 스모크만 즉시·나머지 빚
 ```
 
 | stakes | 외부 검색 | codex | 테스트설계/리뷰 | 산출물 |
 |--------|----------|-------|----------------|--------|
-| 낮음 | — | — | 셀프체크 | task.md (전 차원 비활성 자명 작업은 트리아지 1행 축약) |
-| 중간 | 낯선 영역 | 듀얼 1패스에 포함 (설계 선검증 제외) | spec-우선 + 테스트 코드 정합성 점검 · 리뷰 = **듀얼 1패스**(Opus∥codex → 종합 → 감사 → 수정 → post-fix 타깃 재점검, 반복 없음) | task.md (+페이즈 절) |
-| 높음 | 의무 | 계획+설계+최종 (페이즈 diff는 리뷰 루프가 겸함) | 테스트설계 별도 워커(diff 미열람) · 리뷰 = **병렬 듀얼 리뷰 루프**(中 1패스 + 반복 ≤3, playbooks/review.md) | definition + task.md (다단계면 master-plan+phases) |
+| 낮음 | — | — | 셀프체크 | master-plan(얇게)+task-process (자명 작업은 트리아지 1행 축약·task 1개 인라인) |
+| 중간 | 낯선 영역 | 듀얼 1패스에 포함 (설계 선검증 제외) | spec-우선 + 테스트 코드 정합성 점검 · 리뷰 = **듀얼 1패스**(Opus∥codex → 종합 → 감사 → 수정 → post-fix 타깃 재점검, 반복 없음) | + review-log |
+| 높음 | 의무 | 계획+설계+최종 (페이즈 diff는 리뷰 루프가 겸함) | 테스트설계 별도 워커(diff 미열람) · 리뷰 = **병렬 듀얼 리뷰 루프**(中 1패스 + 반복 ≤3, playbooks/review.md) | + definition.md (다단계면 tasks/ 분리) |
 
-> 코드 구현이 있는 작업은 stakes 무관 **제품 산출물 4종**(`OVERVIEW`·`changelog`·`learned`·`TECHNICAL`) 추가 작성, 리뷰/codex가 돈 작업(중간↑)은 `review-log.md`까지. 경계: OVERVIEW=추상 지도(다이어그램) / changelog=이번 diff 의사결정(스니펫) / learned=사용 요소 카탈로그 / TECHNICAL=diff 비종속 동작 모델 / review-log=리뷰 finding.
+> 코드 구현이 있는 작업의 학습·기록은 `task-process.md` **완료 요약**(무엇이 됐나·핵심 diff before/after 스니펫·배운 것·남은 빚)이 맡고, 리뷰/codex가 돈 작업(중간↑)은 `review-log.md`가 필수다(finding ledger — 출처·file:line·채택/기각). 그 위의 개념·동작 모델·전이 지식 정리는 **`learning-note`(옵트인)** — 사용자 요청 또는 높음+학습 가치 클 때만. (구 OVERVIEW·changelog·learned·TECHNICAL 4종은 v3에서 이 둘로 통합.)
 
 ## 설치 / 배포
 
-배포 = repo 파일을 `~/.claude/`로 복사 (v1의 build.sh/dist 이중 구조 폐지):
+배포 = repo 산출물을 `~/.claude/`로 동기 (**`deploy.sh` 경유만** — core §6.4):
 
 ```bash
-cp CLAUDE.md core.md dimensions*.md ~/.claude/
-cp -r playbooks templates ~/.claude/
-cp hooks/*.sh ~/.claude/hooks/ && chmod +x ~/.claude/hooks/*.sh
-# settings.json은 기존 model 등 키를 보존하며 hooks 절만 반영
+bash hooks/deploy.sh --dry-run   # 배포 대상·diff 미리보기
+bash hooks/deploy.sh             # 원자 배포(기존 대상 backup mv → staging → 제자리 mv)
 ```
 
-구 버전이 설치돼 있으면 먼저 `~/.claude/.backup-*/`로 이동한다 (2026-06-10 배포 시 수행됨).
+- **manifest = 배포 대상**: `core.md`·`HISTORY.md`·`dimensions*.md`·`playbooks/`·`templates/`·`hooks/`. **CLAUDE.md·settings.json은 제외** — 역할 분기(글로벌은 `@core.md` 부트스트랩, 이 repo 로컬 CLAUDE.md는 포인터 / settings는 로컬 키 보존).
+- 기존 대상은 `~/.claude/.backup-*/`로 **mv**(cp 아님 — 부분 백업 파괴 없음), 실패 시 복원. 상세는 `hooks/deploy.sh` 헤더.
+- ⚠️ 새 clone·글로벌 설정 유실 환경은 먼저 `bash hooks/deploy.sh`로 부트스트랩(글로벌 `~/.claude/CLAUDE.md`의 `@core.md`가 규칙 본체를 주입).
 
 ---
 
@@ -126,5 +126,7 @@ cp hooks/*.sh ~/.claude/hooks/ && chmod +x ~/.claude/hooks/*.sh
 | **24** | **中 stakes 듀얼 리뷰 승격 + 대칭 부담 (2026-06-29)** — 中이 "별도 패스 1회(codex 단독 가능)"라 Opus 워커를 스킵할 여지가 남아 있던 것(2026-06-23 구멍)을 닫음. 中을 **듀얼 1패스**(Opus 워커 ∥ codex → 종합 → codex 감사 → 수정 → **post-fix 타깃 재점검 1회**, 반복 루프 없음)로 승격 → 高 = 中 + 반복 루프(≤3) + 설계 선검증 + blind 테스트 워커(이 둘만 高 전용). 中 테스트 = spec-우선 + **테스트 코드 자체 정합성 점검**(blind 워커 경량 대체). **대칭 부담**: 신규 finding 0 리뷰는 §3 렌즈 applicable 판정 후 **applicable 전부 verified**(고정수 X — "필수 finding 강제→날조" 함정 회피, `## verified` 섹션·template-guard 마커). 낮음·dimensions·§4 불변. core §5·`review.md`·`review-log.md`·`template-guard.sh` 배선. **약/강 2단 전면 개편안은 blast radius 과다로 기각**(中 승격만). codex 설계검증 15지적 반영(≥4 고정→applicable 전부 / 재리뷰 제거→post-fix 타깃재점검 / 외부검색 의무→조건부 / blind→테스트 정합성 점검). 설계=`docs/plans/2026-06-29/stakes-중간-듀얼리뷰-대칭부담/` |
 
 | **25** | **하네스 강화 1차 — 훅 결함 16건·문서 정합·컨텍스트 비용 (2026-07-03)** — 지난 1달 실사용 기록(measurement-log 188행·작업 260폴더·review-log 115개·메모리 58프로젝트)과 저장소를 리서치·codex 교차검증해 확정한 훅 결함 16건을 8페이즈로 수정·머지. ① **훅 테스트 하네스 신설**(`hooks/tests/` — fixture 러너, 결함 재현 baseline + 정상 회귀; 16건 red→green 실증, 66 green). ② **git-guard scoped one-shot 승인**(사이드카 `#turn`/`#ts` 단일 원천 + 부정문·질문·복합명령·add-all·전역옵션·heredoc 처리, jsonl 폴백 제거). ③ **gate-guard canonical 면제**(문자열 glob→`realpath` FILE 기준 repo 판정, leaf symlink·`..` 해소·경로조작 우회 차단, 프로젝트 밖 자연 면제). ④ **template-guard 대소문자 교정**(소문자 정규식이라 `OVERVIEW.md`·`TECHNICAL.md` 검사가 **도입 이래 실동작 0회**였던 것 복구) + task-mode 경로기반 리셋·scope untracked/rename 정합. ⑤ **컨텍스트 비용**: core.md 변경이력 ~18KB→`HISTORY.md` 분리, 이 repo 한정 core.md **이중 주입**(글로벌+프로젝트 CLAUDE.md) 해소. ⑥ 中 승격 미전파 등 문서 stale 5건 정합 + 낮음 stakes 경량화(before/after diff 필수)·measurement 고정 스키마·`deploy.sh` 원자 배포(staging+mv, CLAUDE.md·settings 제외). **codex 12회 + 페이즈별 병렬 듀얼 리뷰**(보안 경계 3루프·나머지 1패스+재점검). dogfood 교훈: git-guard 자연어 승인은 셸 파싱의 근본 한계(리뷰 loop마다 fail-open 엣지 — 근본 해소는 구조화 신호 전환, 별도 작업) / "다수결≠독립신호"(phase-04 Fable verified↔codex 실코드 검출) / 배포한 새 훅이 이 세션의 push·template 작성을 실제로 막음. 설계·산출물=`docs/plans/2026-07-03/하네스-강화-1차/`(OVERVIEW·TECHNICAL·changelog·learned 포함) |
+
+| **26** | **v3 재설계 (2026-07-19) — L0/L1·모드 5종·라이브 문서** — 2개월 실측(measurement-log·review-log·메모리)을 근거로 v2를 전면 재설계. ① [탐색중]↔[정의됨] 2상태 → **L0(자율: 대화·리서치·분석·설계+기록)/L1(구현: 실행·적용물 전부 + 실행 정책 파일)** 경계 + gate-guard 판별표(C1)·오류표(C2)·상태 계약(C3). ② 작업 모드 2축 4분기(auto/lazy × implements/write) → **평평한 레퍼토리 5종**(`auto`·`lazy`·`pair`·`refactor`·`fast` — write 축·WRITE_PHASE 폐지, refactor·fast 신설). ③ 문서 4종(OVERVIEW·changelog·learned·TECHNICAL) → **라이브 타임라인**(master-plan + task-process, 완료 요약 + 옵트인 learning-note). ④ git-guard **push-only**(docs 커밋 가드·jsonl 폴백 제거). ⑤ 오케스트레이션 계약(Opus 워커 기본·depth-2·packet 필수 필드). 설계·결정·계약 정본 = `docs/plans/2026-07-19/harness-v3-restructure/` |
 
 상세: `docs/HISTORY.md`, v1 규칙 전문: `archive/2026-06-10-opus-harness/`, v2 설계 근거: `docs/11`~`16` + `docs/plans/` + core.md 변경 이력.

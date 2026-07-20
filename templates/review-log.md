@@ -3,7 +3,7 @@
 > 목적: 듀얼 리뷰 루프(Opus 워커 ∥ codex)·codex 교차 검증에서 **오간 리뷰 내용**을 남긴다 — 감사 추적 + 리뷰 능력 학습 자료. finding이 무엇이었고, 누가 냈고, 왜 채택/기각됐고, 어떻게 해소됐나.
 > 단일 출처: ledger **스키마**는 `playbooks/review.md §2`가 정의. 이 파일은 그 **인스턴스** + finding별 실질 내용. 종료 조건 판정의 입력도 이 ledger다(review.md에서 task.md → 여기로 승격).
 > 트리거: codex 교차 검증 또는 듀얼 리뷰 루프가 실행된 작업 (중간↑ stakes, 코드·문서 무관). 낮음(셀프체크만)은 작성하지 않는다. 작성 시점: 리뷰 종료 후·최종 응답 전.
-> 경계: changelog "리뷰 연습 포인트" = 사용자가 **직접 연습할** 포인트 / review-log = 리뷰어(Opus·codex)가 **실제로 낸** finding과 처리. 둘은 다르다.
+> 경계: task-process 완료 요약 = 이번 작업이 무엇이 됐나·핵심 diff·배운 것 / review-log = 리뷰어(Opus·codex)가 **실제로 낸** finding과 처리. 둘은 다르다.
 
 ## 루프 메타
 
