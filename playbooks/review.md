@@ -10,7 +10,8 @@
 → ④ 수정 → 테스트 → ⑤ 재리뷰(①로) … 종료 조건 충족 시 탈출, 최대 3루프
 ```
 
-- **⓪ review packet**: 페이즈 시작 base SHA를 task.md(또는 gate.md)에 고정. packet = `base SHA..current` **누적 diff** + spec (이번 루프 수정 diff는 참고로만 별도 표기 — 마지막 수정만 보면 전체 일관성 문제를 놓친다). **보안 스캔(core §5) 통과한 동일 packet을 양쪽에 제공** — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
+- **⓪ review packet**: 페이즈 시작 base SHA를 task.md(또는 gate.md)에 고정. packet = `base SHA..current` **누적 diff** + spec (이번 루프 수정 diff는 참고로만 별도 표기 — 마지막 수정만 보면 전체 일관성 문제를 놓친다). **보안 스캔(§5) 통과한 동일 packet을 양쪽에 제공** — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
+- **⓪′ spec 기준 판정 (구현이 아닌 spec)**: packet에 **spec 원문**을 포함하고, 리뷰어 프롬프트에 "구현이 그럴듯한가가 아니라 **spec과 일치하는가**로 판정하라"를 명시한다 — 잘못된 구현을 "의도대로"로 오검증한 사고(03c 관찰)를 spec 원문 대조로 차단. 구현 diff는 "무엇이 바뀌었나"의 근거일 뿐, 정답의 기준이 아니다.
 - **① 병렬 리뷰**: Opus 워커(Agent 호출, model: opus) ∥ codex(`codex exec`, read-only). **입력 격리는 실행으로 강제한다**: Opus 워커 프롬프트에는 packet만 포함(다른 파일 읽기 지시 금지), codex는 repo 밖 임시 디렉터리에 packet 파일만 두고 실행 — read-only는 packet-only가 아니다. packet 외 접근이 발생했으면 비대칭 입력으로 표시하고 정상 종료로 인정하지 않는다.
 - **① 실패 분기**: 한쪽 실패 시 1회 재시도 → 그래도 실패면 **`review blocked`** — 정상 종료 불가. 같은 packet으로 동등한 대체 독립 리뷰어를 실행하면 루프 계속 가능. 사용자가 단일 리뷰 진행을 명시 승인하면 **`user override`로 기록**하고 잔여 리스크를 보고 — 머지 가부는 사용자 결정 (높음 codex 스킵 불가 — core §5).
 - **② 메인 종합**: 중복 병합 + finding별 채택/기각. **허용 근거는 packet 안(diff·spec·리뷰 원문)으로 제한** — 기각 사유도 file:line 또는 spec 조항에 귀속. 숨은 구현 의도·대화 맥락을 근거로 쓰지 않는다 (절단 계약 보호).
@@ -57,3 +58,11 @@
 - **finding 증거 형식**: file:line / 도달 경로(어떤 API·입력이 닿나) / 복잡도 추정(N×M, N번 원격 호출 등) / 입력 규모 가정(상한 또는 "상한 없음" 근거) / 현실적 영향(latency·memory·DB 부하·자원 고갈·timeout 중 무엇) / 완화 부재 사유(limit·batch·cache·timeout이 왜 불충분한지) / 수정 방향(클래스 수준 — batch query·streaming·bounded concurrency·상한 강제. 특정 구현 강요 금지).
 - **지적한다**: unbounded 입력에 superlinear 작업·per-item I/O·무제한 fan-out을 신설/악화 · 기존 limit/pagination/batching/cache 제거·우회 · 상한 없이 입력 전체에 비례하는 메모리 적재 · production request path에서 입력 크기만큼 자원(thread·connection·트랜잭션 시간) 점유가 file:line으로 보일 때.
 - **넘어간다**: 상한이 작고 코드로 강제되며 그 규모에서 복잡도가 합리적 · one-time migration/admin/startup 경로로 빈도·규모 제한이 spec/code에 보임 · 상수배 미세 최적화·취향 수준 · 입력 규모가 diff/spec에서 증명 안 돼 귀속 불가(→ open question).
+
+## 5. codex 호출 (외부 전송 게이트 — core §5에서 이관)
+
+> ①~③은 codex를 실제로 호출하는 절차. §1 ⓪·①의 "보안 스캔·codex 실행"이 이 절을 참조한다.
+
+- **① 보안 스캔 (전송 전 필수)**: packet에서 `sk-`·`ghp_`·`AKIA`·`PRIVATE KEY`·`password|token|secret[:=]` 값·PII·내부 호스트/경로를 스캔 — 매칭 0건만 자동 통과, 발견 시 오탐 여부 개별 판정 후 redact 또는 사용자 확인.
+- **② 호출**: `cat 입력.md | codex exec --skip-git-repo-check -s read-only --ephemeral -o 출력.md -` (Bash, 백그라운드 권장).
+- **③ 비대화형 PATH 함정**: codex는 nvm 설치라 Claude Bash(비대화형)의 PATH에 안 잡힌다 — `CODEX=$(ls ~/.nvm/versions/node/*/bin/codex 2>/dev/null | head -1)`로 전체 경로를 확보한다(`which codex` 실패 ≠ 미설치).

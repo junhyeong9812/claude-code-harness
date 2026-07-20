@@ -1,7 +1,7 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
 5be764cb79089ac0cc9212cd29d35f4dda969f1ae6283152224f87fe8460b540  cases/gate-guard.sh
 ebc3a0b063a92e971d67ce696bb6d3cbd673ed58536a237b185309a6c94f2ec2  cases/git-guard.sh
-f662f6785ea1f95084b2959a11315b003ba5c5d7a84d6721e79ae0b7dcd079bd  cases/misc-guards.sh
+6c10d9a02cbbf60b1469d29cafc907049e7ea618462ebc3809054a05d9152d8b  cases/misc-guards.sh
 1ada4a030e7fa6ae449b2e96bf5e353f62df843ad41dee204e9db693cca1e754  cases/state-schema.sh
 5ba9c2f259e24985b5db12042f32cb4f10a791c8b1d039bb779b792d6283139e  lib.sh
 7d194f60b055c7759d65b782e610b384f75dae1d4b40332322ec9c8218034fd9  run.sh
@@ -142,8 +142,14 @@ f662f6785ea1f95084b2959a11315b003ba5c5d7a84d6721e79ae0b7dcd079bd  cases/misc-gua
 # test: test_tm_05
 # test: test_tm_06
 # test: test_tp_01
+# test: test_tp_01b
 # test: test_tp_02
 # test: test_tp_03
 # test: test_tp_04
 # test: test_tp_05
 # test: test_tp_06
+# test: test_tp_07
+# test: test_tp_08
+# test: test_tp_09
+# test: test_tp_10
+# test: test_tp_11

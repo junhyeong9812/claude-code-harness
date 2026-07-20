@@ -31,29 +31,39 @@ test_tm_03() { # [green] 다른 task.md 경로 → 새 태스크 리셋
   assert_state MODE UNSET new-task-reset
 }
 
-test_tp_01() { # [red #1] 마커 없는 OVERVIEW.md → 경고(exit 2)
-  mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/OVERVIEW.md"
-  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/OVERVIEW.md")"
-  assert_exit 2 overview-checked
+test_tp_01() { # [v3] 마커(6칸) 없는 master-plan.md → 경고(exit 2)
+  mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/master-plan.md"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/master-plan.md")"
+  assert_exit 2 master-plan-checked
 }
 
-test_tp_02() { # [red #1b] 마커 없는 TECHNICAL.md → 경고(exit 2)
-  mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/TECHNICAL.md"
-  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/TECHNICAL.md")"
-  assert_exit 2 technical-checked
+test_tp_01b() { # [04-cln codex#1] 헤더 앵커 — 산문에만 "6칸" 있는 decoy는 차단, ## 헤더는 통과
+  mkdir -p "$REPO/docs/plans/a"
+  printf '# mp\n정의 6칸은 추후 작성 예정.\n' > "$REPO/docs/plans/a/master-plan.md"   # 산문 decoy(헤더 아님)
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/master-plan.md")"
+  assert_exit 2 master-plan-prose-decoy-blocked
+  printf '# mp\n## 0. 정의 6칸 요약\n내용\n' > "$REPO/docs/plans/a/master-plan.md"       # 정상 ## 헤더
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/master-plan.md")"
+  assert_exit 0 master-plan-header-pass
 }
 
-test_tp_03() { # [red #16] 상대경로 file_path도 검사된다
+test_tp_02() { # [v3] '## 타임라인' 없는 task-process.md → 경고(exit 2)
+  mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/task-process.md"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/task-process.md")"
+  assert_exit 2 task-process-checked
+}
+
+test_tp_03() { # [red #16] 상대경로 file_path도 검사된다 (task.md — 다단계 task 분리)
   mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/task.md"
   run_hook template-guard.sh "$(json_file PostToolUse Write "docs/plans/a/task.md")"
   assert_exit 2 relative-checked
 }
 
-test_tp_04() { # [green] 마커 완비 changelog.md → 통과
+test_tp_04() { # [green] 마커(## 타임라인) 완비 task-process.md → 통과
   mkdir -p "$REPO/docs/plans/a"
-  printf '## 1. 판단 항목 (J)\n## 2. 기계적 변경 (M)\n리뷰 연습 포인트\n' > "$REPO/docs/plans/a/changelog.md"
-  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/changelog.md")"
-  assert_exit 0 changelog-pass
+  printf '# task-process\n## 타임라인\n- 07-20 | 착수 | ok\n' > "$REPO/docs/plans/a/task-process.md"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/task-process.md")"
+  assert_exit 0 task-process-pass
 }
 
 test_tp_05() { # [green] '## 리뷰 모드' 없는 review-log.md → 경고(exit 2)
@@ -61,6 +71,36 @@ test_tp_05() { # [green] '## 리뷰 모드' 없는 review-log.md → 경고(exit
   printf '## 루프 메타\n## verified\n## finding ledger\n' > "$REPO/docs/plans/a/review-log.md"
   run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/review-log.md")"
   assert_exit 2 review-mode-required
+}
+
+test_tp_07() { # [v3 회귀] 폐지 산출물 OVERVIEW.md는 더 이상 강제 안 함 → exit 0
+  mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/OVERVIEW.md"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/OVERVIEW.md")"
+  assert_exit 0 overview-abolished
+}
+
+test_tp_08() { # [v3] 마커 없는 learning-note.md(옵트인) → 경고(exit 2)
+  mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/learning-note.md"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/learning-note.md")"
+  assert_exit 2 learning-note-checked
+}
+
+test_tp_09() { # [v3 회귀] 폐지 산출물 TECHNICAL.md는 더 이상 강제 안 함 → exit 0
+  mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/TECHNICAL.md"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/TECHNICAL.md")"
+  assert_exit 0 technical-abolished
+}
+
+test_tp_10() { # [v3 회귀] 폐지 산출물 learned.md는 더 이상 강제 안 함 → exit 0
+  mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/learned.md"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/learned.md")"
+  assert_exit 0 learned-abolished
+}
+
+test_tp_11() { # [v3 회귀] 폐지 산출물 changelog.md는 더 이상 강제 안 함 → exit 0
+  mkdir -p "$REPO/docs/plans/a"; echo hello > "$REPO/docs/plans/a/changelog.md"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/changelog.md")"
+  assert_exit 0 changelog-abolished
 }
 
 test_sc_01() { # [red #14] untracked 신규 code+docs 혼재도 경고
@@ -106,9 +146,9 @@ test_cp_03() { # [신규 phase-02] 헤더 형식 — turn 단조 증가 + ts 존
 
 # ── phase-04 fix-verification (codex 듀얼 1패스 채택)
 
-test_tp_06() { # [fix-verify] 대문자 확장자 OVERVIEW.MD도 검사 (마커 없음 → exit 2)
-  mkdir -p "$REPO/docs/plans/a"; echo hi > "$REPO/docs/plans/a/OVERVIEW.MD"
-  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/OVERVIEW.MD")"
+test_tp_06() { # [fix-verify] 대문자 확장자 TASK-PROCESS.MD도 검사 (마커 없음 → exit 2)
+  mkdir -p "$REPO/docs/plans/a"; echo hi > "$REPO/docs/plans/a/TASK-PROCESS.MD"
+  run_hook template-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/a/TASK-PROCESS.MD")"
   assert_exit 2 uppercase-ext-checked
 }
 

@@ -1,15 +1,14 @@
 # playbook: 구현 — lazymode
 
-> 트리거: 작업 모드 = **lazy-implements** 선택 시 (task-mode-guard·gate-guard 훅).
+> 트리거: 구현 모드 = **lazy** 선택 시 (core §1 모드 5종 — gate-guard 훅).
 > 목적: **자율주행 금지** — 매 결정·매 diff에서 사용자 이해를 주관식으로 검증하며 진행한다.
-> 설계 단일 출처: `docs/plans/2026-06-20/lazy-busy-mode/plans.md` + `docs/plans/2026-06-21/mode-taxonomy-session-keying/`. 토큰 비용은 **의도된 비용**.
+> 설계 근거: v3 재설계 `docs/plans/2026-07-19/harness-v3-restructure/`. 토큰 비용은 **의도된 비용**.
 
 ## 0. 모드 진입 (훅 강제)
 
-- **정의됨 진입 시 2축 4분기**(구현·구현전 계획·설계 착수 — "구현/설계/계획하자", 보통 task.md 생성): `auto-implements` | `lazy-implements` | `auto-write` | `lazy-write` 선택 (task-mode-guard가 새 task.md에서 리셋·재질문, gate-guard가 첫 **산출물(코드)** 변경을 막아 강제 — task.md 자체는 안 막음, F4). 태스크마다 재질문. **개념 탐색·토론·학습은 자유 — 이때 묻지 않음.**
-- `auto-implements` = 앞단(정의·계획) 합의 후 자율 실행(per-diff 게이트 없음). **`lazy-implements`·`lazy-write` = 이 플레이북**(per-diff 이해 게이트는 `lazy-` 접두사로 결정).
-- **`lazy-write`**: 구현 단계는 이 플레이북 그대로(매 diff 게이트), 단 기록 단계 종료 후 `playbooks/write-handoff.md` 핸드오프(코드/테스트 롤백 → writing.md 필사 → 검증)를 append (§1 작업 모드).
-- lazy 계열이면 **이 플레이북이 §2~§6 게이트를 지배**한다. 정의·dimensions·templates·hooks·review·verification·git-workflow·open-source는 **현행 그대로**(단일 출처 — 복제 금지).
+- **L1(구현) 진입 시 훅이 모드 5종**(auto · lazy · pair · refactor · fast)을 강제 선택시킨다(gate-guard가 첫 L1 변경을 막아 MODE 미선택을 차단). 태스크마다 재질문. **L0(대화·리서치·설계)은 자유 — 이때 묻지 않음.**
+- `auto` = 앞단(정의·계획) 합의 후 자율 실행(per-diff 게이트 없음). **`lazy` = 이 플레이북**(매 diff 이해 게이트).
+- lazy 모드면 **이 플레이북이 §2~§6 게이트를 지배**한다. 정의·dimensions·templates·hooks·review·verification·git-workflow·open-source는 **현행 그대로**(단일 출처 — 복제 금지).
 
 ## 1. 게이트 형식 (공통)
 
@@ -52,4 +51,4 @@
 ## 6. 검증·기록
 
 - 검증의 **테스트 작성·수정·처리도 §3.1과 동일** 주관식 게이트(순차 전부 확인).
-- 기록 산출물(changelog·learned·OVERVIEW·TECHNICAL·review-log)은 **현행 그대로** — 단 트레이드오프 정의(§2)가 끝난 뒤에만 작성.
+- 기록은 core §3.5 — **task-process 완료 요약**(diff before/after 스니펫 포함) + **review-log**(中↑) + **학습노트**(옵트인) — 단 트레이드오프 정의(§2)가 끝난 뒤에만 작성.

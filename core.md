@@ -194,7 +194,7 @@ docs/plans/YYYY-MM-DD/작업명/
 - **듀얼 리뷰 누락 금지(中↑)**: Opus 워커(독립 서브에이전트) ∥ codex 필수 — codex 단독·셀프리뷰 대체 금지. 생략은 사유 review-log 명시 + 사용자 확인. 절차·렌즈·finding·대칭 부담 = `playbooks/review.md` 단일 출처. **리뷰 루프를 수행한 작업은 루프의 codex 병렬 리뷰+종합 감사가 최종 검증을 겸한다(별도 패스 없음)** — 루프 비대상 산출물만 별도 최종 검증 1회.
 - **외부 검색 불가 시**(네트워크·보안상 부적합): 사유 기록 + codex 큐레이션 대체 또는 사용자 보고 — 높음 stakes에서 말없이 생략하지 않는다.
 - **codex 실패 시**: 낮음 자동 스킵+기록. 中↑는 1회 재시도 → 대체 독립 리뷰어 또는 `review blocked`.
-- **codex 호출** *(아래 3항은 task-04에서 review.md로 이관 예정 — 이관 전까지 여기가 정본)*: ① 외부 전송 보안 스캔 — `sk-`·`ghp_`·`AKIA`·`PRIVATE KEY`·`password|token|secret[:=]` 값·PII·내부 호스트 매칭 0건만 자동 통과, 발견 시 오탐 여부 개별 판정 후 redact/사용자 확인 ② 호출: `cat 입력.md | codex exec --skip-git-repo-check -s read-only --ephemeral -o 출력.md -` (백그라운드 권장) ③ 비대화형 PATH 함정 — codex는 nvm 설치라 `CODEX=$(ls ~/.nvm/versions/node/*/bin/codex | head -1)`로 전체 경로 확보 (`which codex` 실패 ≠ 미설치).
+- **codex 호출·보안 스캔·PATH 함정 = `playbooks/review.md §5` 단일 출처** (보안 스캔 → 호출 명령 → 비대화형 nvm PATH 3항).
 
 ### 오케스트레이션 (메인 = 관리감독 — 상세 `playbooks/orchestration.md`)
 
