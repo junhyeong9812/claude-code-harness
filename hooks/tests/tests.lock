@@ -1,4 +1,5 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
+8eaa56b71611c62a5de5a43fde22d49f3c0f78cc80b73a67060e08ed19a1c284  cases/codex-scan.sh
 43f905e9c69793aef2f3b317916139a66720231d96882acdf349b14e1921b3ea  cases/gate-guard.sh
 273300dcbb81266ddde05b18405ba4f8ba8b70230e1f296d2ebf90fab5004255  cases/git-guard.sh
 a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-guards.sh
@@ -8,6 +9,19 @@ a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-gua
 # test: test_cp_01
 # test: test_cp_02
 # test: test_cp_03
+# test: test_cs_aws_blocked
+# test: test_cs_codex_clean_pass
+# test: test_cs_empty_stdin
+# test: test_cs_generic_assign_blocked
+# test: test_cs_ghp_blocked
+# test: test_cs_malformed_stdin
+# test: test_cs_non_bash_tool
+# test: test_cs_non_codex_ignored
+# test: test_cs_pem_blocked
+# test: test_cs_redaction
+# test: test_cs_sk_blocked
+# test: test_cs_stdin_redirect_limit
+# test: test_cs_substring_no_fp
 # test: test_gg_ask_arith_shift
 # test: test_gg_ask_basic
 # test: test_gg_ask_cd
