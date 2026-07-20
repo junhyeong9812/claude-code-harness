@@ -219,12 +219,12 @@ docs/plans/YYYY-MM-DD/작업명/
 데이터 작업(마이그레이션·기존 데이터 변경=높음, 조회 의미 변경=중간↑)은 record-level 검증(count·sample·orphan) — `playbooks/verification.md §3`. **silent failure가 실측 최다 사고 유형** — 부분실패 DONE 위장·무음 스킵·조용한 절단을 명시적으로 반증하라.
 
 ### 6.4 git (훅 강제 + 정책)
-- **push는 사용자 확인 후** (리모트·브랜치·커밋 수 보고) — `git-guard` 훅 강제. 추측 push 금지.
+- **push는 사용자 확인 후** — `git-guard`가 push 감지 시 `permissionDecision:"ask"`를 반환해 **네이티브 승인 UI**를 프롬프트 하한으로 강제(자연어 파싱 아님). ask reason에 참고용 로컬 컨텍스트(cwd 기준 브랜치·upstream 리모트·미푸시 수)를 담되 실제 push 대상은 명령+Git설정이 결정함을 명시. 추측 push 금지.
 - 커밋은 **승인 게이트 없음**(로컬·가역 — push만 승인 필요). 단 git-guard가 **AI trailer(`Co-Authored-By: Claude` 등)가 포함된 커밋은 하드 차단**한다(승인 게이트가 아니라 형식 정책 — 승인 무관 즉시 차단). code 커밋에 docs 자동 포함 금지(scope-guard 경고), 검증 과정 출처(codex·리뷰 언급) 커밋·주석 기재 금지(review-log 소유).
 - `--force`·`reset --hard`·`branch -D`·`checkout .`·파괴적 삭제는 명시 요청 시만. **git 밖 불가역 조작(DB 변경 실행·마이그레이션·대량 삭제·원본 덮어쓰기)도 동일 — 개별 사용자 확인 후** (fast 진입 턱과 별개, C4 공통 불변의 근거 조항). **파괴적 조작 직전 현재 브랜치·HEAD·경로·대상 재확인**(실측: 상태 오인이 최고 강도 사고 유형).
 - **하네스 배포는 deploy.sh 경유만** — manifest diff → 백업+원자 교체 → 신규 세션 smoke. **배포 예외(D9)**: 배포 직후 smoke 실패 한정, 직전 백업 즉시 복원은 승인 없이 실행 + 사후 보고.
 
-> **활성 훅 (배포 단일 출처 = 이 repo, `hooks/deploy.sh`로 ~/.claude 동기)**: `git-guard`(PreToolUse:Bash — push 승인: 현재 턴 사이드카 단일 원천 + 2턴 pending) · `gate-guard`(PreToolUse·PostToolUse:Edit|Write + PreToolUse:Bash — C1 판별·C2 오류표·모드 5택·pair is_test_file·lazy Bash 리마인더) · `scope-guard`·`template-guard`(PostToolUse — 경고) · `session-mode-guard`(SessionStart) · `reinject-mode`·`capture-prompt`(UserPromptSubmit) · `task-mode-guard`(PostToolUse:Write — 새 태스크 리셋). 상태 = C3. 훅 테스트: `hooks/tests/run.sh`.
+> **활성 훅 (배포 단일 출처 = 이 repo, `hooks/deploy.sh`로 ~/.claude 동기)**: `git-guard`(PreToolUse:Bash — push 감지 시 `ask` 반환으로 네이티브 승인 UI 위임 + AI trailer 하드차단) · `codex-scan`(PreToolUse:Bash — codex 호출 명령 문자열의 시크릿 패턴 backstop 차단; stdin·파일 리다이렉트 바이트는 범위 밖=절차 스캔이 primary) · `gate-guard`(PreToolUse·PostToolUse:Edit|Write + PreToolUse:Bash — C1 판별·C2 오류표·모드 5택·pair is_test_file·lazy Bash 리마인더) · `scope-guard`·`template-guard`(PostToolUse — 경고) · `session-mode-guard`(SessionStart) · `reinject-mode`·`capture-prompt`(UserPromptSubmit) · `task-mode-guard`(PostToolUse:Write — 새 태스크 리셋). 상태 = C3. 훅 테스트: `hooks/tests/run.sh`.
 
 ### 6.5 태스크 git 워크플로우 (원격 작업)
 - **훅 강제 = push뿐.** 이슈·MR/PR 생성·원격 브랜치를 만드는 경로는 **절차 규칙으로 각각 사용자 확인**(추측 발행 금지). 브랜치 base·이름, MR/PR target·draft도 확인.

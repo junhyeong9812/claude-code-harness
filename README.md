@@ -47,9 +47,9 @@ claude-code-harness/
 │   ├── learning-note.md       #   학습노트 옵트인 — 개념·동작 모델·전이 지식 (구 OVERVIEW·changelog·learned·TECHNICAL 통합 후신)
 │   └── measurement-log.md     #   작업당 측정 1행 (규칙 증감의 근거 데이터 — 사용 워커 모델 포함)
 ├── hooks/                     # 강제(발생)만 결정론적으로:
-│   │                          #   git-guard(push 가드 — 현재 턴 사이드카, push-only) · scope-guard(docs/code 혼합 경고) · template-guard(산출물 템플릿 미준수 경고)
+│   │                          #   git-guard(push 감지→네이티브 ask 위임 + AI trailer 차단) · codex-scan(codex 호출 시크릿 backstop) · scope-guard(docs/code 혼합 경고) · template-guard(템플릿 미준수 경고)
 │   │                          #   구현 모드: session-mode-guard·reinject-mode·capture-prompt·gate-guard·task-mode-guard
-├── settings.json              # 훅 8종 배선 (SessionStart·UserPromptSubmit·PreToolUse·PostToolUse)
+├── settings.json              # 훅 9종 배선 (SessionStart·UserPromptSubmit·PreToolUse·PostToolUse)
 ├── archive/                   # v1 전체(2026-06-10-opus-harness) + 하네스 v2 스냅샷(2026-06-20-harness-v2)
 └── docs/                      # 설계 이력 (08~16 + HISTORY) + plans/ (작업별 산출물·설계) + 학습 제품 (17·18 개발 핵심질문)
 ```
