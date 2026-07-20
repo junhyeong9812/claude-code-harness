@@ -1,5 +1,5 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
-28586aaa64a7799a746817d81219a33b5fe129bb5dc1911451c2794a340e997f  cases/codex-scan.sh
+f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-scan.sh
 43f905e9c69793aef2f3b317916139a66720231d96882acdf349b14e1921b3ea  cases/gate-guard.sh
 7e4a9e1911da9318b7c57d49da2fac658b7627ec9f4cf2e4c72d2b2f2f0b97a0  cases/git-guard.sh
 a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-guards.sh
@@ -22,6 +22,7 @@ a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-gua
 # test: test_cs_midword_hash_not_comment
 # test: test_cs_non_bash_tool
 # test: test_cs_non_codex_ignored
+# test: test_cs_operator_comment_stripped
 # test: test_cs_pem_blocked
 # test: test_cs_prefix_forms_detected
 # test: test_cs_quoted_secret_still_blocked

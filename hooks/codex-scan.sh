@@ -10,9 +10,12 @@
 #   ① `codex exec - < prompt.txt`·`printf %s "$SECRET" | codex exec -` 처럼 파일 리다이렉트·파이프로
 #      넘어가는 실제 바이트는 못 본다. ② `echo "$(codex exec sk-…)"` 처럼 **따옴표 안 명령치환**으로
 #      codex 를 실행하면 탐지가 놓친다(따옴표 내용을 정제 시 비우므로 — 임의 셸 중첩은 정규식으로
-#      완전 커버 불가, codex 리뷰 #3 2026-07-20). 이 훅은 인라인 시크릿을 잡는 **backstop** 이며,
-#   외부 전송 전 시크릿 0 매칭의 primary 보장은 절차 스캔(playbooks/review.md §5 — packet 을 repo 밖에
-#   두고 스캔 후 호출)이다.
+#      완전 커버 불가, codex 리뷰 #3 2026-07-20). ③ wrapper 의 **옵션형**(`env -i codex`·`command -- codex`·
+#      `sudo -u x codex`)도 놓친다 — wrapper 인자를 완전 파싱하려면 셸 파서가 필요(codex 리뷰 P1 2026-07-20).
+#   ①②③ 공통: 정규식은 셸 의미를 완전 파싱 못 한다. 이 훅의 위협모델은 **Claude 의 실수 유출**이며
+#   (고의 우회는 훅 범위 밖 — core §0.6), 위 형태는 실수로 나오지 않는 구성이다. 이 훅은 인라인 시크릿을
+#   잡는 **backstop** 이고, 외부 전송 전 시크릿 0 매칭의 primary 보장은 절차 스캔(playbooks/review.md §5 —
+#   packet 을 repo 밖에 두고 스캔 후 호출)이다.
 
 set -eu
 
@@ -35,9 +38,10 @@ fi
 # ── codex 호출 감지 (명령 워드로서 codex — 정제 명령 기준) ──
 # 인용문·주석 속 "codex" 언급(echo "codex …", # codex …)은 실제 호출이 아니므로 탐지 대상에서 제외한다:
 # 따옴표 안 내용과 주석을 비운 SCAN 으로 판정(git-guard 와 동일 원리 — 탐지는 정제, 시크릿 스캔은 raw).
-# 주석 정제: '#' 는 **행 시작 또는 공백 뒤**에서만 주석이다 — 단어 내부 '#'(foo#bar)까지 지우면 그 뒤
-# 실제 codex 호출·시크릿을 놓친다(codex 리뷰 #2 2026-07-20). 따옴표 안 내용은 비워 언급 FP 를 막는다.
-SCAN=$(printf '%s\n' "$COMMAND" | sed -E "s/'[^']*'/''/g; s/\"[^\"]*\"/\"\"/g" | sed -E 's/(^|[[:space:]])#.*$/\1/') || SCAN="$COMMAND"
+# 주석 정제: '#' 는 **행 시작·공백 뒤·셸 메타문자(; & | () 뒤**에서 주석이다(bash 단어 경계) — 단어 내부
+# '#'(foo#bar)은 주석 아님(그 뒤 실호출 미탐 방지, codex #2). `;#`·`&&#` 연산자 직후 주석도 제거해
+# 주석 속 codex 를 실호출로 오인하는 FP 를 막는다(codex #2-잔여 2026-07-20). 따옴표 안은 비워 언급 FP 차단.
+SCAN=$(printf '%s\n' "$COMMAND" | sed -E "s/'[^']*'/''/g; s/\"[^\"]*\"/\"\"/g" | sed -E 's/(^|[[:space:];&|()])#.*$/\1/') || SCAN="$COMMAND"
 # command-position 만 codex 실행으로 본다: 명령 시작/셸 구분자(; | & ( ) { } &&·|| 개행) 뒤 +
 # 선택적 앞 토큰(할당 VAR=val·wrapper env/command/sudo/nohup/time) + 경로 프리픽스(/usr/bin/codex).
 # 인자 위치(`test codex`)·부분문자열(`mycodex`)은 제외 — 임의 codex 단어 FP 차단(codex 리뷰 F1).

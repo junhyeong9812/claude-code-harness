@@ -88,6 +88,11 @@ test_cs_real_comment_still_stripped() { # 행시작/공백 뒤 '#' 는 주석 �
   assert_exit 0 cs-realcomment-pass
 }
 
+test_cs_operator_comment_stripped() { # [codex #2-잔여] ';#' 연산자 직후 주석도 주석 → codex 미실행 → 통과(FP 차단)
+  run_hook codex-scan.sh "$(json_bash 'echo hi;# note; codex exec AKIAIOSFODNN7EXAMPLE')"
+  assert_exit 0 cs-opcomment-pass
+}
+
 test_cs_prefix_forms_detected() { # [codex #4] 할당·env·command 프리픽스 실호출 감지
   run_hook codex-scan.sh "$(json_bash 'TOKENX=y codex exec AKIAIOSFODNN7EXAMPLE')"
   assert_exit 2 cs-prefix-assign
