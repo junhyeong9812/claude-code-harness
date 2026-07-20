@@ -112,7 +112,9 @@ EOF
 #   (branch.pushRemote·remote.pushDefault·remote.*.push·push.default·refspec)이 결정하며 bare `git push`
 #   에서는 명령에도 안 드러난다. 실 대상을 파싱해 "정확한 척"하지 않는다(그 파싱은 이 작업이 제거한
 #   취약점이고 alias·refspec·config 를 완전 커버 불가). 따라서 값이 무엇을 잰 것인지 정확히 명명하고
-#   "실제 대상 아님"을 직접 밝힌 뒤 원본 명령을 제공한다.
+#   "실제 대상 아님"을 직접 밝힌다. ⚠ raw 명령은 reason 에 echo 하지 않는다(codex 리뷰 F2 2026-07-20):
+#   승인 창이 실행 명령을 독립 표시하므로 중복이고, `git push https://user:TOKEN@host` 같은 URL 크리덴셜·
+#   복합 명령 속 시크릿이 reason/훅 로그로 유출되는 것을 차단한다(codex-scan redaction 을 형제 훅이 무효화하던 경로).
 push_report() {
   local br rem cnt
   # 브랜치: symbolic-ref 로 detached HEAD 를 브랜치명("HEAD")으로 오표기하지 않는다(codex F4 2026-07-20).
@@ -123,8 +125,8 @@ push_report() {
     br="(detached HEAD 또는 미상)"; rem="(해당 없음 — detached/미상)"
   fi
   cnt=$(git -C "$CWD" rev-list --count '@{u}..HEAD' 2>/dev/null || true); [ -n "$cnt" ] || cnt="?"
-  printf 'git push 감지 — 승인이 필요한 외부 발행입니다(§6.5).\n참고용 로컬 컨텍스트(cwd=%s): 현재 브랜치=%s · upstream 리모트(branch.<br>.remote, fetch 설정)=%s · upstream 대비 HEAD 고유 커밋=%s개\n⚠ 위 값은 실제 push 대상·범위가 아닙니다 — 실제 대상은 명령과 Git 설정(branch.pushRemote·remote.pushDefault·remote.*.push·push.default·refspec)이 결정하며, bare `git push` 에서는 명령에도 드러나지 않습니다.\n명령: %s' \
-    "$CWD" "$br" "$rem" "$cnt" "$COMMAND"
+  printf 'git push 감지 — 승인이 필요한 외부 발행입니다(§6.5).\n참고용 로컬 컨텍스트(cwd=%s): 현재 브랜치=%s · upstream 리모트(branch.<br>.remote, fetch 설정)=%s · upstream 대비 HEAD 고유 커밋=%s개\n⚠ 위 값은 실제 push 대상·범위가 아닙니다 — 실제 대상은 승인 창에 표시된 명령과 Git 설정(branch.pushRemote·remote.pushDefault·remote.*.push·push.default·refspec)이 결정합니다.' \
+    "$CWD" "$br" "$rem" "$cnt"
 }
 
 # C2 ② 폴백: 정제 결과가 공백(awk/grep 실패 포함 — 정제 기계 오류 시 출력이 비는 것으로 수렴)인데

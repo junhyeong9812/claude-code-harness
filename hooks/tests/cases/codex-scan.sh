@@ -67,6 +67,17 @@ test_cs_quoted_secret_still_blocked() { # 실호출인데 시크릿이 인용 �
   assert_exit 2 cs-quoted-secret
 }
 
+test_cs_codex_as_argument_no_fp() { # [codex F1 2026-07-20] 인자 위치 codex 단어 + 시크릿 패턴 → 실행 아님 → 통과
+  # `test codex = codex` 는 codex 를 실행하지 않는데 임의 codex 단어 매칭이면 FP. command-position 아님 → exit 0.
+  run_hook codex-scan.sh "$(json_bash 'test codex = codex && echo token=abcdefghij')"
+  assert_exit 0 cs-arg-position-nofp
+}
+
+test_cs_codex_after_separator_detected() { # command-position(구분자 뒤) 실호출은 감지 유지
+  run_hook codex-scan.sh "$(json_bash 'cd /tmp && codex exec AKIAIOSFODNN7EXAMPLE')"
+  assert_exit 2 cs-sep-detected
+}
+
 # ── codex 부분문자열 오탐 회피(mycodex·codex-foo) ──────────────
 test_cs_substring_no_fp() {
   run_hook codex-scan.sh "$(json_bash 'mycodex run AKIAIOSFODNN7EXAMPLE')"

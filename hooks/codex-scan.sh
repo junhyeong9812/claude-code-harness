@@ -32,8 +32,12 @@ fi
 # 인용문·주석 속 "codex" 언급(echo "codex …", # codex …)은 실제 호출이 아니므로 탐지 대상에서 제외한다:
 # 따옴표 안 내용과 주석을 비운 SCAN 으로 판정(git-guard 와 동일 원리 — 탐지는 정제, 시크릿 스캔은 raw).
 SCAN=$(printf '%s\n' "$COMMAND" | sed -E "s/'[^']*'/''/g; s/\"[^\"]*\"/\"\"/g" | sed -E 's/#.*$//') || SCAN="$COMMAND"
-# 경계: 셸 구분자·경로(/usr/bin/codex 등) 뒤의 codex 실행. `mycodex`·`codex-foo` 부분문자열 오탐 회피.
-if ! printf '%s' "$SCAN" | grep -qE '(^|[;&|(){}[:space:]]|/)codex([[:space:]]|$)'; then
+# command-position 만 codex 실행으로 본다: 명령 시작 또는 셸 구분자(; | & ( ) { } 개행) 뒤 +
+# 선택적 경로 프리픽스(/usr/bin/codex). 인자 위치(`test codex`)·부분문자열(`mycodex`)은 제외 —
+# 임의의 codex 단어 매칭이 FP(무해한 언급 차단)와 함께 나온 것(codex 리뷰 F1). 따옴표로 감싼 명령
+# (`"codex" exec`)은 SCAN 에서 비워져 놓치는데, 이는 인용 시크릿까지 파싱하려다 취약해지는 것보다
+# 나은 backstop 한계로 수용(primary 는 절차 스캔).
+if ! printf '%s' "$SCAN" | grep -qE '(^|[|&;(){}]|&&|\|\|)[[:space:]]*([A-Za-z0-9_./-]*/)?codex([[:space:]]|$)'; then
   exit 0
 fi
 

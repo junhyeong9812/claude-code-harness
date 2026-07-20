@@ -249,7 +249,7 @@ docs/plans/YYYY-MM-DD/작업명/
 | `playbooks/design-taste.md` | review §3 설계 렌즈 + implementation §0 + refactor 그룹핑 대화 |
 | `playbooks/git-workflow.md` | 원격 있는 L1 작업 — 개발 진입 시 + 기록 종료 후 |
 | `playbooks/open-source.md` | 외부 OSS 기여·PR 시 |
-| `playbooks/process-map.md` | L1 진입 시 프로젝트에 `docs/process-map.md` 부재 → 생성 + 기록 단계에서 맵 노드 변경 시 갱신 |
+| `playbooks/process-map.md` | L1 진입 시 `docs/process-map.md` 부재 AND 작업이 구조를 건드림 → 생성(격리 변경은 skip 가능) + 기록 단계 맵 노드 변경 시 갱신 |
 | `templates/master-plan.md` | L1 작업 시작 시 (모든 구현의 진입점) |
 | `templates/task-process.md` | 〃 (task-04에서 신설) |
 | `templates/task.md` | 다단계 task 분리 시 |

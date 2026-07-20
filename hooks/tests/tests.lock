@@ -1,7 +1,7 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
-bf43b3161af5f6071aaaea5103188c5338a5d74bc8bfb3bf4399c3ce8f1ef3f3  cases/codex-scan.sh
+0c4e353c746d4e54828f5b6b56c8a10825b57e95a800ba6b50ba2bc89ff49c22  cases/codex-scan.sh
 43f905e9c69793aef2f3b317916139a66720231d96882acdf349b14e1921b3ea  cases/gate-guard.sh
-273300dcbb81266ddde05b18405ba4f8ba8b70230e1f296d2ebf90fab5004255  cases/git-guard.sh
+e8c8790eaf2f6e1e323a75891781a81304395102258f0e6de008e4c826656444  cases/git-guard.sh
 a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-guards.sh
 1ada4a030e7fa6ae449b2e96bf5e353f62df843ad41dee204e9db693cca1e754  cases/state-schema.sh
 5ba9c2f259e24985b5db12042f32cb4f10a791c8b1d039bb779b792d6283139e  lib.sh
@@ -10,6 +10,8 @@ a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-gua
 # test: test_cp_02
 # test: test_cp_03
 # test: test_cs_aws_blocked
+# test: test_cs_codex_after_separator_detected
+# test: test_cs_codex_as_argument_no_fp
 # test: test_cs_codex_clean_pass
 # test: test_cs_empty_stdin
 # test: test_cs_generic_assign_blocked
@@ -30,10 +32,11 @@ a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-gua
 # test: test_gg_ask_command_prefix
 # test: test_gg_ask_docs_compound_push
 # test: test_gg_ask_gitc
-# test: test_gg_ask_gitc_target_visible
 # test: test_gg_ask_quoted_heredoc_marker
 # test: test_gg_ask_real_heredoc_then_push
 # test: test_gg_ask_report
+# test: test_gg_ask_report_no_cmd_echo
+# test: test_gg_ask_report_no_url_credential_leak
 # test: test_gg_c2_empty_scan_no_trailer_fp
 # test: test_gg_c2_empty_scan_raw_push
 # test: test_gg_c2_empty_scan_trailer_gap_accepted

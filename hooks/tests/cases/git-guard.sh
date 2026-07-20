@@ -28,7 +28,7 @@ test_gg_ask_report() { # [green] ask reason: 조회값을 정확히 명명 + "�
   assert_stdout_match '참고용 로컬 컨텍스트' ask-report-cwdlabel
   assert_stdout_match 'upstream 리모트' ask-report-remotelabel
   assert_stdout_match '위 값은 실제 push 대상' ask-report-caveat
-  assert_stdout_match '명령:' ask-report-cmdline
+  assert_stdout_match '승인 창에 표시된 명령' ask-report-uiref
 }
 
 test_gg_ask_gitc() { # [green] git -C 우회 형태도 감지 → ask (커버리지 유지)
@@ -37,11 +37,17 @@ test_gg_ask_gitc() { # [green] git -C 우회 형태도 감지 → ask (커버리
   assert_stdout_match '"permissionDecision":"ask"' ask-gitc-json
 }
 
-test_gg_ask_gitc_target_visible() { # [green] git -C 시 실제 대상(refspec)이 명령 에코로 사용자에게 노출됨 (codex P1)
-  # cwd 기준 수치가 fork/feature 와 다를 수 있으나, 진짜 대상은 명령 항상 표시로 승인자가 확인
+test_gg_ask_report_no_cmd_echo() { # [green · codex F2 2026-07-20] reason 은 raw 명령을 echo 하지 않는다(유출 차단)
+  # git -C 실대상은 승인 창이 표시. reason 에 명령 인자(fork feature)가 안 실려야 함.
   run_hook_stdout git-guard.sh "$(json_bash 'git -C sub push fork feature')"
-  assert_stdout_match 'push fork feature' ask-gitc-target-echo
-  assert_stdout_match '위 값은 실제 push 대상' ask-gitc-target-caveat
+  assert_exit 0 ask-nocmd-exit
+  assert_stdout_match '"permissionDecision":"ask"' ask-nocmd-json
+  assert_stdout_no_match 'fork feature' ask-nocmd-no-echo
+}
+
+test_gg_ask_report_no_url_credential_leak() { # [green · codex F2] push URL 크리덴셜이 reason 에 안 샌다
+  run_hook_stdout git-guard.sh "$(json_bash 'git push https://user:ghp_SECRETTOKEN0123456789@github.com/x/y')"
+  assert_stdout_no_match 'ghp_SECRETTOKEN0123456789' ask-url-noleak
 }
 
 test_gg_ask_command_prefix() { # [green] command git push 프리픽스(=git 바이너리 alias 우회) → ask
