@@ -1,6 +1,6 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
 43f905e9c69793aef2f3b317916139a66720231d96882acdf349b14e1921b3ea  cases/gate-guard.sh
-ebc3a0b063a92e971d67ce696bb6d3cbd673ed58536a237b185309a6c94f2ec2  cases/git-guard.sh
+273300dcbb81266ddde05b18405ba4f8ba8b70230e1f296d2ebf90fab5004255  cases/git-guard.sh
 a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-guards.sh
 1ada4a030e7fa6ae449b2e96bf5e353f62df843ad41dee204e9db693cca1e754  cases/state-schema.sh
 5ba9c2f259e24985b5db12042f32cb4f10a791c8b1d039bb779b792d6283139e  lib.sh
@@ -8,42 +8,29 @@ a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-gua
 # test: test_cp_01
 # test: test_cp_02
 # test: test_cp_03
-# test: test_gg_01
-# test: test_gg_02
-# test: test_gg_03
-# test: test_gg_04
-# test: test_gg_05
-# test: test_gg_09
-# test: test_gg_10
-# test: test_gg_11
-# test: test_gg_12
-# test: test_gg_13
-# test: test_gg_14
-# test: test_gg_15
-# test: test_gg_16
-# test: test_gg_18
-# test: test_gg_19
-# test: test_gg_21
-# test: test_gg_22
-# test: test_gg_23
-# test: test_gg_25
-# test: test_gg_26
-# test: test_gg_27
-# test: test_gg_28
-# test: test_gg_29
-# test: test_gg_30
-# test: test_gg_32
-# test: test_gg_35
-# test: test_gg_37
-# test: test_gg_38
-# test: test_gg_39
-# test: test_gg_40
-# test: test_gg_41
-# test: test_gg_42
-# test: test_gg_43
-# test: test_gg_44
-# test: test_gg_45
-# test: test_gg_46
+# test: test_gg_ask_arith_shift
+# test: test_gg_ask_basic
+# test: test_gg_ask_cd
+# test: test_gg_ask_command_prefix
+# test: test_gg_ask_docs_compound_push
+# test: test_gg_ask_gitc
+# test: test_gg_ask_gitc_target_visible
+# test: test_gg_ask_quoted_heredoc_marker
+# test: test_gg_ask_real_heredoc_then_push
+# test: test_gg_ask_report
+# test: test_gg_c2_empty_scan_no_trailer_fp
+# test: test_gg_c2_empty_scan_raw_push
+# test: test_gg_c2_empty_scan_trailer_gap_accepted
+# test: test_gg_c2_empty_stdin
+# test: test_gg_c2_malformed_stdin
+# test: test_gg_noask_docs_commit
+# test: test_gg_noask_heredoc_body
+# test: test_gg_noask_non_git
+# test: test_gg_noask_quoted_push
+# test: test_gg_trailer_coauthored
+# test: test_gg_trailer_generated_with
+# test: test_gg_trailer_product_name_passes
+# test: test_gg_trailer_wins_over_push
 # test: test_gt_01
 # test: test_gt_02
 # test: test_gt_03
