@@ -128,6 +128,7 @@ docs/plans/YYYY-MM-DD/작업명/
 └── tasks/NN-이름/     다단계일 때 — task.md(범위·검증) + review-log.md(中↑ 필수)
 ```
 
+- **저장 위치 = 변경된 프로젝트** (cwd 아님): 산출물·measurement-log은 **변경 파일을 소유한 프로젝트/git repo 루트**의 `docs/plans/…`에 쓴다. A에서 Claude를 구동해 하위 B를 변경했으면 → **B/docs**(A 아님). 상위 A가 그 자체로 추적 프로젝트면 A엔 **하위 활동 roll-up 1줄**(measurement-log 스타일: 날짜·하위·한줄결과)만 — 전체 task 문서 중복 금지. ⚠ 대상 프로젝트가 `docs`를 gitignore하면 문서는 **커밋 안 되고 로컬-only**로 남는다(누락 아님 — 이 머신 Claude의 맥락 유지용). 프로젝트 맥락은 그 프로젝트의 measurement-log(=프로젝트 히스토리 다이제스트)를 **필요 시 JIT read** — 자동 startup 주입 아님(컨텍스트 비용, §0.2).
 - **task-process.md**: `시각 | 사건 | 결과/결정` 1~3줄을 **사건 발생 시점에 append** — 시도→실패→해결→결정, 테스트 단위 구분. 사후 재구성 금지(예외: 워커 이벤트는 packet 원시각 명시 append, 미회수 시 "미회수" 행 필수). fast 빚은 `## fast 빚` 섹션이 정본.
 - 높음 stakes는 definition.md 분리(`templates/definition.md`). task 단위 커밋으로 diff 격리(§3.2).
 - **긴급(장애 대응)**: fast 모드가 정식 경로 — 진입 턱 + 스모크 + 빚 소급.
