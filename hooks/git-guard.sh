@@ -106,27 +106,15 @@ emit_trailer_block() {
 EOF
   exit 2
 }
-# §6.4 보고 생성 — read-only git 조회(모두 실패 무시, 보고용). codex 리뷰 P1(2026-07-20):
-#   조회값은 실제 push 대상이 아니다 — br/rem/cnt 는 훅 cwd 의 "현재 브랜치·그 upstream(fetch) 리모트·
-#   upstream 대비 HEAD 고유 커밋 수"일 뿐. 실제 발행 대상·범위는 명령 + Git 설정
-#   (branch.pushRemote·remote.pushDefault·remote.*.push·push.default·refspec)이 결정하며 bare `git push`
-#   에서는 명령에도 안 드러난다. 실 대상을 파싱해 "정확한 척"하지 않는다(그 파싱은 이 작업이 제거한
-#   취약점이고 alias·refspec·config 를 완전 커버 불가). 따라서 값이 무엇을 잰 것인지 정확히 명명하고
-#   "실제 대상 아님"을 직접 밝힌다. ⚠ raw 명령은 reason 에 echo 하지 않는다(codex 리뷰 F2 2026-07-20):
-#   승인 창이 실행 명령을 독립 표시하므로 중복이고, `git push https://user:TOKEN@host` 같은 URL 크리덴셜·
-#   복합 명령 속 시크릿이 reason/훅 로그로 유출되는 것을 차단한다(codex-scan redaction 을 형제 훅이 무효화하던 경로).
+# §6.4 보고 — **정적 문자열**. reason 에 동적 git 상태(리모트·브랜치·커밋수·명령·cwd)를 넣지 않는다.
+#   이유(누적 교훈): 동적 값은 ① 실제 push 대상이 아니라 오도(F1) ② detached·조회실패 엣지(F4)
+#   ③ **크리덴셜 유출** — `git config branch.<name>.remote` 는 리모트 이름이 아니라 URL(예:
+#   `https://user:TOKEN@host`)로도 설정 가능해 그 값을 reason 에 넣으면 토큰이 reason/훅 로그로 샌다
+#   (codex 리뷰 F2-잔여 2026-07-20, /tmp/leaktest 로 재현 확인). raw 명령 echo 도 같은 유출원.
+#   → reason 은 정적 경고만. 실행 명령·실제 리모트/refspec 은 승인 창이 독립 표시하므로 그걸로 판단한다.
+#   (훅 출력의 시크릿 유출은 이제 상시 검증 대상 — hooks/tests 에 URL·명령 유출 회귀 테스트 고정.)
 push_report() {
-  local br rem cnt
-  # 브랜치: symbolic-ref 로 detached HEAD 를 브랜치명("HEAD")으로 오표기하지 않는다(codex F4 2026-07-20).
-  br=$(git -C "$CWD" symbolic-ref --short -q HEAD 2>/dev/null || true)
-  if [ -n "$br" ]; then
-    rem=$(git -C "$CWD" config --get "branch.$br.remote" 2>/dev/null || true); [ -n "$rem" ] || rem="(branch.<br>.remote 미설정)"
-  else
-    br="(detached HEAD 또는 미상)"; rem="(해당 없음 — detached/미상)"
-  fi
-  cnt=$(git -C "$CWD" rev-list --count '@{u}..HEAD' 2>/dev/null || true); [ -n "$cnt" ] || cnt="?"
-  printf 'git push 감지 — 승인이 필요한 외부 발행입니다(§6.5).\n참고용 로컬 컨텍스트(cwd=%s): 현재 브랜치=%s · upstream 리모트(branch.<br>.remote, fetch 설정)=%s · upstream 대비 HEAD 고유 커밋=%s개\n⚠ 위 값은 실제 push 대상·범위가 아닙니다 — 실제 대상은 승인 창에 표시된 명령과 Git 설정(branch.pushRemote·remote.pushDefault·remote.*.push·push.default·refspec)이 결정합니다.' \
-    "$CWD" "$br" "$rem" "$cnt"
+  printf 'git push 감지 — 승인이 필요한 외부 발행입니다(§6.5). 승인 전 승인 창에 표시된 명령의 리모트·refspec 을 직접 확인하세요(실제 대상은 명령과 Git 설정이 결정하며, 훅은 안전을 위해 로컬 git 값을 표시하지 않습니다).'
 }
 
 # C2 ② 폴백: 정제 결과가 공백(awk/grep 실패 포함 — 정제 기계 오류 시 출력이 비는 것으로 수렴)인데

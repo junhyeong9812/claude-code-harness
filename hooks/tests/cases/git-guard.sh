@@ -20,15 +20,13 @@ test_gg_ask_basic() { # [green] 일반 push → ask
   assert_stdout_match '"permissionDecision":"ask"' ask-basic-json
 }
 
-test_gg_ask_report() { # [green] ask reason: 조회값을 정확히 명명 + "실제 대상 아님" 명시 + 명령 (codex P1 루프2·3 2026-07-20)
+test_gg_ask_report() { # [green] ask reason: 정적 경고 — 동적 git 값 0(유출·오도 class 차단), UI 참조 (2026-07-20)
   run_hook_stdout git-guard.sh "$(json_bash 'git push origin main')"
-  assert_stdout_match '현재 브랜치=' ask-report-branch
   assert_stdout_match 'git push 감지' ask-report-detect
-  # 조회값이 "실제 push 대상"이 아님을 정확히 명명·경고하고 원본 명령을 제공
-  assert_stdout_match '참고용 로컬 컨텍스트' ask-report-cwdlabel
-  assert_stdout_match 'upstream 리모트' ask-report-remotelabel
-  assert_stdout_match '위 값은 실제 push 대상' ask-report-caveat
   assert_stdout_match '승인 창에 표시된 명령' ask-report-uiref
+  # 정적 reason — 동적 git 값(브랜치·리모트·cwd) 마커가 없어야 함(유출·오도 class 차단)
+  assert_stdout_no_match '참고용 로컬 컨텍스트' ask-report-no-cwd
+  assert_stdout_no_match '현재 브랜치=' ask-report-no-branch
 }
 
 test_gg_ask_gitc() { # [green] git -C 우회 형태도 감지 → ask (커버리지 유지)
@@ -48,6 +46,19 @@ test_gg_ask_report_no_cmd_echo() { # [green · codex F2 2026-07-20] reason 은 r
 test_gg_ask_report_no_url_credential_leak() { # [green · codex F2] push URL 크리덴셜이 reason 에 안 샌다
   run_hook_stdout git-guard.sh "$(json_bash 'git push https://user:ghp_SECRETTOKEN0123456789@github.com/x/y')"
   assert_stdout_no_match 'ghp_SECRETTOKEN0123456789' ask-url-noleak
+}
+
+test_gg_report_no_config_credential_leak() { # [green · codex F2-잔여 2026-07-20] branch.<br>.remote 가 URL(토큰)이어도 reason 유출 0
+  # git 은 branch.<name>.remote 를 URL 로도 허용 → 정적 reason 이 아니면 토큰이 샘. 정적화 회귀 잠금.
+  local d; d=$(mktemp -d)
+  git -C "$d" init -q
+  git -C "$d" -c user.email=a@b -c user.name=x commit -q --allow-empty -m c1 >/dev/null 2>&1
+  local br; br=$(git -C "$d" symbolic-ref --short -q HEAD)
+  git -C "$d" config "branch.$br.remote" 'https://user:ghp_CFGLEAK0123456789ABCDEF@github.com/x/y'
+  run_hook_stdout git-guard.sh "$(printf '{"tool_name":"Bash","tool_input":{"command":"git push"},"cwd":"%s"}' "$d")"
+  assert_stdout_no_match 'ghp_CFGLEAK0123456789ABCDEF' report-config-noleak
+  assert_stdout_match '"permissionDecision":"ask"' report-config-ask
+  rm -rf "$d"
 }
 
 test_gg_ask_command_prefix() { # [green] command git push 프리픽스(=git 바이너리 alias 우회) → ask
