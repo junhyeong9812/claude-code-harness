@@ -28,9 +28,12 @@ if [ -z "$COMMAND" ]; then
   exit 0
 fi
 
-# ── codex 호출 감지 (명령 워드로서 codex) ──
+# ── codex 호출 감지 (명령 워드로서 codex — 정제 명령 기준) ──
+# 인용문·주석 속 "codex" 언급(echo "codex …", # codex …)은 실제 호출이 아니므로 탐지 대상에서 제외한다:
+# 따옴표 안 내용과 주석을 비운 SCAN 으로 판정(git-guard 와 동일 원리 — 탐지는 정제, 시크릿 스캔은 raw).
+SCAN=$(printf '%s\n' "$COMMAND" | sed -E "s/'[^']*'/''/g; s/\"[^\"]*\"/\"\"/g" | sed -E 's/#.*$//') || SCAN="$COMMAND"
 # 경계: 셸 구분자·경로(/usr/bin/codex 등) 뒤의 codex 실행. `mycodex`·`codex-foo` 부분문자열 오탐 회피.
-if ! printf '%s' "$COMMAND" | grep -qE '(^|[;&|(){}[:space:]]|/)codex([[:space:]]|$)'; then
+if ! printf '%s' "$SCAN" | grep -qE '(^|[;&|(){}[:space:]]|/)codex([[:space:]]|$)'; then
   exit 0
 fi
 

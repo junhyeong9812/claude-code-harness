@@ -52,6 +52,21 @@ test_cs_non_codex_ignored() {
   assert_exit 0 cs-noncodex-exit
 }
 
+# ── 인용문·주석 속 codex 언급은 실호출 아님 → 통과(dogfood FP 수정) ──
+test_cs_mention_in_string_no_fp() {
+  # echo 문자열 안 codex 언급 + 시크릿 패턴 → 실제 codex 실행 아님 → 통과
+  run_hook codex-scan.sh "$(json_bash 'echo "codex 로 AKIAIOSFODNN7EXAMPLE 보내지 마"')"
+  assert_exit 0 cs-mention-echo
+  # 주석 속 codex → 정제 후 비어 탐지 안 됨 → 통과
+  run_hook codex-scan.sh "$(json_bash '# codex exec AKIAIOSFODNN7EXAMPLE 하지 말 것')"
+  assert_exit 0 cs-mention-comment
+}
+
+test_cs_quoted_secret_still_blocked() { # 실호출인데 시크릿이 인용 안에 → 여전히 차단(스캔은 raw)
+  run_hook codex-scan.sh "$(json_bash 'codex exec -m "AKIAIOSFODNN7EXAMPLE"')"
+  assert_exit 2 cs-quoted-secret
+}
+
 # ── codex 부분문자열 오탐 회피(mycodex·codex-foo) ──────────────
 test_cs_substring_no_fp() {
   run_hook codex-scan.sh "$(json_bash 'mycodex run AKIAIOSFODNN7EXAMPLE')"
