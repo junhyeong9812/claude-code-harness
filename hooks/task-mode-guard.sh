@@ -3,11 +3,14 @@
 # PostToolUse(matcher: Write) 이벤트에서 실행됨.
 # stdin JSON: {tool_name, tool_input:{file_path}, cwd, session_id, ...}
 #
-# 정책 (core.md §1 C3):
+# 정책 (core.md §1 C3·§3.1 문서 구조):
 #   - 상태: <project>/.claude/lazymode/<session_id> — SCHEMA=3 flat KEY=value(state-lib.sh 소유).
-#   - file_path 가 .../docs/plans/.../task.md 이면 = 새 태스크 시작 신호 → MODE=UNSET 리셋(태스크마다 재질문).
+#   - 진입점 파일 = master-plan.md(모든 L1 작업의 진입점 — 자명한 작업은 task.md 없이 이것만) 또는
+#     다단계 tasks/NN/task.md. 리셋 단위는 **작업 폴더**(docs/plans/<날짜>/<작업명>/) — 진입점 파일에서
+#     작업 폴더를 도출하고, 저장된 TASK_PATH(=직전 작업 폴더)와 다르면 새 작업 → MODE=UNSET 리셋
+#     (작업 폴더 전환마다 재질문). 같은 작업 폴더 내 master-plan/여러 task.md 재작성은 리셋하지 않는다.
 #   - 실제 차단은 gate-guard 가 MODE=UNSET 일 때 구현 변경을 막아 수행(teeth).
-#   - 주의: 기존 task.md 를 Write 로 덮어써도 발화한다(생성/덮어쓰기 구분 불가) — 통상 생성 1회 후 Edit 갱신.
+#   - 주의: 파일을 Write 로 덮어써도 발화한다(생성/덮어쓰기 구분 불가) — 작업 폴더 비교로 재리셋을 억제.
 #
 # 종료 코드: 0 (알림만; 하드 차단은 gate-guard)
 
@@ -32,8 +35,10 @@ TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool_name // empty')
 [ "$TOOL_NAME" = "Write" ] || exit 0
 
 FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
-# 새 태스크 정의 파일인가 (.../docs/plans/.../task.md) — 절대·상대경로 모두 (phase-04 codex: 상대 미매칭 교정)
+# 새 태스크 진입점 파일인가 — master-plan.md(L1 진입점) 또는 다단계 tasks/NN/task.md.
+# 절대·상대경로 모두 (phase-04 codex: 상대 미매칭 교정).
 case "$FILE_PATH" in
+  */docs/plans/*/master-plan.md|docs/plans/*/master-plan.md) ;;
   */docs/plans/*/task.md|docs/plans/*/task.md) ;;
   *) exit 0 ;;
 esac
@@ -53,16 +58,22 @@ if ! state_ensure_valid "$STATE"; then
   exit 0
 fi
 
-# 같은 task.md 재작성(Edit 갱신·재Write)에는 모드를 리셋하지 않는다 (#12) — 경로가 바뀔 때만 새 태스크.
-# canonical 경로로 비교(상대/절대·심링크 무관). 저장된 TASK_PATH와 같으면 리셋 스킵.
+# 리셋 단위 = 작업 폴더(docs/plans/<날짜>/<작업명>/). 진입점 파일에서 작업 폴더를 도출한다:
+#   - 다단계 tasks/NN/task.md → /tasks/... 이전까지가 작업 폴더(하위 태스크는 같은 폴더 → 재리셋 안 함).
+#   - master-plan.md / 작업 폴더 직속 task.md → 그 파일이 있는 폴더가 작업 폴더.
+# canonical 경로로 비교(상대/절대·심링크 무관). 저장된 TASK_PATH(직전 작업 폴더)와 같으면 리셋 스킵.
+case "$FILE_PATH" in
+  */tasks/*/task.md) WORK_DIR=${FILE_PATH%/tasks/*} ;;
+  *)                 WORK_DIR=$(dirname -- "$FILE_PATH") ;;
+esac
 canon() { realpath -m -- "$1" 2>/dev/null || realpath -- "$1" 2>/dev/null || python3 -I -S -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null; }
-case "$FILE_PATH" in /*) CFP=$(canon "$FILE_PATH") ;; *) CFP=$(canon "$CWD/$FILE_PATH") ;; esac
+case "$WORK_DIR" in /*) CFP=$(canon "$WORK_DIR") ;; *) CFP=$(canon "$CWD/$WORK_DIR") ;; esac
 PREV_TASK=$(state_get "$STATE" TASK_PATH)
 if [ -n "$CFP" ] && [ "$CFP" = "$PREV_TASK" ]; then
-  exit 0   # 같은 태스크 재작성 — 모드 유지, 재질문 없음
+  exit 0   # 같은 작업 폴더 재진입 — 모드 유지, 재질문 없음
 fi
 
-# 새 태스크 → MODE=UNSET 리셋 + TASK_PATH 기록 + 직전 게이트 빚(PENDING_GATE) 리셋.
+# 새 작업 폴더 → MODE=UNSET 리셋 + TASK_PATH(작업 폴더) 기록 + 직전 게이트 빚(PENDING_GATE) 리셋.
 # **단일 트랜잭션**: state_set 다중 KEY=V로 한 flock 안 원자 1회(부분 갱신 창 없음 — gate-guard가 중간 상태를
 # 보고 오판하지 않도록). 실패는 삼키지 않는다(|| true 금지) — 리셋 실패 시 이전 모드가 유효할 수 있음을 명시 경고.
 RESET_ARGS=(MODE UNSET PENDING_GATE 0)
@@ -72,8 +83,8 @@ if ! state_set "$STATE" "${RESET_ARGS[@]}"; then
 fi
 
 cat >&2 <<MSG
-[모드] 새 태스크 감지 (task.md 생성). 구현 변경 전에 사용자에게 이 태스크의 구현 모드를 물어 선택받으세요
-(평평한 레퍼토리 5종 — 완결 프로토콜, 태스크마다 재질문):
+[모드] 새 태스크 감지 (master-plan/task.md 생성 — 작업 폴더 전환). 구현 변경 전에 사용자에게 이 태스크의 구현 모드를 물어 선택받으세요
+(평평한 레퍼토리 5종 — 완결 프로토콜, 작업 폴더마다 재질문 — 같은 폴더 내 하위 task는 이 선택 유지):
   • auto — 앞단 합의 후 Claude 자율 실행 (per-diff 이해 게이트 없음).
   • lazy — 이해 게이트 모드: diff마다 주관식 검증 (playbooks/implementation-lazymode.md).
   • pair — 대화로 정의·설계 합의 → TDD(테스트 1개=경계) → 사용자가 로직 타이핑, Claude는 테스트/보일러플레이트+핑퐁 리뷰만 (playbooks/pair-coding.md).

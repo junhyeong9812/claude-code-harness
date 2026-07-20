@@ -31,8 +31,12 @@
 #       · 테스트/보일러플레이트 파일(is_test_file 컨벤션) → Claude Edit/Write 허용(게이트 없음)
 #       · 그 외 로직 파일 → **Edit/Write/MultiEdit**은 PreToolUse 항상 차단(사용자만 타이핑, Claude는 리뷰만).
 #         Bash 파일쓰기는 하드 차단 안 함(§0.6 FP 근거) — 소프트 리마인더만(아래 IS_BASH 분기).
-#         docs/plans·상태파일은 이 분기 이전에 이미 면제(task.md 6칸 라이브 append 용도).
-#   - 게이트 통과 시 Claude가 PENDING_GATE=0 으로 내린다(lazy 워커 verdict=pass 후). state 파일은 면제라 가능.
+#         docs/plans는 이 분기 이전에 이미 면제(task.md 6칸 라이브 append 용도).
+#   - 상태파일(.claude/lazymode/*) Edit/Write/MultiEdit → classify 이전에 **하드 거부(exit 2, MODE 무관)**:
+#       상태는 훅(state-lib)이 flock 원자쓰기로 소유한다. Claude가 Edit/Write 도구로 MODE 등을 직접 써서
+#       모드 게이트·fast 빚을 우회하는 것을 차단(#1). Bash 경로는 훅 bash 쓰기와 구분 불가라 소프트 리마인더만(§0.6 FP).
+#   - 게이트 통과 시 PENDING_GATE=0 은 Bash로 state-lib(state_set) 경유해 내린다(lazy 워커 verdict=pass 후 —
+#       Edit/Write 직접 편집은 위 #1로 하드거부되므로 상태 변경은 반드시 state-lib를 탄다).
 #
 # 종료 코드: 0 통과 / 2 차단(PreToolUse)
 
@@ -118,31 +122,31 @@ is_claude_deploy_path() { # <canonical file> → rc 0/1/2
   esac
   return 1
 }
-# repo 내 docs 면제 판정 (임의 깊이 */docs/** — 단 정책 파일·hooks/·playbooks/·templates/ 하위는 제외 → L1).
+# repo 내 docs 면제 판정 (임의 깊이 */docs/** — 단 정책 파일(claude.md·core.md 등)은 제외 → L1).
 # rc 0 = docs L0 면제 · rc 1 = 면제 아님/준비실패 안전측(L1).
 # **docs/ 컴포넌트 판정은 리터럴(fold 금지)** — 재설계#1: fold 는 L0 부여 경로에 절대 쓰지 않는다
 # (DOCS/→docs/ fold 가 대문자 디렉토리에 L0 를 잘못 부여한 회귀가 재설계를 유발). L0 부여의 docs/ 여부는
 # 리터럴 소문자 `docs` 컴포넌트로만 인정하고, **정책/배포 배제(→L1)** 매칭만 fold 로 과게이트(안전).
 # 준비명령(basename·tr) 실패·빈 결과는 안전측 L1(재설계#5).
+# **#6 정책 경로 앵커**: 정책 디렉토리(hooks/·playbooks/·templates/)는 canonical **$ROOT 직속**
+# (repo 루트 직속)에만 존재한다 — 그런 경로는 rel 에 `docs/` 컴포넌트가 없어 애초에 이 함수에 도달하지 않고
+# classify 의 "repo 내 비-docs → L1" 로 걸린다. 따라서 **docs 하위**의 hooks/playbooks/templates 이름
+# 디렉토리(예: docs/foo/hooks/design.md)는 정책이 아니라 순수 문서이므로 L0 여야 한다. 과거의 `after`
+# 컴포넌트 매칭은 이 순수 문서를 잘못 L1 로 앵커해 제거했다(#6). 정책 **파일**(base name) 배제는 유지.
 is_docs_exempt() { # <canonical file> <repo root> → rc 0/1
-  local cf="$1" root="$2" rel base base_lc after after_lc
+  local cf="$1" root="$2" rel base base_lc
   rel="${cf#"$root"/}"
   [ "$rel" != "$cf" ] || return 1                # repo 밖(방어 — 호출부에서 이미 걸러짐)
   [ -n "$rel" ] || return 1                       # 빈 rel(준비 실패) → 안전측 L1
   # docs/ 컴포넌트 필수 — **리터럴 소문자만**(fold 안 함). DOCS/·Docs/ 등 대문자는 docs 아님 → L1.
   case "/$rel" in */docs/*) ;; *) return 1 ;; esac
-  # 이하 정책/배포 배제(→L1)는 fold 허용 — 과게이트는 안전측이라 대소문자 우회를 fold 로 닫는다.
+  # 이하 정책 파일 배제(→L1)는 fold 허용 — 과게이트는 안전측이라 대소문자 우회를 fold 로 닫는다.
   base=$(basename -- "$cf") || return 1           # basename 실패 → 안전측 L1
   base_lc=$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]') || return 1
   [ -n "$base_lc" ] || return 1
   case "$base_lc" in
     claude.md|core.md|history.md|dimensions*.md) return 1 ;;  # 정책 파일 → L1
     settings.json|settings.local.json) return 1 ;;           # 정책(훅 등록) → L1
-  esac
-  after="${rel#*docs/}"                            # 첫 (리터럴) docs/ 이후 부분
-  after_lc=$(printf '%s' "$after" | tr '[:upper:]' '[:lower:]') || return 1
-  case "/$after_lc/" in
-    */hooks/*|*/playbooks/*|*/templates/*) return 1 ;;  # docs 하위 hooks/playbooks/templates → L1(fold)
   esac
   return 0
 }
@@ -288,6 +292,21 @@ case "$CFILE" in
   *)
     echo "[gate-guard] 정규화 결과가 절대경로가 아님(빈·상대) — 안전 차단(fail-closed). 경로: $FILE_PATH" >&2
     exit 2
+    ;;
+esac
+
+# #1) 상태파일(.claude/lazymode/*) Edit/Write/MultiEdit 하드 거부 (classify 이전, MODE 무관).
+#    상태는 훅(state-lib)이 flock 원자쓰기로 소유한다 — Edit/Write 도구 경로엔 정당한 용도가 없다.
+#    Claude가 MODE=auto 등을 직접 써서 모드 게이트·fast 빚을 우회하는 것을 차단(7/3 우회의 Edit/Write판).
+#    Bash 경로(IS_BASH=1)는 위 IS_BASH 분기에서 이미 종료 — 훅 bash 쓰기와 구분 불가라 소프트 리마인더만(§0.6 FP).
+case "$CFILE" in
+  */.claude/lazymode/*)
+    if [ "$EVENT" = "PreToolUse" ]; then
+      echo "[gate-guard] 상태파일은 훅 소유(state-lib) — Claude 직접 편집 금지. 모드 선택은 사용자 답변으로 훅이 기록합니다. (.claude/lazymode/$SESSION_ID — PENDING_GATE 등 상태 변경은 Bash로 state-lib 경유)" >&2
+      exit 2
+    fi
+    echo "[gate-guard] 경고: 상태파일 변경이 PostToolUse까지 도달($CFILE) — Claude 직접 편집은 금지입니다(state-lib 소유). Pre 훅 우회 여부를 확인하세요." >&2
+    exit 0
     ;;
 esac
 

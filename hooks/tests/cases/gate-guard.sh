@@ -356,13 +356,15 @@ test_gt_35b() { # [green #7] case-fold — docs/Core.md 도 정책 파일로 L1(
   assert_exit 2 docs-policy-casefold-L1
 }
 
-test_gt_36() { # [green #4] docs/ 하위 hooks·templates 서브디렉토리 → L1
+test_gt_36() { # [green #6] docs/ 하위 hooks·templates 이름 서브디렉토리 = 순수 문서 → L0 (정책 앵커는 $ROOT 직속만)
+  # #6: 정책 디렉토리는 canonical $ROOT/hooks·$ROOT/templates(repo 루트 직속)에만 존재 — docs 하위의 동명
+  # 디렉토리는 정책이 아니라 순수 문서다. 구: after-컴포넌트 매칭으로 L1 앵커했으나 #6 로 제거.
   write_state UNSET
   mkdir -p "$REPO/docs/hooks" "$REPO/docs/templates"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/hooks/x.sh")"
-  assert_exit 2 docs-hooks-subdir-L1
+  assert_exit 0 docs-hooks-subdir-L0
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/templates/t.md")"
-  assert_exit 2 docs-templates-subdir-L1
+  assert_exit 0 docs-templates-subdir-L0
 }
 
 test_gt_37() { # [green #6] Write인데 file_path 없음 → 보수 차단(Pre) — auto 모드여도 분류 불가로 차단
@@ -437,14 +439,13 @@ test_gt_42() { # [green loop3#4] ~/.CLAUDE/core.md (대문자 prefix, HOME overr
   assert_exit 2 casefold-claude-prefix-L1-block   # loop2: prefix 비교가 case-sensitive 라 ~/.CLAUDE 우회됐음
 }
 
-test_gt_43() { # [green loop3#4] docs/Hooks/x.sh (대문자 컴포넌트) → docs 경로 case-fold L1
-  # loop3#3(준비명령 tr/basename 실패 → L1) 은 coreutil 실패를 sandbox 에서 강제하기 어려워 별도 케이스 없음:
-  # is_claude_deploy_path/is_docs_exempt 의 각 `tr`/`basename` 이 `|| return 2`(deploy)·`|| return 1`(docs)
-  # + 빈결과 `[ -n ]` 가드로 명시 감지 — 안전측(L1). 이 케이스들의 case-fold 경로가 그 가드를 관통 실행한다.
+test_gt_43() { # [green #6] docs/Hooks/x.sh (대문자 컴포넌트) = 순수 문서 → L0 (정책 앵커는 $ROOT 직속만)
+  # 구: after-컴포넌트 case-fold 로 docs 하위 Hooks 를 L1 앵커했으나 #6 로 제거 — docs 하위 동명 디렉토리는 정책 아님.
+  # (정책 파일 base name 배제 + repo-밖 ~/.claude case-fold 은 유지 — test_gt_35b·gt_42 참조)
   write_state UNSET
   mkdir -p "$REPO/docs/Hooks"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/Hooks/x.sh")"
-  assert_exit 2 casefold-docs-hooks-L1-block      # loop2: after 컴포넌트 매칭이 case-sensitive 라 docs/Hooks 우회
+  assert_exit 0 docs-uppercase-hooks-dir-L0
 }
 
 # ── task-03b 재설계 (불변식 반전): loop1~3 잔여 fail-open 능동 반증 ─────────────────
@@ -589,4 +590,48 @@ test_gt_55() { # [task-03c] UNSET L1 차단 = 5택 전부(stderr) + 구 모드�
   assert_stderr_match 'TDD' choice-pair-desc
   assert_stderr_match '특성테스트' choice-refactor-desc
   assert_stderr_no_match 'auto-implements|lazy-implements|auto-write|lazy-write|WRITE_PHASE|write-handoff' choice-no-old-mode
+}
+
+# ── 최종 감사 blocker #1: 상태파일 Claude Edit/Write 하드 거부 (state-lib 소유) ──────────
+test_gt_56() { # [green #1] 상태파일(.claude/lazymode/<sid>) Edit/Write/MultiEdit → 하드 거부(exit 2, MODE 무관)
+  # 수정 전: classify 의 상태파일 L0 면제로 Edit/Write 가 통과(exit 0) → Claude 가 MODE 직접 써서 모드게이트 우회.
+  # MODE=auto 로 둬 "MODE 무관 차단"을 입증(revert 시 auto 는 게이트 없어 exit 0 로 red).
+  write_state auto
+  run_hook gate-guard.sh "$(json_file PreToolUse Edit "$STATE")"
+  assert_exit 2 state-edit-hardblock
+  assert_stderr_match '훅 소유' state-edit-msg
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$STATE")"
+  assert_exit 2 state-write-hardblock
+  run_hook gate-guard.sh "$(json_file PreToolUse MultiEdit "$STATE")"
+  assert_exit 2 state-multiedit-hardblock
+}
+
+test_gt_56b() { # [green #1] 상태파일 Bash sed 는 하드 차단 없이 소프트 리마인더(exit 0) — 훅 bash 쓰기와 구분 불가(§0.6)
+  # 대조 케이스: Edit/Write 는 하드거부(56), Bash 경로는 §0.6 FP 근거로 소프트만(lazy 에서 sed -i 패턴 리마인더).
+  write_state lazy 0
+  run_hook gate-guard.sh "$(json_bash "sed -i 's/MODE=lazy/MODE=auto/' .claude/lazymode/$SID")"
+  assert_exit 0 state-bash-soft-pass
+  assert_stderr_match 'per-diff' state-bash-soft-reminder
+}
+
+test_gt_56c() { # [green #1] 상태파일 Edit PostToolUse 도달 → 차단 불가하나 감사 경고(관측)
+  write_state auto
+  run_hook gate-guard.sh "$(json_file PostToolUse Edit "$STATE")"
+  assert_exit 0 state-edit-post-noop
+  assert_stderr_match '경고' state-edit-post-warn
+}
+
+# ── 최종 감사 blocker #6: 정책 경로 앵커 — $ROOT 직속만 정책, docs 하위 동명 디렉토리는 순수 문서 ──
+test_gt_57() { # [green #6] docs 하위 hooks/ 이름 디렉토리(임의 깊이) = 순수 문서 → L0
+  # 수정 전: is_docs_exempt after-컴포넌트 매칭이 docs 하위 임의 위치 hooks/ 를 L1 앵커 → 순수문서 오차단(exit 2, revert red).
+  write_state UNSET
+  mkdir -p "$REPO/docs/foo/hooks"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/foo/hooks/design.md")"
+  assert_exit 0 docs-nested-hooks-dir-L0-pass
+}
+
+test_gt_57b() { # [green #6] repo 루트 직속 정책 디렉토리($ROOT/hooks) → L1 (정책, docs 밖 — 앵커 유지 회귀가드)
+  write_state UNSET
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/hooks/gate-guard.sh")"
+  assert_exit 2 root-hooks-policy-L1-block
 }

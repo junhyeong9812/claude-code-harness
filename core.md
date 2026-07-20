@@ -35,6 +35,7 @@
 | 관찰 | 판별 | 훅 처리 |
 |------|------|--------|
 | 읽기 도구 (Read·Grep·Glob 등) | L0 | 관여 없음 |
+| **Edit/Write → `.claude/lazymode/*`(모드 상태파일)** | — | **하드 거부**(모드 무관) — 상태는 훅 소유(state-lib bash). Claude 직접 편집 금지(게이트 자가 우회 차단). 모드 선택은 사용자 답변을 훅이 기록 |
 | Edit/Write → canon 경로가 `docs/**`(정책 파일 아님) 또는 repo 밖(~/.claude 배포 경로 제외) | L0 | 통과 |
 | Edit/Write → **그 외 repo 내 전부** (기본값 보수) | **L1** | MODE 미선택 시 차단 + 모드 5택 질문 |
 | Bash 읽기 | L0 | 관여 없음 |
@@ -61,7 +62,7 @@
 
 ### 구현 모드 5종 (평평한 레퍼토리 — 훅이 L1 진입 시 강제 선택)
 
-모드 = 직교 축이 아니라 **완결 프로토콜 5개**. 태스크마다 재질문. L0에서는 묻지 않는다.
+모드 = 직교 축이 아니라 **완결 프로토콜 5개**. **작업 폴더(`docs/plans/<날짜>/<작업명>/`)마다 재질문** — task-mode-guard가 새 작업 폴더의 master-plan.md·task.md 생성을 리셋 트리거로 인식(같은 폴더 내 여러 하위 task는 1회만 선택·유지, 다른 작업 폴더로 넘어가면 재질문). L0에서는 묻지 않는다.
 
 | 모드 | 파일 수정 주체 | 사용자 확인 시점 | 검증 최소선 | 문서·빚 | 전환·종료 |
 |------|--------------|----------------|------------|---------|----------|
@@ -76,7 +77,7 @@
 
 ### C3. 상태 계약 (모드 상태 — 훅 소유)
 
-- 위치 `.claude/lazymode/<session_id>` — flat `KEY=value`, 1행 `SCHEMA=3`. 키: `MODE ∈ {UNSET, auto, lazy, pair, refactor, fast}` · `PENDING_GATE` · `TASK_PATH` · `FAST_DEBT ∈ {0,1}`(빚 정본은 task-process).
+- 위치 `.claude/lazymode/<session_id>` — flat `KEY=value`, 1행 `SCHEMA=3`. 필수 키: `MODE ∈ {UNSET, auto, lazy, pair, refactor, fast}` · `PENDING_GATE ∈ {0,1}` · `FAST_DEBT ∈ {0,1}`(빚 정본은 task-process). 선택 키: `TASK_PATH`(작업 폴더 경로 — 새 작업 리셋 판정용, 부재 허용).
 - 쓰기 = temp + `mv` 원자 교체, 전 writer 동일 flock, 파서는 grep 기반(`source` 금지), session_id는 `[A-Za-z0-9-]`만.
 - 구 스키마·구 모드값 발견 = 손상으로 간주 → quarantine → UNSET 재질문 (자동 변환 금지).
 - reinject-mode가 매 턴 모드·fast 빚 1줄을 재주입(컨텍스트 요약 후 일관성).
@@ -219,7 +220,7 @@ docs/plans/YYYY-MM-DD/작업명/
 
 ### 6.4 git (훅 강제 + 정책)
 - **push는 사용자 확인 후** (리모트·브랜치·커밋 수 보고) — `git-guard` 훅 강제. 추측 push 금지.
-- 커밋은 훅 무차단(로컬·가역) — 단 code 커밋에 docs 자동 포함 금지(scope-guard 경고), AI trailer 금지, 검증 과정 출처(codex·리뷰 언급) 커밋·주석 기재 금지(review-log 소유).
+- 커밋은 **승인 게이트 없음**(로컬·가역 — push만 승인 필요). 단 git-guard가 **AI trailer(`Co-Authored-By: Claude` 등)가 포함된 커밋은 하드 차단**한다(승인 게이트가 아니라 형식 정책 — 승인 무관 즉시 차단). code 커밋에 docs 자동 포함 금지(scope-guard 경고), 검증 과정 출처(codex·리뷰 언급) 커밋·주석 기재 금지(review-log 소유).
 - `--force`·`reset --hard`·`branch -D`·`checkout .`·파괴적 삭제는 명시 요청 시만. **git 밖 불가역 조작(DB 변경 실행·마이그레이션·대량 삭제·원본 덮어쓰기)도 동일 — 개별 사용자 확인 후** (fast 진입 턱과 별개, C4 공통 불변의 근거 조항). **파괴적 조작 직전 현재 브랜치·HEAD·경로·대상 재확인**(실측: 상태 오인이 최고 강도 사고 유형).
 - **하네스 배포는 deploy.sh 경유만** — manifest diff → 백업+원자 교체 → 신규 세션 smoke. **배포 예외(D9)**: 배포 직후 smoke 실패 한정, 직전 백업 즉시 복원은 승인 없이 실행 + 사후 보고.
 

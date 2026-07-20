@@ -252,3 +252,58 @@ test_tm_06() { # [task-03c] 새 태스크 재질문 메시지 = 5종 전부(stde
   assert_stderr_match 'fast' tm-choice-fast
   assert_stderr_no_match 'auto-implements|lazy-implements|auto-write|lazy-write|WRITE_PHASE|write-handoff' tm-no-old-mode
 }
+
+# ── fix-taskmode: master-plan.md(L1 진입점) 리셋 트리거 + 리셋 단위 = 작업 폴더
+# (v3: 자명한 작업은 task.md 없이 master-plan.md만 → 종전엔 리셋 신호 전무 → 모드 누수)
+
+test_tm_07() { # [fix-taskmode revert-red] master-plan.md만 있는 자명 작업 첫 Write → MODE=UNSET 리셋
+  write_state auto
+  mkdir -p "$REPO/docs/plans/mp"; echo m > "$REPO/docs/plans/mp/master-plan.md"
+  run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/mp/master-plan.md")"
+  assert_exit 0 mp-reset-exit
+  assert_state MODE UNSET mp-reset
+  assert_stderr_match '새 태스크' mp-reset-msg
+  # 안내 문구가 새 계약(작업 폴더 단위)과 일치 — "태스크마다" 잔존 금지 (재감사 codex #2)
+  assert_stderr_match '작업 폴더마다 재질문' mp-reset-folder-wording
+  assert_stderr_no_match '태스크마다 재질문' mp-reset-no-stale-wording
+}
+
+test_tm_08() { # [fix-taskmode] 같은 작업 폴더 내 task.md 추가 → 재리셋 안 함(작업 폴더 동일)
+  write_state auto
+  mkdir -p "$REPO/docs/plans/mp"; echo m > "$REPO/docs/plans/mp/master-plan.md"
+  run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/mp/master-plan.md")"
+  sed -i 's/^MODE=.*/MODE=auto/' "$STATE"   # 사용자가 모드 재선택
+  echo t > "$REPO/docs/plans/mp/task.md"
+  run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/mp/task.md")"
+  assert_state MODE auto same-folder-no-rereset
+}
+
+test_tm_09() { # [fix-taskmode] 다른 작업 폴더 master-plan → 리셋
+  write_state auto
+  mkdir -p "$REPO/docs/plans/mp1" "$REPO/docs/plans/mp2"
+  echo m > "$REPO/docs/plans/mp1/master-plan.md"; echo m > "$REPO/docs/plans/mp2/master-plan.md"
+  run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/mp1/master-plan.md")"
+  sed -i 's/^MODE=.*/MODE=auto/' "$STATE"
+  run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/mp2/master-plan.md")"
+  assert_exit 0 other-folder-exit
+  assert_state MODE UNSET other-folder-reset
+}
+
+test_tm_10() { # [fix-taskmode] 상대경로 master-plan.md도 리셋
+  write_state auto
+  mkdir -p "$REPO/docs/plans/mp"
+  local j; j=$(jq -cn --arg f "docs/plans/mp/master-plan.md" --arg c "$REPO" --arg s "$SID" \
+    '{hook_event_name:"PostToolUse", tool_name:"Write", tool_input:{file_path:$f}, cwd:$c, session_id:$s}')
+  run_hook task-mode-guard.sh "$j"
+  assert_state MODE UNSET relative-mp-reset
+}
+
+test_tm_11() { # [fix-taskmode] 다단계 tasks/NN/task.md → 같은 작업 폴더면 재리셋 안 함(작업 폴더 도출)
+  write_state auto
+  mkdir -p "$REPO/docs/plans/mp/tasks/01-foo"; echo m > "$REPO/docs/plans/mp/master-plan.md"
+  run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/mp/master-plan.md")"
+  sed -i 's/^MODE=.*/MODE=auto/' "$STATE"
+  echo t > "$REPO/docs/plans/mp/tasks/01-foo/task.md"
+  run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/mp/tasks/01-foo/task.md")"
+  assert_state MODE auto subtask-same-folder-no-rereset
+}
