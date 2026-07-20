@@ -152,6 +152,7 @@ docs/plans/YYYY-MM-DD/작업명/
 - **review-log.md** (中↑ — codex/듀얼 리뷰가 돈 task마다 필수, 옵트인 아님): ledger 스키마는 `playbooks/review.md §2`.
 - **학습노트 (옵트인)**: 사용자가 요청하거나 높음+학습 가치 클 때만 — 개념·동작 모델·전이 지식 정리(구 OVERVIEW·learned·TECHNICAL의 통합 후신). 기본값은 작성하지 않음.
 - **문서 인용 규칙**: 코드 블록은 실파일에서 복사 — 메모리 재현·placeholder 금지. 워커 위임이 이 규칙의 구조적 집행이다.
+- **process-map 갱신 (해당 시)**: 이번 작업이 프로젝트의 프로세스 흐름·엔티티 의존·경계 노드를 바꿨으면 `docs/process-map.md`의 그 노드를 Opus 워커로 갱신(변경분만) — `playbooks/process-map.md`. 없으면 L1 진입 시 생성.
 
 ---
 
@@ -248,11 +249,13 @@ docs/plans/YYYY-MM-DD/작업명/
 | `playbooks/design-taste.md` | review §3 설계 렌즈 + implementation §0 + refactor 그룹핑 대화 |
 | `playbooks/git-workflow.md` | 원격 있는 L1 작업 — 개발 진입 시 + 기록 종료 후 |
 | `playbooks/open-source.md` | 외부 OSS 기여·PR 시 |
+| `playbooks/process-map.md` | L1 진입 시 프로젝트에 `docs/process-map.md` 부재 → 생성 + 기록 단계에서 맵 노드 변경 시 갱신 |
 | `templates/master-plan.md` | L1 작업 시작 시 (모든 구현의 진입점) |
 | `templates/task-process.md` | 〃 (task-04에서 신설) |
 | `templates/task.md` | 다단계 task 분리 시 |
 | `templates/definition.md` | 높음 stakes 정의 |
 | `templates/review-log.md` | 中↑ 리뷰 실행 task |
+| `templates/process-map.md` | process-map 생성·갱신 시 |
 | `templates/learning-note.md` | 학습노트 옵트인 시 (task-04에서 신설) |
 | `templates/measurement-log.md` | 로그 최초 생성 시 |
 
