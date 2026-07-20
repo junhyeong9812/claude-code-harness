@@ -25,4 +25,21 @@
 - 없음 (auto 모드)
 
 ## 완료 요약 (작업 종료 시)
-- (대기)
+
+> ⚠ 진행 방식 전환(사용자 지시 2026-07-20): task-01의 5라운드 codex churn 이후 "적대적 리뷰 루프 = 문제를 가정한 무한 루프(비수렴 구조)"라는 사용자 지적 수용. task-02~05는 **전부 구현 → 통합 테스트 1회**(적대적 루프 X, "돌려보니 되나" 긍정 검증)로 전환.
+
+**task-01** (git-guard ask 반환): 자연어 승인 파싱 전면 제거 → push 감지 시 `permissionDecision:"ask"` 반환. 커버리지(git -C·alias·heredoc) 유지. §6.5 보고는 cwd 기준값을 정확 명명 + "실제 대상 아님" 명시. trailer 제품명 오탐 수정. C2 폴백은 push 안전망만(F2 재처리 — 사용자 승인). git-guard.sh −224줄.
+
+**task-02** (codex-scan): PreToolUse:Bash 신규 훅. codex 호출 명령의 시크릿 패턴 backstop 차단(값·명령 미출력 redaction). stdin/파일 리다이렉트 바이트는 범위 밖(문서화 — 절차 스캔이 primary).
+
+**task-04** (docs): core §6.4·활성훅 목록·README 정합(push=ask, codex-scan 추가, 훅 9종).
+
+**task-05** (배포·검증):
+- 통합 테스트 1회: `hooks/tests/run.sh` **158 passed / 0 failed** + codex-scan·git-guard 스모크 전건.
+- 글로벌 settings.json 에 codex-scan 등록(jq 삽입, 백업 `settings.json.bak-fdb9cea`, 로컬 키 model·tui·enabledPlugins·skipWorkflowUsageWarning 보존). deploy.sh 가 settings 제외라 수동.
+- `deploy.sh` 실행 → core.md·hooks 배포, smoke 통과, 백업 `.deploy-backup-2332235`.
+- **dogfood(배포된 훅 라이브 검증)**: 제품명 커밋 통과(오탐 3회 재현 → 해소) · push→ask · 실 trailer→exit2 · codex+시크릿→exit2.
+
+**남은 것**: main 머지 + origin push(사용자 확인 대상). capture-prompt 는 git-guard 가 사이드카 소비 중단으로 **dead producer** — 등록 해제·삭제는 후속 후보(이번 범위 밖, UserPromptSubmit 배선 건드림).
+
+**배운 것**: 적대적 검증 루프는 "흠을 찾아라" 프롬프트 + 회귀를 내는 모델 = 비수렴. 검증은 "적대자가 못 찾나"(무한)가 아니라 "돌려보니 되나"(유한 긍정 확인)로. churn 2회 = 땜질 말고 설계 되돌림 신호.
