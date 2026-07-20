@@ -2,7 +2,7 @@ a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manif
 f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-scan.sh
 43f905e9c69793aef2f3b317916139a66720231d96882acdf349b14e1921b3ea  cases/gate-guard.sh
 7e4a9e1911da9318b7c57d49da2fac658b7627ec9f4cf2e4c72d2b2f2f0b97a0  cases/git-guard.sh
-a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-guards.sh
+4446ede0b74fe7ef40e1dec93b04452ab941f007b7e6d8951cc09ac277c974a9  cases/misc-guards.sh
 1ada4a030e7fa6ae449b2e96bf5e353f62df843ad41dee204e9db693cca1e754  cases/state-schema.sh
 5ba9c2f259e24985b5db12042f32cb4f10a791c8b1d039bb779b792d6283139e  lib.sh
 7d194f60b055c7759d65b782e610b384f75dae1d4b40332322ec9c8218034fd9  run.sh
@@ -134,6 +134,8 @@ a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-gua
 # test: test_sc_01
 # test: test_sc_02
 # test: test_sc_03
+# test: test_setmode_records_valid
+# test: test_setmode_rejects_invalid
 # test: test_sg_01
 # test: test_sg_02
 # test: test_ss_01

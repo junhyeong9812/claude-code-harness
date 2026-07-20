@@ -307,3 +307,17 @@ test_tm_11() { # [fix-taskmode] 다단계 tasks/NN/task.md → 같은 작업 폴
   run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/mp/tasks/01-foo/task.md")"
   assert_state MODE auto subtask-same-folder-no-rereset
 }
+
+test_setmode_records_valid() { # [fix-mode-recording 2026-07-20] set-mode.sh 가 사용자 모드를 상태에 기록
+  write_state UNSET
+  set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-mode.sh" auto "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e
+  assert_exit 0 setmode-valid-exit
+  assert_state MODE auto setmode-recorded
+}
+
+test_setmode_rejects_invalid() { # enum 밖 모드는 거부하고 상태 무변경
+  write_state UNSET
+  set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-mode.sh" bogus "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e
+  assert_exit 2 setmode-reject-exit
+  assert_state MODE UNSET setmode-unchanged
+}

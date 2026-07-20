@@ -302,7 +302,7 @@ esac
 case "$CFILE" in
   */.claude/lazymode/*)
     if [ "$EVENT" = "PreToolUse" ]; then
-      echo "[gate-guard] 상태파일은 훅 소유(state-lib) — Claude 직접 편집 금지. 모드 선택은 사용자 답변으로 훅이 기록합니다. (.claude/lazymode/$SESSION_ID — PENDING_GATE 등 상태 변경은 Bash로 state-lib 경유)" >&2
+      echo "[gate-guard] 상태파일은 훅 소유(state-lib) — Claude 직접 편집(Edit/Write) 금지. 모드는 사용자에게 물은 뒤 'bash ~/.claude/hooks/set-mode.sh <선택> .claude/lazymode/$SESSION_ID' 로 기록하세요(자동 기록 훅 없음 — 이 명령이 유일한 기록 경로). PENDING_GATE 등 다른 상태도 Bash로 state-lib 경유." >&2
       exit 2
     fi
     echo "[gate-guard] 경고: 상태파일 변경이 PostToolUse까지 도달($CFILE) — Claude 직접 편집은 금지입니다(state-lib 소유). Pre 훅 우회 여부를 확인하세요." >&2
@@ -344,7 +344,10 @@ set_pending() {
 if [ "$MODE" = "UNSET" ] || [ -z "$MODE" ]; then
   if [ "$EVENT" = "PreToolUse" ]; then
     cat >&2 <<MSG
-[gate-guard] 작업 모드 미선택(MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다 — 사용자에게 아래 5종 중 하나를 물어 .claude/lazymode/$SESSION_ID 의 MODE 에 기록한 뒤 다시 시도하세요. (탐색·토론·학습은 모드 없이 자유)
+[gate-guard] 작업 모드 미선택(MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다. (탐색·토론·학습은 모드 없이 자유)
+복구 순서: ① 아래 5종을 사용자에게 물어라(AskUserQuestion 권장) → ② 사용자가 고른 값을 아래 명령으로 기록 → ③ 이 도구 호출을 다시 시도.
+  ▶ 기록 명령(유일한 기록 경로 — 상태파일 Edit 금지, 이 훅은 프롬프트를 읽어 자동기록하지 않음):
+      bash ~/.claude/hooks/set-mode.sh <선택한_모드> .claude/lazymode/$SESSION_ID
   • auto — 앞단(정의·계획) 합의 후 Claude 자율 실행 (per-diff 이해 게이트 없음).
   • lazy — 매 diff 사용자 이해 게이트(주관식→판정 워커). 자율주행 금지. (implementation-lazymode.md)
   • pair — 대화로 정의·설계 합의 → TDD(테스트 1개=사이클) → 사용자가 로직 타이핑, Claude는 테스트/보일러플레이트+핑퐁 리뷰만. (pair-coding.md)
