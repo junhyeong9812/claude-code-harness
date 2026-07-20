@@ -96,13 +96,12 @@ emit_ask() { # $1 = reason
 #   bare "Claude Code"(제품명)는 오탐이라 제외(2026-07-20). raw COMMAND 검사(메시지는 인용 안).
 has_trailer() { echo "$COMMAND" | grep -qiE 'Co-Authored-By:[[:space:]]*.*(Claude|Codex|Anthropic)|Generated with[[:space:]]*.*Claude'; }
 emit_trailer_block() {
-  cat >&2 <<EOF
-[git-guard] 커밋 메시지에 Claude/Codex trailer가 감지되었습니다.
-
-차단된 명령:
-  $COMMAND
-
+  # ⚠ raw 명령($COMMAND)을 stderr 에 echo 하지 않는다(codex 리뷰 #1 2026-07-20): 복합 명령에 push URL
+  #   크리덴셜·토큰이 있으면 trailer 차단 메시지로 그대로 유출된다(push_report 정적화와 같은 유출 class).
+  cat >&2 <<'EOF'
+[git-guard] 커밋 메시지에 Claude/Codex trailer가 감지되어 차단했습니다.
 정책(§6.4): 커밋 메시지에 Co-Authored-By / Generated with Claude 등 trailer를 넣지 않습니다.
+(명령 전문은 유출 방지를 위해 출력하지 않습니다 — 방금 실행한 커밋 명령의 메시지에서 trailer 를 제거하세요.)
 EOF
   exit 2
 }

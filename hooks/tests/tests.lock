@@ -1,5 +1,5 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
-0c4e353c746d4e54828f5b6b56c8a10825b57e95a800ba6b50ba2bc89ff49c22  cases/codex-scan.sh
+28586aaa64a7799a746817d81219a33b5fe129bb5dc1911451c2794a340e997f  cases/codex-scan.sh
 43f905e9c69793aef2f3b317916139a66720231d96882acdf349b14e1921b3ea  cases/gate-guard.sh
 7e4a9e1911da9318b7c57d49da2fac658b7627ec9f4cf2e4c72d2b2f2f0b97a0  cases/git-guard.sh
 a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-guards.sh
@@ -17,15 +17,20 @@ a00611778d666aacab53b88c1e7179fd289c535e3b0bcec443d10c8f3bac487b  cases/misc-gua
 # test: test_cs_generic_assign_blocked
 # test: test_cs_ghp_blocked
 # test: test_cs_malformed_stdin
+# test: test_cs_malformed_warns_when_codex_present
 # test: test_cs_mention_in_string_no_fp
+# test: test_cs_midword_hash_not_comment
 # test: test_cs_non_bash_tool
 # test: test_cs_non_codex_ignored
 # test: test_cs_pem_blocked
+# test: test_cs_prefix_forms_detected
 # test: test_cs_quoted_secret_still_blocked
+# test: test_cs_real_comment_still_stripped
 # test: test_cs_redaction
 # test: test_cs_sk_blocked
 # test: test_cs_stdin_redirect_limit
 # test: test_cs_substring_no_fp
+# test: test_cs_uppercase_assignment_secret
 # test: test_gg_ask_arith_shift
 # test: test_gg_ask_basic
 # test: test_gg_ask_cd

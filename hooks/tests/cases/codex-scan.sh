@@ -78,6 +78,36 @@ test_cs_codex_after_separator_detected() { # command-position(구분자 뒤) 실
   assert_exit 2 cs-sep-detected
 }
 
+test_cs_midword_hash_not_comment() { # [codex #2] 단어 내부 '#'(foo#bar)은 주석 아님 → 뒤 실호출·시크릿 탐지
+  run_hook codex-scan.sh "$(json_bash 'echo foo#bar; codex exec AKIAIOSFODNN7EXAMPLE')"
+  assert_exit 2 cs-midhash-detected
+}
+
+test_cs_real_comment_still_stripped() { # 행시작/공백 뒤 '#' 는 주석 → codex 미실행 → 통과
+  run_hook codex-scan.sh "$(json_bash 'echo hi # codex exec AKIAIOSFODNN7EXAMPLE')"
+  assert_exit 0 cs-realcomment-pass
+}
+
+test_cs_prefix_forms_detected() { # [codex #4] 할당·env·command 프리픽스 실호출 감지
+  run_hook codex-scan.sh "$(json_bash 'TOKENX=y codex exec AKIAIOSFODNN7EXAMPLE')"
+  assert_exit 2 cs-prefix-assign
+  run_hook codex-scan.sh "$(json_bash 'env FOO=bar codex exec AKIAIOSFODNN7EXAMPLE')"
+  assert_exit 2 cs-prefix-env
+  run_hook codex-scan.sh "$(json_bash 'command codex exec AKIAIOSFODNN7EXAMPLE')"
+  assert_exit 2 cs-prefix-command
+}
+
+test_cs_uppercase_assignment_secret() { # [codex #5] 대문자 env 변수 할당 시크릿도 차단
+  run_hook codex-scan.sh "$(json_bash 'codex exec --note TOKEN=abcdefghijklmnop')"
+  assert_exit 2 cs-uppercase-token
+}
+
+test_cs_malformed_warns_when_codex_present() { # [codex #6] malformed JSON + raw 에 codex → C2 경고(통과)
+  run_hook codex-scan.sh '{ broken json codex exec'
+  assert_exit 0 cs-malformed-warn-exit
+  assert_stderr_match '파싱 실패' cs-malformed-warn-msg
+}
+
 # ── codex 부분문자열 오탐 회피(mycodex·codex-foo) ──────────────
 test_cs_substring_no_fp() {
   run_hook codex-scan.sh "$(json_bash 'mycodex run AKIAIOSFODNN7EXAMPLE')"
