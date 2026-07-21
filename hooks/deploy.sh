@@ -15,12 +15,18 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST="$HOME/.claude"
 DRY=0; [ "${1:-}" = "--dry-run" ] && DRY=1
 
-MANIFEST="core.md HISTORY.md dimensions.md dimensions-batch.md dimensions-frontend.md dimensions-infra.md hooks playbooks templates"
+MANIFEST="core.md HISTORY.md hooks playbooks templates"
+# dest 이름 → repo 소스 경로 매핑 (v4: core.md 소스는 src/ — 루트에 두면 세션 런타임이 project instructions 로
+# 중복 주입하는 실측 때문. harness-v4-slimdown task-01)
+src_of() { case "$1" in core.md) echo "src/core.md" ;; *) echo "$1" ;; esac; }
+# v4 에서 배포 대상에서 빠진 구 최상위 파일 — DEST 에 남으면 유령 정책(디렉토리와 달리 통째 교체가 안 됨).
+# 배포 시 BACKUP 으로 이동(= D9 원복 대상), 성공 시 제거 확정.
+STALE_TOPLEVEL="dimensions.md dimensions-batch.md dimensions-frontend.md dimensions-infra.md"
 
 echo "[deploy] repo=$REPO → dest=$DEST (dry-run=$DRY)"
 [ -n "${HOME:-}" ] && [ -d "$DEST" ] || { echo "[deploy] \$DEST($DEST) 없음 — 중단"; exit 1; }
 for m in $MANIFEST; do
-  [ -e "$REPO/$m" ] || { echo "[deploy] manifest 대상 없음: $m — 중단"; exit 1; }
+  [ -e "$REPO/$(src_of "$m")" ] || { echo "[deploy] manifest 대상 없음: $(src_of "$m") — 중단"; exit 1; }
 done
 
 # manifest diff 요약 (dry-run·실배포 공통 — core §6.4 "manifest diff"). 각 대상의 repo↔DEST 차이를 stdout 에.
@@ -32,10 +38,13 @@ print_manifest_diff() {
   echo "[deploy] manifest diff (repo↔dest):"
   for m in $MANIFEST; do
     if [ -e "$DEST/$m" ]; then
-      diff -rq "$REPO/$m" "$DEST/$m" 2>/dev/null | sed 's/^/  /'
+      diff -rq "$REPO/$(src_of "$m")" "$DEST/$m" 2>/dev/null | sed 's/^/  /'
     else
       echo "  (신규 배포) $m"
     fi
+  done
+  for m in $STALE_TOPLEVEL; do
+    [ -e "$DEST/$m" ] && echo "  (stale 제거 예정) $m — v4 배포 대상 아님"
   done
 }
 
@@ -57,8 +66,8 @@ cleanup_fail() {
   set +e                 # 원복은 하나 실패해도 나머지 전부 시도 (재점검 High)
   echo "[deploy] 실패/중단 — 원복 중..." >&2
   for m in $INSTALLED; do rm -rf "$DEST/$m"; done          # 신규 설치분 제거
-  for m in $MANIFEST; do
-    [ -e "$BACKUP/$m" ] && { rm -rf "$DEST/$m"; mv "$BACKUP/$m" "$DEST/$m"; }   # 백업에서 원복
+  for m in $MANIFEST $STALE_TOPLEVEL; do
+    [ -e "$BACKUP/$m" ] && { rm -rf "$DEST/$m"; mv "$BACKUP/$m" "$DEST/$m"; }   # 백업에서 원복(stale 포함)
   done
   rm -rf "$STAGING"
   echo "[deploy] 원복 완료(백업 보존됐던 대상은 제자리 복구)." >&2
@@ -71,8 +80,13 @@ trap cleanup_fail EXIT INT TERM
 # ① staging 복사 + 검증 (원본 무손상 단계)
 for m in $MANIFEST; do
   mkdir -p "$STAGING/$(dirname "$m")"
-  cp -a "$REPO/$m" "$STAGING/$m"
-  diff -rq "$REPO/$m" "$STAGING/$m" >/dev/null 2>&1 || { echo "[deploy] staging 검증 실패: $m" >&2; exit 1; }
+  cp -a "$REPO/$(src_of "$m")" "$STAGING/$m"
+  diff -rq "$REPO/$(src_of "$m")" "$STAGING/$m" >/dev/null 2>&1 || { echo "[deploy] staging 검증 실패: $m" >&2; exit 1; }
+done
+
+# ②′ stale 최상위 파일 → BACKUP 이동(실패 시 cleanup_fail 이 원복)
+for m in $STALE_TOPLEVEL; do
+  [ -e "$DEST/$m" ] && mv "$DEST/$m" "$BACKUP/$m"
 done
 
 # ② 기존 대상 백업(mv — 원자, 부분 백업 없음) ③ staging → 제자리(mv)
@@ -85,7 +99,7 @@ done
 
 # ④ 최종 검증
 for m in $MANIFEST; do
-  diff -rq "$REPO/$m" "$DEST/$m" >/dev/null 2>&1 || { echo "[deploy] 최종 검증 실패: $m" >&2; exit 1; }
+  diff -rq "$REPO/$(src_of "$m")" "$DEST/$m" >/dev/null 2>&1 || { echo "[deploy] 최종 검증 실패: $m" >&2; exit 1; }
 done
 
 # ⑤ 신규 세션 smoke (core §6.4 "신규 세션 smoke") — 배포된 훅을 canned 입력으로 실제 구동해 로드·실행을 검증.

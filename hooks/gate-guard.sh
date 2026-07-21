@@ -104,7 +104,6 @@ is_claude_deploy_path() { # <canonical file> → rc 0/1/2
   case "$rel_lc" in
     core.md|history.md|claude.md) return 0 ;;    # 정책·부트스트랩 (최고 blast radius)
     settings.json|settings.local.json) return 0 ;;  # 훅 등록 — 직접수정 차단
-    dimensions.md|dimensions-*.md) return 0 ;;   # 배포 대상만 (deploy MANIFEST 정합 — dimensions_backup·dimensions-notes.txt 등 비배포는 과게이트 안 함)
     hooks/*|playbooks/*|templates/*) return 0 ;;
   esac
   return 1
@@ -132,7 +131,7 @@ is_docs_exempt() { # <canonical file> <repo root> → rc 0/1
   base_lc=$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]') || return 1
   [ -n "$base_lc" ] || return 1
   case "$base_lc" in
-    claude.md|core.md|history.md|dimensions*.md) return 1 ;;  # 정책 파일 → L1
+    claude.md|core.md|history.md) return 1 ;;  # 정책 파일 → L1
     settings.json|settings.local.json) return 1 ;;           # 정책(훅 등록) → L1
   esac
   return 0

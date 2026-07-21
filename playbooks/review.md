@@ -1,6 +1,6 @@
 # playbook: 리뷰 (中=듀얼 1패스 / 높음=병렬 듀얼 리뷰 루프)
 
-> 트리거: **中·높음**의 리뷰 시점(페이즈 구현 완료·커밋 후). 개발 단계의 설계 자문은 §3 렌즈만 참조(implementation.md §0). **낮음(셀프체크)만 이 문서를 읽지 않는다.** 中 = §1의 **듀얼 1패스**(⓪~④ + post-fix 타깃 재점검, ⑤ 반복 없음) + §2·§3 / 높음 = §1 전체(반복 루프 max3) + 설계 선검증·blind 테스트 워커. §2 대칭 부담·ledger는 中·높음 공통.
+> 트리거: **中·높음**의 리뷰 시점(페이즈 구현 완료·커밋 후). 개발 단계의 설계 자문은 §3 렌즈만 참조. **낮음(셀프체크)만 이 문서를 읽지 않는다.** 中 = §1의 **듀얼 1패스**(⓪~④ + post-fix 타깃 재점검, ⑤ 반복 없음) + §2·§3 / 높음 = §1 전체(반복 루프 max3) + 설계 선검증·blind 테스트 워커. §2 대칭 부담·ledger는 中·높음 공통.
 > 원리: 같은 모델 여러 개는 편향을 공유한다 — 독립 신호는 다른 모델(codex)이 제공하고, 최종 판정은 투표가 아니라 근거 품질 재평가다.
 
 ## 1. 루프 절차
@@ -10,27 +10,27 @@
 → ④ 수정 → 테스트 → ⑤ 재리뷰(①로) … 종료 조건 충족 시 탈출, 최대 3루프
 ```
 
-- **⓪ review packet**: 페이즈 시작 base SHA를 task.md(또는 gate.md)에 고정. packet = `base SHA..current` **누적 diff** + spec (이번 루프 수정 diff는 참고로만 별도 표기 — 마지막 수정만 보면 전체 일관성 문제를 놓친다). **보안 스캔(§5) 통과한 동일 packet을 양쪽에 제공** — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
+- **⓪ review packet**: 페이즈 시작 base SHA를 작업 폴더 log.md에 고정. packet = `base SHA..current` **누적 diff** + spec (이번 루프 수정 diff는 참고로만 별도 표기 — 마지막 수정만 보면 전체 일관성 문제를 놓친다). **보안 스캔(§5) 통과한 동일 packet을 양쪽에 제공** — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
 - **⓪′ spec 기준 판정 (구현이 아닌 spec)**: packet에 **spec 원문**을 포함하고, 리뷰어 프롬프트에 "구현이 그럴듯한가가 아니라 **spec과 일치하는가**로 판정하라"를 명시한다 — 잘못된 구현을 "의도대로"로 오검증한 사고(03c 관찰)를 spec 원문 대조로 차단. 구현 diff는 "무엇이 바뀌었나"의 근거일 뿐, 정답의 기준이 아니다.
 - **① 병렬 리뷰**: Opus 워커(Agent 호출, model: opus) ∥ codex(`codex exec`, read-only). **입력 격리는 실행으로 강제한다**: Opus 워커 프롬프트에는 packet만 포함(다른 파일 읽기 지시 금지), codex는 repo 밖 임시 디렉터리에 packet 파일만 두고 실행 — read-only는 packet-only가 아니다. packet 외 접근이 발생했으면 비대칭 입력으로 표시하고 정상 종료로 인정하지 않는다.
-- **① 실패 분기**: 한쪽 실패 시 1회 재시도 → 그래도 실패면 **`review blocked`** — 정상 종료 불가. 같은 packet으로 동등한 대체 독립 리뷰어를 실행하면 루프 계속 가능. 사용자가 단일 리뷰 진행을 명시 승인하면 **`user override`로 기록**하고 잔여 리스크를 보고 — 머지 가부는 사용자 결정 (높음 codex 스킵 불가 — core §5).
+- **① 실패 분기**: 한쪽 실패 시 1회 재시도 → 그래도 실패면 **`review blocked`** — 정상 종료 불가. 같은 packet으로 동등한 대체 독립 리뷰어를 실행하면 루프 계속 가능. 사용자가 단일 리뷰 진행을 명시 승인하면 **`user override`로 기록**하고 잔여 리스크를 보고 — 머지 가부는 사용자 결정 (높음 codex 스킵 불가 — core §4).
 - **② 메인 종합**: 중복 병합 + finding별 채택/기각. **허용 근거는 packet 안(diff·spec·리뷰 원문)으로 제한** — 기각 사유도 file:line 또는 spec 조항에 귀속. 숨은 구현 의도·대화 맥락을 근거로 쓰지 않는다 (절단 계약 보호).
 - **③ codex 종합 감사 (1회)**: 입력 = packet + 양 리뷰 원문 + 메인 채택/기각표. 역할은 "메인 판정 오류·누락 후보 지적"까지 — codex가 자기 finding의 기각을 재검토하는 것이므로 **독립 리뷰 1표가 아니라 종합 품질 감사**다. 추가 왕복 금지.
-- **④ 수정 → 테스트**: verification.md대로. finding 재현 테스트는 **"fix verification test"로 분류** — blind 테스트 설계(구현 diff 미열람 계약)와 구분하고, 그 계약을 소급 오염시키지 않는다.
+- **④ 수정 → 테스트**: core §4 검증대로. finding 재현 테스트는 **"fix verification test"로 분류** — blind 테스트 설계(구현 diff 미열람 계약)와 구분하고, 그 계약을 소급 오염시키지 않는다.
 - **⑤ 재리뷰**: ①로 복귀. 입력은 갱신된 누적 diff packet.
 
 **종료 조건 (높음 — 반복 루프)**: `open(채택·미수정) finding 0` **AND** `이번 루프 신규 채택 finding 0` **AND** `대칭 부담 충족(§2)`. **최대 3루프** — 초과 시 `review unresolved`로 중단하고 미해소 finding·기각 목록·잔여 리스크·필요한 사용자 결정을 보고한다 (해소 또는 사용자 보류 결정 전 머지 불가).
 
-- **中 변형 (듀얼 1패스 — 반복 루프 없음)**: 中 stakes는 ⓪~④를 1회 수행하고 **⑤ 재리뷰 반복을 하지 않는다**. ④ 수정 후 **post-fix 타깃 재점검 1회**(채택 finding을 고친 hunks + 인접 호출부 + 새 테스트만 — codex 또는 Opus 워커 중 하나가 재검토하되 **독립성 위해 원 수정 근거를 낸 쪽이 아닌 리뷰어 권장(codex 우선)**, 종합 감사 재실행 없음, 전체 packet 재리뷰 아님)로 수정-새결함을 차단한다. **中 종료 조건**: `채택 finding 전부 fixed` + `post-fix 재점검 clean(신규 finding 0)` + §4.3 최소 안전선 + **대칭 부담(§2 — 이 신규 0 상태에 적용)**. 설계 선검증·blind 테스트 워커는 中 비대상(高 전용 — 中 테스트는 core §5대로 spec-우선 + 테스트 코드 자체 정합성 점검). 진행 중 설계 리스크가 드러나면(테스트 설계 막힘·불변식 한 문장 설명 실패·변경 확산 — core §4.1) **높음 승격**, 이미 수행한 듀얼 1패스를 높음 루프 **1회차로 인정**(처음부터 다시 X).
+- **中 변형 (듀얼 1패스 — 반복 루프 없음)**: 中 stakes는 ⓪~④를 1회 수행하고 **⑤ 재리뷰 반복을 하지 않는다**. ④ 수정 후 **post-fix 타깃 재점검 1회**(채택 finding을 고친 hunks + 인접 호출부 + 새 테스트만 — codex 또는 Opus 워커 중 하나가 재검토하되 **독립성 위해 원 수정 근거를 낸 쪽이 아닌 리뷰어 권장(codex 우선)**, 종합 감사 재실행 없음, 전체 packet 재리뷰 아님)로 수정-새결함을 차단한다. **中 종료 조건**: `채택 finding 전부 fixed` + `post-fix 재점검 clean(신규 finding 0)` + core §4 최소 안전선 + **대칭 부담(§2 — 이 신규 0 상태에 적용)**. 설계 선검증·blind 테스트 워커는 中 비대상(高 전용 — 中 테스트는 core §4대로 spec-우선 + 테스트 코드 자체 정합성 점검). 진행 중 설계 리스크가 드러나면(테스트 설계 막힘·불변식 한 문장 설명 실패·변경 확산 — core §3) **높음 승격**, 이미 수행한 듀얼 1패스를 높음 루프 **1회차로 인정**(처음부터 다시 X).
 
 ## 2. finding 규칙
 
 - **자격 조건 (전부 충족해야 finding)**: ① 현재 diff가 도입·변경한 **산출물**(코드·문서·정책 등) ② **근거 위치** — `file:line`, 또는 "diff에 *없는 것*"(완전성·통합 렌즈) finding은 누락 산출물 경로·deploy 단계·runtime 계약 형식 허용 ③ 실질 리스크(코드=정확성·성능·유지보수 / 문서·정책=정확성·일관성·운영·유지보수 중 무엇인지 명시) ④ spec 또는 변경 의도와의 연결. 하나라도 없으면 "범위 밖" 또는 open question — 단순 선호·취향은 finding이 아니다.
-- **상태 ledger** (필수 필드 — 종료 판정의 입력): `id / first_seen_loop / source(opus·codex·감사·main-synthesis) / 근거(file:line, 또는 diff-밖 finding은 누락 경로·deploy·runtime 계약) / disposition(채택·기각·범위 밖·open question) / status(open·fixed·user-deferred·unresolved) / fixed_in_loop`. 기록 위치: **`review-log.md`**(`templates/review-log.md` — 이 스키마의 인스턴스 + finding별 실질 내용. core §3.5; 다단계·대규모는 해당 페이즈 폴더). **종료식**: open = disposition=채택 AND status=open / 신규 채택 = first_seen_loop=현재 루프 AND disposition=채택. **finding 단위**: 같은 `file:line`·같은 불변식 위반은 1건(출처가 둘이면 source 병기) — 쪼개거나 합쳐 종료식을 조작하지 않는다. 코드 변경 없이 테스트만 추가한 수정도 재점검 대상. **메인 종합 중 양 리뷰 비교로 발견한 결함**은 `source: main-synthesis`로 등록 — 독립 신호는 아니나 유효 finding(귀속·자격은 동일).
+- **상태 ledger** (필수 필드 — 종료 판정의 입력): `id / first_seen_loop / source(opus·codex·감사·main-synthesis) / 근거(file:line, 또는 diff-밖 finding은 누락 경로·deploy·runtime 계약) / disposition(채택·기각·범위 밖·open question) / status(open·fixed·user-deferred·unresolved) / fixed_in_loop`. 기록 위치: **작업 폴더 `log.md`의 리뷰 ledger 섹션**(`templates/log.md` — 이 스키마의 인스턴스 + finding별 실질 내용. core §7). **종료식**: open = disposition=채택 AND status=open / 신규 채택 = first_seen_loop=현재 루프 AND disposition=채택. **finding 단위**: 같은 `file:line`·같은 불변식 위반은 1건(출처가 둘이면 source 병기) — 쪼개거나 합쳐 종료식을 조작하지 않는다. 코드 변경 없이 테스트만 추가한 수정도 재점검 대상. **메인 종합 중 양 리뷰 비교로 발견한 결함**은 `source: main-synthesis`로 등록 — 독립 신호는 아니나 유효 finding(귀속·자격은 동일).
 - **대칭 부담 (신규 채택 finding 0인 루프 — 무근거 통과 차단)**: finding 0을 종료로 인정하려면 §3 렌즈마다 **applicable / not-applicable을 근거 1줄로 판정**하고(예: "동시성 = N/A: 단일 인스턴스 read-only"), **applicable 렌즈를 전부 `verified`로 입증**한다. **고정 개수 요구 없음** — 적용 안 되는 렌즈를 형식 충족용으로 verified 처리하는 것이 더 큰 위반(과거 "필수 finding 강제 → 날조" 재현). **verified ledger 필드**: `lens / 근거(file:line, 또는 "diff에 *없는 것*" 렌즈는 누락 산출물 경로·deploy 단계·runtime 계약 허용) / how(충족 방식 1줄) / source(opus·codex)`. 근거는 병렬 리뷰 원문에서 인용(메인 사후 창작 금지). **양쪽 균형**: applicable 렌즈를 Opus·codex가 합쳐서 전부 커버하면 충족 — applicable verified 전체를 통틀어 한 source(opus 또는 codex)의 기여가 0건이면 종료는 가능하되 `비대칭` 플래그로 리스크 기록(편향 공유 가능성). 中·높음 공통, 신규 finding 있는 루프엔 불필요(검사가 이미 입증됨).
 - 애매하면 단정하지 않는다 — open question으로 남긴다 ("이 컬렉션의 최대 크기는 어디서 제한되나?").
 
-## 3. 판단 렌즈 (리뷰는 diff 기반, 판단은 이 레벨로 — 설계 시 선적용: implementation.md §0)
+## 3. 판단 렌즈 (리뷰는 diff 기반, 판단은 이 레벨로 — 설계 시에도 선적용)
 
 > diff 정확성(아래 처음 4렌즈)만 보면 **"빠진 능력"을 못 잡는다** — 완전성·운영성 렌즈는 diff 안에 *없는 것*을 본다(codex 가 약한 지점, 독립 리뷰어가 메우는 관점).
 
@@ -59,7 +59,7 @@
 - **지적한다**: unbounded 입력에 superlinear 작업·per-item I/O·무제한 fan-out을 신설/악화 · 기존 limit/pagination/batching/cache 제거·우회 · 상한 없이 입력 전체에 비례하는 메모리 적재 · production request path에서 입력 크기만큼 자원(thread·connection·트랜잭션 시간) 점유가 file:line으로 보일 때.
 - **넘어간다**: 상한이 작고 코드로 강제되며 그 규모에서 복잡도가 합리적 · one-time migration/admin/startup 경로로 빈도·규모 제한이 spec/code에 보임 · 상수배 미세 최적화·취향 수준 · 입력 규모가 diff/spec에서 증명 안 돼 귀속 불가(→ open question).
 
-## 5. codex 호출 (외부 전송 게이트 — core §5에서 이관)
+## 5. codex 호출 (외부 전송 게이트)
 
 > ①~③은 codex를 실제로 호출하는 절차. §1 ⓪·①의 "보안 스캔·codex 실행"이 이 절을 참조한다.
 

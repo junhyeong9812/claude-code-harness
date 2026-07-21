@@ -8,7 +8,7 @@
 #   stdout 에 permissionDecision:"ask" JSON 을 반환하고 exit 0. 승인 판정은 네이티브 UI(사용자)가
 #   소유한다 — 자연어 승인 파싱(사이드카 SC_BODY·pending 2턴·키워드 절 판정)은 **전부 제거됨**
 #   (v3 후속 2026-07-20: 명령 변형 시 pending clobber·"main에머지" 키워드 엣지·마찰 해소).
-#   커밋은 로컬·가역이라 승인 경계 밖(docs-only 커밋 가드는 2026-07-19 제거, scope-guard 전담).
+#   커밋은 로컬·가역이라 승인 경계 밖(docs 혼합 커밋 금지는 core v4 §6 스코프 절차 규칙 — 경고 훅은 v4에서 제거).
 #   커밋 메시지의 Claude/Codex trailer 금지(§6.4)는 push 와 별개로 여기서 계속 즉시 차단(exit 2)한다.
 #
 # push 감지 로직(GIT_PRE/GIT_OPTS 정규식·heredoc/주석 정제·git -C/-c/command/cd/alias 우회 탐지)은

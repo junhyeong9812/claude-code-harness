@@ -52,7 +52,7 @@
 
 - **얕게**: `Explore` 에이전트로 패키지별 후보 스윕(저위험 다수).
 - **깊게**: 멀티에이전트 워크플로우 — 하위 패키지 병렬 `Find`(정확성 버그만) → `Verify`(adversarial 검증). 토큰 많이 쓰므로 사용자 opt-in.
-- 발견 결과는 `findings.md`(요약 표) + 버그별 `task.md`로 추적.
+- 발견 결과는 `findings.md`(요약 표) + 버그별 `requirement-spec.md`로 추적.
 
 ---
 
@@ -62,7 +62,7 @@
 
 ### ① 문서화 (착수 전)
 - 정의 6칸(목표·불변식·기준소스·금지영역·검증방법·stakes) + 차원 트리아지 + stakes 산정.
-- 산출: 버그 폴더의 `task.md`.
+- 산출: 버그 폴더의 `requirement-spec.md`.
 
 ### ② 독립 검증 (믿지 말고 재확인)
 - 발견 결과(에이전트 주장)를 **그대로 믿지 않는다.** Opus 에이전트로 실제 코드·호출처·git을 **독립 재확인**.
@@ -90,7 +90,7 @@
 ### ⑦ DCO sign-off 커밋
 - **`git commit -s`** — `Signed-off-by: 이름 <이메일>` 필수(2025년부터 Spring은 CLA→DCO).
 - 커밋 메시지: **제목 ≤55자, 본문 ≤72자/줄**. 연관 이슈 있으면 본문에 `Closes gh-XXXXX`.
-- **금지**: AI trailer(`Co-Authored-By: Claude` 등), 검증 출처 언급("codex 지적 반영" 등)은 커밋/주석에 쓰지 않음(→ task-process·review-log에).
+- **금지**: AI trailer(`Co-Authored-By: Claude` 등), 검증 출처 언급("codex 지적 반영" 등)은 커밋/주석에 쓰지 않음(→ log.md에).
 - **code/docs 분리**: docs/plans는 제외돼 자동으로 안 섞임.
 
 ### ⑧ push → PR
@@ -116,14 +116,14 @@
 
 ## 5. 우리가 추가로 채택한 관례
 
-- **`docs/plans/<날짜>/<버그>/`** 폴더에 버그별 산출물(master-plan·task-process.md·review-log.md·**해설.md**). 전부 git 제외.
+- **`docs/plans/<날짜>/<버그>/`** 폴더에 버그별 산출물(requirement-spec.md·log.md·**해설.md**). 전부 git 제외.
 - **PR 투명성 노트**: 의도 불확실(B1 reserveMethodNames)·영향 범위(B2 canConvert 계약)를 본문에 선공개.
 - **재현 테스트 보존**: 검증용 테스트는 `verify/` 브랜치에 보관, 각 PR에서 정제 재사용.
 
 ### 5.1 해설.md — 표준 산출물 (필수)
 
-> task-process 완료 요약·review-log는 구조화돼 있어 딱딱하다. **해설.md는 사람이 읽고 이해하는 서사형 문서**로,
-> **코드 구현이 있는 모든 버그/PR마다 작성**한다(딥다이브 ⑧ push 전, task-process 완료 요약과 함께).
+> log.md 완료 요약·리뷰 ledger는 구조화돼 있어 딱딱하다. **해설.md는 사람이 읽고 이해하는 서사형 문서**로,
+> **코드 구현이 있는 모든 버그/PR마다 작성**한다(딥다이브 ⑧ push 전, log.md 완료 요약과 함께).
 > 위치: `docs/plans/<날짜>/<버그>/해설.md`.
 
 **고정 구조 (B2·B3에서 검증된 템플릿):**

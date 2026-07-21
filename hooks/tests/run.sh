@@ -95,7 +95,7 @@ fi
 # projects(transcript)·todos·statsig 등은 동시 세션이 상시 갱신 → 오탐(리뷰 P1-04).
 # 커버리지: ~/.claude 보호 파일(내용+mode+type+symlink target) / repo tracked 변경 내용(diff HEAD)
 #          / repo untracked **내용 해시**(loop2 L2-C). 한계: gitignored 경로는 불가시(명기).
-PROTECTED_CLAUDE="hooks templates playbooks core.md dimensions.md dimensions-batch.md dimensions-frontend.md dimensions-infra.md CLAUDE.md settings.json"
+PROTECTED_CLAUDE="hooks templates playbooks core.md CLAUDE.md settings.json"
 REPO_ROOT=$(git -C "$TESTS_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$TESTS_DIR")
 snapshot_detail() { # $1 = 출력 파일
   {

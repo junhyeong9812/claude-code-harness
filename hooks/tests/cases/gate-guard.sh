@@ -144,15 +144,13 @@ test_gt_26() { # [green C1④] ~/.claude 하위 배포 대상(hooks/) → repo �
   assert_exit 2 claude-deploy-hooks-L1-block
 }
 
-test_gt_27() { # [green C1④] ~/.claude/core.md·playbooks·templates·dimensions* 배포 대상 → L1
+test_gt_27() { # [green C1④] ~/.claude/core.md·playbooks·templates 배포 대상 → L1 (v4: dimensions 는 배포 대상 아님)
   write_state UNSET
   mkdir -p "$HOME_DIR/.claude/playbooks"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$HOME_DIR/.claude/core.md")"
   assert_exit 2 claude-deploy-core-L1-block
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$HOME_DIR/.claude/playbooks/review.md")"
   assert_exit 2 claude-deploy-playbook-L1-block
-  run_hook gate-guard.sh "$(json_file PreToolUse Write "$HOME_DIR/.claude/dimensions-batch.md")"
-  assert_exit 2 claude-deploy-dimensions-L1-block
 }
 
 test_gt_28() { # [green C1 task-03b#5] ~/.claude/settings*.json·CLAUDE.md → L1(직접수정 차단 — 최고 blast radius)
@@ -263,8 +261,6 @@ test_gt_35() { # [green #4] docs/ 하위여도 정책 파일(CLAUDE·core·HISTO
   assert_exit 2 docs-policy-core-L1
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/HISTORY.md")"
   assert_exit 2 docs-policy-history-L1
-  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/docs/dimensions-batch.md")"
-  assert_exit 2 docs-policy-dimensions-L1
 }
 
 test_gt_35b() { # [green #7] case-fold — docs/Core.md 도 정책 파일로 L1(대소문자 비구분 FS 우회 차단)
