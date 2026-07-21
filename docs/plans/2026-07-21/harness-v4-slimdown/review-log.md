@@ -67,8 +67,60 @@
 
 - loop 2의 ②~⑤는 해소 판정(codex 원문).
 
-## 상태
+## 상태 (설계 리뷰)
 
 - loop 1: 채택 20 / 부분 기각 2 (사용자 명시 결정 귀속) · loop 2: 채택 5 · loop 3: 채택 1 — 전부 반영.
-- **리뷰 루프 최대 3회 도달** (review.md §1) — id 27 수정분은 재리뷰 없이 사용자 승인으로 이관(수정 성격: 리셋 신호 1줄 확장, 잔여 리스크는 한계 명시로 문서화).
-- 다음: rev.3 사용자 승인 → 구현 착수.
+- **설계 리뷰 루프 3회 도달** — id 27 수정분은 사용자 승인으로 이관 → rev.3 사용자 승인 완료(2026-07-21).
+
+---
+
+# 구현 리뷰 (task-02~05 diff — base main..HEAD, 높음 stakes 듀얼 루프)
+
+## 루프 메타 (구현 loop 1)
+
+- packet: 삭제 목록 + 변경·신규 전문 diff(docs/plans 제외) + rev.3 §2 게이트 계약. 보안 스캔 CLEAN.
+- 리뷰어: codex("수정 필요", 6건) ∥ Opus 워커("수정 필요", 3건 + 정합 확인 다수 + open question 3)
+
+## finding ledger (구현)
+
+| id | source | sev | finding 요약 | disposition | 반영 |
+|----|--------|-----|-------------|-------------|------|
+| I1 | codex | 치명 | Bash(sed 등)로 상태파일 SPEC/MODE/DEBT 직접 조작 — set-state 유일 기록 계약 우회 | 채택 | gate-guard Bash 분기에 정밀 차단(lazymode 경로 대상 쓰기 패턴 + set-state 비경유 → exit 2, 읽기·2>/dev/null 오탐 방지) — gt_56b 재작성·gt_56d |
+| I2 | codex | 高 | task-mode-guard 리셋 실패 시 이전 SPEC=1 잔존 — fail-open | 채택 | reset-pending marker + gate-guard 인계(재시도 성공 시 marker 제거·UNSET 게이트, 실패 시 차단) — gt_60·gt_60b |
+| I3 | codex | 高 | set-state 전이 선행조건 부재(mode가 SPEC=0에서 기록, emergency가 log 없이 성공 — st_04가 오계약 고정) | 채택 | state_ensure_valid 선행 + mode=SPEC=1 요구 + emergency=TASK_PATH/log.md 실존 요구 — st_04 수정·st_07·st_08 |
+| I4 | codex+opus | 高/低 | source=clear가 DEBT까지 초기화 — 크로스-태스크 빚 계약 위반 | 채택 | state_init → state_set 부분 리셋(MODE·SPEC·PENDING만) — ss_10 DEBT assert |
+| I5 | codex+opus | 高/中 | settings.json 유령 배선(scope/template-guard) | 기각(중복) — task-06 정리안(settings-json-plan.md)에 순서까지 기존재. README 마이그레이션 노트만 보강 |
+| I6 | codex | 高 | deploy.sh `[ -e ]&&` 마지막 거짓 → set -e 즉사 (clean DEST dry-run exit 1 재현) | 채택 | if 문 교체 2곳 + return 0 — clean DEST dry-run exit 0 실측 |
+| I7 | opus | 低 | 긴급 우회 홀(문서 미생성 시 SPEC=1 승계)의 blast radius가 v3보다 넓은데 문서가 약함 | 채택 | core v4 §1 한계 문구 강화("새 작업은 반드시 spec/log 생성부터") |
+
+- open question 3건 회신: BACKUP은 mkdir 선행(deploy.sh L53) / 잔존 playbook 참조 rg 0건 기확인 / src/core.md는 repo 비-docs → L1 기본값.
+- 수정 커밋: 4b5d51a · tests 155→160 green(신규 5: st_07·st_08·gt_56d·gt_60·gt_60b + gt_56b 계약 반전 재작성).
+
+## 구현 loop 2 — post-fix 재점검 (codex, "미해소 잔존": I1 부분·I2·I3 / I4·I6·I7 해소)
+
+| id | sev | finding 요약 | disposition | 반영(2차 수정 53eced6) |
+|----|-----|-------------|-------------|------------------------|
+| I1-a | 高 | 상태쓰기 검사가 ensure_valid 뒤라 lock 실패 시 통과 | 채택 | 검사를 검증 앞으로 이동 — gt_56f |
+| I1-b | 中 | `[^|]*`가 `;`·`&` 횡단 → 순수 읽기 오탐 차단 | 채택 | `[^|;&]*` — gt_56e |
+| I1-c | 中 | perl -pi·dd·변수 간접·문자열 예외(set-state.sh 섞기) 미탐 | **수용 리스크** — Bash 의미론 완전 파싱은 원리적 불가(§0.6). backstop 한계를 코드 주석에 명시. 위협 모델 = 실수·편의 우회(적대적 회피 아님) |
+| I2-a | 高 | ensure_valid 실패 분기는 marker 없이 종료 → 일시 lock 해제 후 잔존 통과 | 채택 | 그 분기에도 marker 생성 — tm_12 |
+| I2-b | 中 | marker에 새 작업 경로 없음 → 인계 리셋이 TASK_PATH 미갱신(긴급 log 판정 오염) | 채택 | marker 내용 = WORK_DIR, 인계 시 TASK_PATH 복원 — gt_60c |
+| I2-c | 低 | marker 세대 구분 없음(동시 다중 리셋 경합) + clear 후 잔존 | 부분 채택 — clear 성공 시 marker 정리. 세대 경합은 단일 메인 흐름 전제로 수용 |
+| I3-a | 中 | 격리·재생성 직후 set-state가 무재시도 기록 | 채택 | STATE_QUARANTINED=1 → 기록 거부 — st_09 |
+| I3-b | 低 | 선행조건 check-write TOCTOU(사이에 clear/리셋) | **수용** — 위반 결과가 SPEC=0 방향(gate 차단 유지 = fail-closed)·단일 사용자 도구 |
+| I3-c | 低 | Bash로 log.md 생성 시 TASK_PATH 미설정 → emergency 거부 FP | **수용** — fail-closed 방향. 가이드: log.md는 Write 도구로 생성(훅 관측 경로) |
+
+## 구현 loop 3 — 최종 타깃 확인 (codex): I1·I3-a 해소 / I2 잔존 2·I3 문구 2 → 즉시 폐쇄(030e983)
+
+| id | sev | finding | disposition | 반영 |
+|----|-----|---------|-------------|------|
+| L3-1 | 高 | 검증 실패 분기 marker가 빈 파일(WORK_DIR 도출 전) → 인계가 TASK_PATH 미복원 | 채택 | WORK_DIR 도출을 검증 앞으로 — marker에 항상 새 폴더 기록. tm_12 내용 assert |
+| L3-2 | 高 | set-state가 marker 미인계 → stale TASK_PATH/log.md로 emergency 통과(실측) | 채택 | set-state에 인계 블록(리셋 완수 후 선행조건 평가, 실패=기록 거부). st_10(거부→새 log 후 성공) |
+| L3-3 | 中 | I3-b 수용 근거 오류 — TOCTOU가 SPEC=1 재기록으로 리셋 역전 가능("항상 SPEC=0 방향" 틀림) | 채택(문구) | 수용 근거 정정: **단일 메인 흐름 운영 불변식**이 근거(방향성 아님). emergency TOCTOU는 리셋 역전 가능함을 명시 — 동시 다중 메인 세션에서 같은 상태파일로 set-state를 병행하지 않는 것이 전제 |
+| L3-4 | 低 | 긴급 log의 Write 도구 사용이 정본 미기재 | 채택 | core §1 긴급 전이에 "Write 도구로" 명시 |
+
+## 상태 (구현 리뷰 — 종료)
+
+- loop 1: 채택 6/기각 1 · loop 2: 채택 5/부분 1/수용 3 · loop 3: 채택 4 — **루프 상한 3회 도달, 종료**. tests 166 green.
+- **잔여 수용 리스크(사용자 결정으로 이관)**: ① Bash 의미론 완전 차단 불가(perl·dd·변수 간접·문자열 예외 — §0.6 backstop, 위협 모델=실수 방지) ② set-state 선행조건 TOCTOU(단일 메인 흐름 전제 — 병행 세션에서 리셋 역전 가능) ③ marker 세대 경합(동시 다중 리셋) ④ Bash로 log 생성 시 emergency FP(fail-closed 방향).
+- 다음: task-06(배포+settings.json 적용+글로벌 CLAUDE.md 갱신) — 사용자 확인.
