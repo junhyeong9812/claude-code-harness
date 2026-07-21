@@ -26,7 +26,7 @@
 
 ```
 정상: UNSET ─(명세 합의 → set-state 기록)→ SPEC=1 ─(auto/lazy 2택)→ MODE ─→ L1 허용
-긴급: 새 작업 폴더에 log.md 생성(리셋 발동) → 긴급 확인 → set-state가 MODE=auto·SPEC=1·DEBT=1 동시 기록 → L1
+긴급: 새 작업 폴더에 log.md 생성(**Write 도구로** — 훅 관측 경로·리셋 발동) → 긴급 확인 → set-state가 MODE=auto·SPEC=1·DEBT=1 동시 기록 → L1
 ```
 
 - 키: `MODE ∈ {UNSET,auto,lazy}` · `SPEC` · `DEBT` · `PENDING_GATE`(lazy) · `TASK_PATH`. **기록 주체 = set-state 스크립트만** — 상태파일 Edit/Write는 하드 거부(자가 우회 차단). 쓰기 = temp+mv 원자 교체·flock·grep 파서. 구 스키마·구 모드값 = 손상 → quarantine → 재질문.

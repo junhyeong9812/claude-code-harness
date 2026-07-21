@@ -52,19 +52,22 @@ SESSION_ID=$(state_sanitize_sid "$(echo "$HOOK_INPUT" | jq -r '(.session_id // "
 STATE="$CWD/.claude/lazymode/$SESSION_ID"
 # 진짜 부재면 리셋할 상태 없음(session-mode-guard가 생성) → exit. 존재하면 손상 검사·정리.
 if [ ! -e "$STATE" ] && [ ! -L "$STATE" ]; then exit 0; fi
-# rc 1 = 판정 불가(flock 등) → PostToolUse 계열: 경고 1줄 + 통과(C2). 리셋을 시도하지 않는다.
-if ! state_ensure_valid "$STATE"; then
-  # 검증 실패도 리셋 미완 — marker 를 남겨 gate-guard 가 인계(일시적 lock 해제 후 이전 SPEC=1 잔존 통과 차단,
-  # post-fix 재점검 I2). marker 생성 실패 시 경고만(비차단 훅 한계 — 수용).
-  : > "$STATE.reset-pending" 2>/dev/null     && echo "[task-mode-guard] 경고: 상태 검증 실패 — reset-pending marker 기록(gate-guard 가 인계·차단). .claude/lazymode/$SESSION_ID 확인." >&2     || echo "[task-mode-guard] 경고: 상태 검증·marker 기록 모두 실패 — 이전 상태가 유효할 수 있습니다. .claude/lazymode/$SESSION_ID 확인." >&2
-  exit 0
-fi
 
-# 리셋 단위 = 작업 폴더(docs/plans/<날짜>/<작업명>/) = 진입점 파일이 있는 폴더.
-# canonical 경로로 비교(상대/절대·심링크 무관). 저장된 TASK_PATH(직전 작업 폴더)와 같으면 리셋 스킵.
+# 리셋 단위 = 작업 폴더 = 진입점 파일이 있는 폴더. **상태 검증보다 먼저 도출**(loop3 I2-a: 검증 실패
+# 분기의 marker 도 새 작업 폴더 내용을 담아야 인계가 TASK_PATH 를 복원한다 — 빈 marker 금지).
 WORK_DIR=$(dirname -- "$FILE_PATH")
 canon() { realpath -m -- "$1" 2>/dev/null || realpath -- "$1" 2>/dev/null || python3 -I -S -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null; }
 case "$WORK_DIR" in /*) CFP=$(canon "$WORK_DIR") ;; *) CFP=$(canon "$CWD/$WORK_DIR") ;; esac
+
+# rc 1 = 판정 불가(flock 등) → PostToolUse 계열: 경고 1줄 + 통과(C2). 리셋은 marker 로 인계.
+if ! state_ensure_valid "$STATE"; then
+  printf '%s\n' "$CFP" > "$STATE.reset-pending" 2>/dev/null \
+    && echo "[task-mode-guard] 경고: 상태 검증 실패 — reset-pending marker(새 작업 폴더 포함) 기록, gate-guard·set-state 가 인계·차단. .claude/lazymode/$SESSION_ID 확인." >&2 \
+    || echo "[task-mode-guard] 경고: 상태 검증·marker 기록 모두 실패 — 이전 상태가 유효할 수 있습니다. .claude/lazymode/$SESSION_ID 확인." >&2
+  exit 0
+fi
+
+# canonical 경로 비교 — 저장된 TASK_PATH(직전 작업 폴더)와 같으면 리셋 스킵.
 PREV_TASK=$(state_get "$STATE" TASK_PATH)
 if [ -n "$CFP" ] && [ "$CFP" = "$PREV_TASK" ]; then
   exit 0   # 같은 작업 폴더 재진입 — 모드 유지, 재질문 없음

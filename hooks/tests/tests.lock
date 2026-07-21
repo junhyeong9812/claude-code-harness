@@ -2,7 +2,7 @@ a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manif
 f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-scan.sh
 e7182d053acbe1edb76e96824d0a21fb027c0c63d527598b1862091e866c9042  cases/gate-guard.sh
 7e4a9e1911da9318b7c57d49da2fac658b7627ec9f4cf2e4c72d2b2f2f0b97a0  cases/git-guard.sh
-13e77d3882a3d7ad750721c96de5ad33452dfdf598e7faff70bb2b627b211fa0  cases/misc-guards.sh
+b5946a1adafe6e0d323cba97f6aec98867a52c54ceffa0d0c9f70e2a0c4873fd  cases/misc-guards.sh
 90897bfb9e7914f528fb039a2d6a31d2263a7e03faa0498dd8fbb25bbd4c52a3  cases/state-schema.sh
 6a778fcb02db6ec70cf1b1d559ac8e28463c93d1339d66be2f85698ac26f6565  lib.sh
 777067bad35fd92d87e997a08a22b9994faff59eb3d99329e7197aca863c4f81  run.sh
@@ -161,6 +161,7 @@ e7182d053acbe1edb76e96824d0a21fb027c0c63d527598b1862091e866c9042  cases/gate-gua
 # test: test_st_07
 # test: test_st_08
 # test: test_st_09
+# test: test_st_10
 # test: test_tm_01
 # test: test_tm_02
 # test: test_tm_03

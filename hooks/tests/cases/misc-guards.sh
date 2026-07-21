@@ -262,7 +262,27 @@ test_tm_12() { # [post-fix I2] 상태 검증 실패(lock 점유)에도 reset-pen
   flock -u 8 2>/dev/null || true; exec 8>&-
   assert_exit 0 tm-lock-exit
   [ -e "$STATE.reset-pending" ] || fail tm-lock-marker-created
+  [ -s "$STATE.reset-pending" ] || fail tm-lock-marker-nonempty        # loop3 I2-a: 빈 marker 금지(새 작업 폴더 포함)
+  grep -q "docs/plans/lk" "$STATE.reset-pending" || fail tm-lock-marker-content
   assert_stderr_match 'reset-pending' tm-lock-marker-msg
+}
+
+test_st_10() { # [loop3 I2 연계] reset-pending 존재 시 set-state 가 먼저 인계 — stale TASK_PATH 로 emergency 통과 금지
+  write_state auto 0 0                                  # 직전 작업: SPEC=1·auto
+  mkdir -p "$REPO/docs/plans/oldt"; echo l > "$REPO/docs/plans/oldt/log.md"
+  echo "TASK_PATH=$REPO/docs/plans/oldt" >> "$STATE"     # stale TASK_PATH(구 작업, log 있음)
+  mkdir -p "$REPO/docs/plans/newt"                       # 새 작업 폴더 — log.md 아직 없음
+  printf '%s\n' "$REPO/docs/plans/newt" > "$STATE.reset-pending"
+  set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" emergency "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e
+  assert_exit 2 setstate-handoff-em-reject               # 인계 후 새 폴더 기준 log 부재 → 거부 (stale log 로 통과 금지)
+  assert_state TASK_PATH "$REPO/docs/plans/newt" setstate-handoff-taskpath
+  assert_state SPEC 0 setstate-handoff-spec-reset
+  [ ! -e "$STATE.reset-pending" ] || fail setstate-handoff-marker-cleared
+  # 새 폴더에 log.md 를 만들면(정당 경로) emergency 성공
+  echo l > "$REPO/docs/plans/newt/log.md"
+  set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" emergency "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e
+  assert_exit 0 setstate-handoff-em-after-log
+  assert_state DEBT 1 setstate-handoff-em-debt
 }
 
 test_st_06() { # [v4] 미지 명령 → 거부(usage)

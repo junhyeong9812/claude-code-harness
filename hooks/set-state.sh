@@ -59,6 +59,17 @@ fi
 state_ensure_valid "$STATE" || { echo "[set-state] 상태 검증 실패 — 기록 거부(fail-closed)." >&2; exit 1; }
 [ "${STATE_QUARANTINED:-0}" = "0" ]   || { echo "[set-state] 상태가 손상돼 격리·재생성됨 — 직전 합의를 신뢰할 수 없어 기록 거부. 게이트를 처음부터(명세 합의 재확인) 진행하세요." >&2; exit 2; }
 
+# reset-pending 인계 (loop3 I2 연계): task-mode-guard 의 리셋이 미완이면 여기서 먼저 리셋을 완수한다 —
+# 안 하면 emergency 가 이전 작업의 stale TASK_PATH/log.md 를 근거로 통과한다. 인계 실패 = 기록 거부.
+if [ -e "$STATE.reset-pending" ]; then
+  RP_TP=$(head -1 "$STATE.reset-pending" 2>/dev/null || true)
+  RP_ARGS=(MODE UNSET SPEC 0 PENDING_GATE 0)
+  [ -n "$RP_TP" ] && RP_ARGS+=(TASK_PATH "$RP_TP")
+  state_set "$STATE" "${RP_ARGS[@]}" \
+    || { echo "[set-state] reset-pending 인계 실패 — 기록 거부(fail-closed). .claude/lazymode 상태·lock 확인." >&2; exit 1; }
+  rm -f "$STATE.reset-pending" 2>/dev/null || true
+fi
+
 # 전이 선행조건 (구현 리뷰 codex#3): 기록 수단이라도 스펙의 전이 순서 밖 기록은 거부한다.
 case "$CMD" in
   mode)
