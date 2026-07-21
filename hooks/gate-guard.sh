@@ -205,6 +205,13 @@ if [ "$IS_BASH" = "1" ]; then
   fi
   B_MODE=$(state_get "$STATE" MODE)
   B_CMD=$(echo "$HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
+  # 상태파일 대상 Bash **쓰기**는 하드 차단 (구현 리뷰 codex#1 — sed 로 SPEC/MODE/DEBT 직접 조작 = set-state
+  # 유일 기록 계약 우회). 예외 = set-state.sh 경유(유일 정당 경로 — 훅 소유 스크립트). 읽기(cat·grep)는
+  # 쓰기 패턴이 없어 통과. 리다이렉트는 **대상이 lazymode 경로일 때만**(2>/dev/null 등 오탐 방지).
+  if printf '%s' "$B_CMD" | grep -q '\.claude/lazymode'      && ! printf '%s' "$B_CMD" | grep -q 'set-state\.sh'      && printf '%s' "$B_CMD" | grep -qE '(sed([[:space:]]+-[a-zA-Z]+)*[[:space:]]+-i[^|]*\.claude/lazymode|(^|[|;&[:space:]])(tee|mv|cp|rm|truncate)[[:space:]][^|]*\.claude/lazymode|>[[:space:]]*[^|;&[:space:]]*\.claude/lazymode)'; then
+    echo "[gate-guard] 상태파일은 훅 소유 — Bash 쓰기(sed -i·tee·redirect·mv·rm 등)로 SPEC/MODE/DEBT 를 직접 바꾸는 것은 차단됩니다. 상태 기록은 'bash ~/.claude/hooks/set-state.sh <명령>' 이 유일한 경로입니다." >&2
+    exit 2
+  fi
   # lazy 의 Bash 파일쓰기(sed -i·tee·redirect·heredoc)는 per-diff 게이트를 우회한다 — 소프트 리마인더만.
   if [ "$B_MODE" = "lazy" ] && echo "$B_CMD" | grep -qE '(sed([[:space:]]+-[a-zA-Z]+)*[[:space:]]+-i|(^|[[:space:]|;&])tee[[:space:]]|<<[-]?[[:space:]]*["'"'"']?[A-Za-z_])'; then
     echo "[gate-guard] lazy 모드: Bash로 파일을 수정하면 per-diff 이해 게이트가 우회됩니다. 코드 변경은 Edit/Write로 해 게이트를 태우거나, 이 변경도 before/after 스니펫으로 설명·판정하세요. (implementation-lazymode.md §3 — 소프트 리마인더)" >&2
@@ -283,7 +290,21 @@ if [ "$GIT_COMPONENT" != "1" ] && classify_l0l1 "$CFILE"; then
 fi
 # 여기 도달 = L1 (GIT_COMPONENT=1 원본 .git 경로 포함)
 
-# ── L1 전용: 상태 확정(부재→시드·손상→격리) 후 모드 게이트 ──
+# ── L1 전용: reset-pending 인계 → 상태 확정(부재→시드·손상→격리) → 게이트 ──
+# task-mode-guard 의 리셋이 실패했으면 marker 가 남아 있다 — 여기서 리셋을 재시도하고, 실패 시 차단(fail-closed).
+if [ -e "$STATE.reset-pending" ]; then
+  if state_set "$STATE" MODE UNSET SPEC 0 PENDING_GATE 0 2>/dev/null; then
+    rm -f "$STATE.reset-pending" 2>/dev/null || true   # 인계 성공 — 아래 정상 게이트(UNSET→SPEC 질문)로
+  else
+    if [ "$EVENT" = "PreToolUse" ]; then
+      echo "[gate-guard] 새 작업 리셋 미완(reset-pending) — 상태 갱신이 계속 실패해 안전 차단(fail-closed). .claude/lazymode/$SESSION_ID 권한·lock 을 확인하세요." >&2
+      exit 2
+    fi
+    echo "[gate-guard] 경고: reset-pending 인계 실패(PostToolUse) — 상태 미갱신." >&2
+    exit 0
+  fi
+fi
+
 # rc 1 = 판정 불가(flock 획득 실패·재생성/격리 실패) → C2: Pre 차단, Post 경고+통과.
 if ! state_ensure_valid "$STATE"; then
   if [ "$EVENT" = "PreToolUse" ]; then

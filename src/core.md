@@ -32,7 +32,7 @@
 - 키: `MODE ∈ {UNSET,auto,lazy}` · `SPEC` · `DEBT` · `PENDING_GATE`(lazy) · `TASK_PATH`. **기록 주체 = set-state 스크립트만** — 상태파일 Edit/Write는 하드 거부(자가 우회 차단). 쓰기 = temp+mv 원자 교체·flock·grep 파서. 구 스키마·구 모드값 = 손상 → quarantine → 재질문.
 - gate-guard: **SPEC=0 또는 MODE=UNSET이면 L1 쓰기 차단**. 기록 실패 시 차단 유지(fail-open 금지). reinject가 매 턴 모드·DEBT 1줄 재주입(요약 후 일관성).
 - **리셋**: 새 작업 폴더의 requirement-spec.md **또는 log.md** 생성 = task-mode-guard 리셋(SPEC=0·MODE=UNSET, **DEBT는 유지**).
-- **재합의(절차 규칙)**: 승인된 명세의 목표·불변식·범위 변경은 사용자 재합의. 작업 폴더 없이 직전 SPEC=1을 타는 우회는 훅이 task 경계를 관측 불가 — 절차 규칙.
+- **재합의(절차 규칙)**: 승인된 명세의 목표·불변식·범위 변경은 사용자 재합의. **한계**: 새 작업 폴더 문서를 만들지 않고 직전 SPEC=1을 타면 명세 재합의·긴급 확인·DEBT 기록이 전부 우회된다 — 훅이 task 경계를 관측 불가한 고유 한계이므로, **새 작업은 반드시 spec 또는 log 생성부터**(절차 규칙 — v3보다 우회 폭이 넓어 준수 의무가 강함).
 
 ### C1 판별 (gate-guard) · C2 오류
 

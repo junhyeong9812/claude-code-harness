@@ -54,6 +54,23 @@ fi
 
 [ -f "$STATE" ] || { echo "[set-state] 상태파일 없음: $STATE (cwd=$(pwd))" >&2; exit 2; }
 
+# 손상 상태 위 기록 금지 — quarantine/재생성 후 재시도 유도 (판정 불가 = 거부, C2 원칙②)
+state_ensure_valid "$STATE" || { echo "[set-state] 상태 검증 실패 — 기록 거부(fail-closed)." >&2; exit 1; }
+
+# 전이 선행조건 (구현 리뷰 codex#3): 기록 수단이라도 스펙의 전이 순서 밖 기록은 거부한다.
+case "$CMD" in
+  mode)
+    # 자율성 선택은 명세 합의(SPEC=1) 이후 — SPEC=0 에서 mode 기록으로 게이트 순서를 흐리지 않는다.
+    [ "$(state_get "$STATE" SPEC)" = "1" ]       || { echo "[set-state] mode 는 SPEC=1(명세 합의) 이후에만 기록 가능 — 먼저 spec-approved (긴급은 emergency)." >&2; exit 2; }
+    ;;
+  emergency)
+    # 긴급 전이는 log.md 생성(리셋 발동)이 선행 의무 — TASK_PATH 의 log.md 실존을 요구해 직전 작업
+    # 잔존 상태를 타는 우회·문서 없는 긴급 진입을 거부한다.
+    EM_TP=$(state_get "$STATE" TASK_PATH)
+    { [ -n "$EM_TP" ] && [ -f "$EM_TP/log.md" ]; }       || { echo "[set-state] emergency 는 새 작업 폴더에 log.md 를 먼저 생성해야 합니다(리셋 발동 후 재시도) — 현재 TASK_PATH='${EM_TP:-없음}'." >&2; exit 2; }
+    ;;
+esac
+
 case "$CMD" in
   mode)          state_set "$STATE" MODE "$MODE_IN" ;;
   spec-approved) state_set "$STATE" SPEC 1 ;;

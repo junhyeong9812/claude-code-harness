@@ -73,7 +73,15 @@ fi
 RESET_ARGS=(MODE UNSET SPEC 0 PENDING_GATE 0)
 [ -n "$CFP" ] && RESET_ARGS+=(TASK_PATH "$CFP")
 if ! state_set "$STATE" "${RESET_ARGS[@]}"; then
-  echo "[task-mode-guard] 경고: 모드 리셋 실패(상태 갱신 불가) — 이전 모드가 유효할 수 있습니다. .claude/lazymode/$SESSION_ID 를 확인하고 모드를 재선택하세요." >&2
+  # 리셋 실패 = 이전 SPEC=1·MODE 잔존으로 다음 L1 이 무게이트 통과할 수 있다(fail-open, 구현 리뷰 codex#2).
+  # durable marker 를 남겨 gate-guard 가 리셋을 인계(재시도 성공 전 차단)하게 한다. marker 생성마저 실패하면 경고만(비차단 훅 한계).
+  if : > "$STATE.reset-pending" 2>/dev/null; then
+    echo "[task-mode-guard] 경고: 리셋 실패 — reset-pending marker 기록(gate-guard 가 인계·차단). .claude/lazymode/$SESSION_ID 확인." >&2
+  else
+    echo "[task-mode-guard] 경고: 리셋·marker 기록 모두 실패 — 이전 상태가 유효할 수 있습니다. .claude/lazymode/$SESSION_ID 를 확인하세요." >&2
+  fi
+else
+  rm -f "$STATE.reset-pending" 2>/dev/null || true   # 성공 시 잔존 marker 정리
 fi
 
 cat >&2 <<MSG

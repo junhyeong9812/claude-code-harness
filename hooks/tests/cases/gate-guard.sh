@@ -528,8 +528,10 @@ test_gt_58c() { # [v4] SPEC=0 PostToolUse → 비차단(exit 0) — Post 는 관
   assert_exit 0 spec0-post-pass
 }
 
-test_gt_59() { # [v4] 긴급 전이 시나리오: set-state emergency 후 → L1 통과 (fail-open 아닌 명시적 상태 기록)
+test_gt_59() { # [v4] 긴급 전이 시나리오: log.md 선행 + set-state emergency 후 → L1 통과 (fail-open 아닌 명시적 상태 기록)
   write_state UNSET 0 0 0
+  mkdir -p "$REPO/docs/plans/em"; echo l > "$REPO/docs/plans/em/log.md"
+  echo "TASK_PATH=$REPO/docs/plans/em" >> "$STATE"
   set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" emergency "$STATE" >/dev/null 2>&1; set -e
   mkdir -p "$REPO/src"
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
@@ -551,12 +553,41 @@ test_gt_56() { # [green #1] 상태파일(.claude/lazymode/<sid>) Edit/Write/Mult
   assert_exit 2 state-multiedit-hardblock
 }
 
-test_gt_56b() { # [green #1] 상태파일 Bash sed 는 하드 차단 없이 소프트 리마인더(exit 0) — 훅 bash 쓰기와 구분 불가(§0.6)
-  # 대조 케이스: Edit/Write 는 하드거부(56), Bash 경로는 §0.6 FP 근거로 소프트만(lazy 에서 sed -i 패턴 리마인더).
+test_gt_56b() { # [v4 구현리뷰 codex#1] 상태파일 대상 Bash **쓰기**(sed -i)는 하드 차단 — set-state 유일 기록 계약
   write_state lazy 0
   run_hook gate-guard.sh "$(json_bash "sed -i 's/MODE=lazy/MODE=auto/' .claude/lazymode/$SID")"
-  assert_exit 0 state-bash-soft-pass
-  assert_stderr_match 'per-diff' state-bash-soft-reminder
+  assert_exit 2 state-bash-write-block
+  assert_stderr_match 'set-state' state-bash-write-msg
+}
+
+test_gt_56d() { # [v4] set-state.sh 경유 Bash 는 허용(유일 정당 경로) + 상태파일 읽기(grep, 2>/dev/null 리다이렉트)도 통과
+  write_state lazy 0
+  run_hook gate-guard.sh "$(json_bash "bash ~/.claude/hooks/set-state.sh gate-pass .claude/lazymode/$SID")"
+  assert_exit 0 state-bash-setstate-pass
+  run_hook gate-guard.sh "$(json_bash "grep MODE .claude/lazymode/$SID 2>/dev/null")"
+  assert_exit 0 state-bash-read-pass
+}
+
+test_gt_60() { # [v4 구현리뷰 codex#2] reset-pending marker → gate-guard 가 리셋 인계 성공 → marker 제거 + UNSET 게이트
+  write_state auto                                     # 직전 작업 잔존: SPEC=1·MODE=auto (marker 없으면 통과했을 상태)
+  : > "$STATE.reset-pending"
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 2 resetpending-handoff-block             # 인계 리셋 후 SPEC=0 → 차단 (잔존 상태로 통과 금지)
+  [ ! -e "$STATE.reset-pending" ] || fail resetpending-marker-cleared
+  assert_state SPEC 0 resetpending-spec-reset
+  assert_state MODE UNSET resetpending-mode-reset
+}
+
+test_gt_60b() { # [v4] reset-pending + 리셋 재시도도 실패(lock 점유) → fail-closed 차단
+  write_state auto
+  : > "$STATE.reset-pending"
+  mkdir -p "$REPO/src"
+  exec 8>>"$STATE.lock"; flock -x 8
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  flock -u 8 2>/dev/null || true; exec 8>&-
+  assert_exit 2 resetpending-fail-block
+  assert_stderr_match 'reset-pending' resetpending-fail-msg
 }
 
 test_gt_56c() { # [green #1] 상태파일 Edit PostToolUse 도달 → 차단 불가하나 감사 경고(관측)

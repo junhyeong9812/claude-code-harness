@@ -105,7 +105,7 @@ bash hooks/tests/run.sh          # 훅 테스트
 ```
 
 - 글로벌 `~/.claude/CLAUDE.md`(부트스트랩)가 core.md 를 import 한다 — 이 repo 로컬 CLAUDE.md 는 포인터만(이중 주입 방지, 상세: CLAUDE.md 헤더).
-- 훅 등록(`~/.claude/settings.json`)과 글로벌 CLAUDE.md 는 배포 제외(역할 분기) — 수동 관리.
+- 훅 등록(`~/.claude/settings.json`)과 글로벌 CLAUDE.md 는 배포 제외(역할 분기) — 수동 관리. **v3→v4 마이그레이션**: 배포와 같은 작업 단위로 settings.json 의 `scope-guard.sh`·`template-guard.sh` PostToolUse 등록 2행을 제거할 것(파일이 배포로 사라져 유령 참조가 됨 — 절차: `docs/plans/2026-07-21/harness-v4-slimdown/settings-json-plan.md`).
 
 ## 이력
 

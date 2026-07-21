@@ -207,8 +207,10 @@ test_st_03() { # [v4] spec-approved → SPEC=1 (다른 키 무변경)
   assert_state MODE UNSET setstate-spec-mode-intact
 }
 
-test_st_04() { # [v4] emergency → MODE=auto·SPEC=1·DEBT=1 원자 1회 (긴급 전이)
+test_st_04() { # [v4] emergency → MODE=auto·SPEC=1·DEBT=1 원자 1회 (선행조건: TASK_PATH 의 log.md 실존)
   write_state UNSET 0 0 0
+  mkdir -p "$REPO/docs/plans/em"; echo l > "$REPO/docs/plans/em/log.md"
+  echo "TASK_PATH=$REPO/docs/plans/em" >> "$STATE"
   set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" emergency "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e
   assert_exit 0 setstate-em-exit
   assert_state MODE auto setstate-em-mode
@@ -227,6 +229,21 @@ test_st_05() { # [v4] debt-clear → DEBT=0 / gate-pass → PENDING_GATE=0
   set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" gate-pass "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e
   assert_exit 0 setstate-gatepass-exit
   assert_state PENDING_GATE 0 setstate-gatepass
+}
+
+test_st_07() { # [v4 선행조건] SPEC=0 에서 mode 기록 → 거부 + 상태 무변경 (구현 리뷰 codex#3)
+  write_state UNSET 0 0 0
+  set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" mode auto "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e
+  assert_exit 2 setstate-mode-no-spec-reject
+  assert_state MODE UNSET setstate-mode-no-spec-unchanged
+}
+
+test_st_08() { # [v4 선행조건] log.md 없는 emergency → 거부 + 상태 무변경 (문서 없는 긴급 진입 차단)
+  write_state UNSET 0 0 0                              # TASK_PATH 없음
+  set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" emergency "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e
+  assert_exit 2 setstate-em-no-log-reject
+  assert_state SPEC 0 setstate-em-no-log-unchanged
+  assert_state DEBT 0 setstate-em-no-log-debt-unchanged
 }
 
 test_st_06() { # [v4] 미지 명령 → 거부(usage)

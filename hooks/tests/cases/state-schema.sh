@@ -129,13 +129,15 @@ test_ss_09() { # session-mode-guard init: SCHEMA=4·UNSET·SPEC=0 생성, WRITE_
   return 0
 }
 
-test_ss_10() { # source=clear → 유효 상태도 강제 UNSET 리셋(SCHEMA=4 유지)
-  write_state auto
+test_ss_10() { # source=clear → MODE·SPEC·PENDING 리셋하되 **DEBT 는 보존**(긴급 빚 크로스-clear — 구현 리뷰 codex#4)
+  write_state auto 0 1                                 # DEBT=1 · SPEC=1
   local j; j=$(jq -cn --arg c "$REPO" --arg s "$SID" \
     '{hook_event_name:"SessionStart", session_id:$s, cwd:$c, source:"clear"}')
   run_hook session-mode-guard.sh "$j"
   assert_exit 0 clear-exit
   assert_state MODE UNSET clear-reset
+  assert_state SPEC 0 clear-spec-reset
+  assert_state DEBT 1 clear-debt-preserved
   assert_state SCHEMA 4 clear-schema
 }
 

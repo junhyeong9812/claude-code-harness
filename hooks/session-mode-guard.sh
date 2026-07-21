@@ -55,11 +55,12 @@ if ! state_ensure_valid "$STATE"; then
   echo "[session-mode-guard] 경고: 상태 검증 실패(flock/재생성) — 상태 초기화 생략. .claude/lazymode/$SESSION_ID 확인." >&2
   exit 0
 fi
-# source=clear 면 유효 상태도 강제 UNSET 리셋(새 작업). (부재는 위 ensure_valid 가 이미 UNSET 시드)
-# state_init 실패(flock/쓰기 불가)를 set -e 로 죽이지 않는다 — 비차단 계약대로 경고 1줄 + exit 0.
+# source=clear 면 유효 상태도 강제 리셋(새 작업) — 단 **DEBT 는 보존**(긴급 빚은 크로스-태스크·크로스-clear 의무,
+# 구현 리뷰 codex#4·Opus#2). state_init(전체 시드)이 아니라 state_set 부분 리셋(MODE·SPEC·PENDING만, 원자 1회).
+# 실패를 set -e 로 죽이지 않는다 — 비차단 계약대로 경고 1줄 + exit 0.
 if [ "$SOURCE" = "clear" ]; then
-  if ! state_init "$STATE"; then
-    echo "[session-mode-guard] 경고: clear 리셋 실패(state_init) — 이전 모드가 남을 수 있습니다. .claude/lazymode/$SESSION_ID 확인." >&2
+  if ! state_set "$STATE" MODE UNSET SPEC 0 PENDING_GATE 0; then
+    echo "[session-mode-guard] 경고: clear 리셋 실패 — 이전 상태가 남을 수 있습니다. .claude/lazymode/$SESSION_ID 확인." >&2
     exit 0
   fi
 fi

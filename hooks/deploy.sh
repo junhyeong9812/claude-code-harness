@@ -44,8 +44,9 @@ print_manifest_diff() {
     fi
   done
   for m in $STALE_TOPLEVEL; do
-    [ -e "$DEST/$m" ] && echo "  (stale 제거 예정) $m — v4 배포 대상 아님"
+    if [ -e "$DEST/$m" ]; then echo "  (stale 제거 예정) $m — v4 배포 대상 아님"; fi
   done
+  return 0   # 마지막 [ -e ] 거짓이 set -e 로 새는 것 차단 (구현 리뷰 codex#6 — clean DEST dry-run 즉사 재현)
 }
 
 print_manifest_diff
@@ -84,9 +85,9 @@ for m in $MANIFEST; do
   diff -rq "$REPO/$(src_of "$m")" "$STAGING/$m" >/dev/null 2>&1 || { echo "[deploy] staging 검증 실패: $m" >&2; exit 1; }
 done
 
-# ②′ stale 최상위 파일 → BACKUP 이동(실패 시 cleanup_fail 이 원복)
+# ②′ stale 최상위 파일 → BACKUP 이동(실패 시 cleanup_fail 이 원복). if 문 — [ -e ]&& 는 set -e 함정.
 for m in $STALE_TOPLEVEL; do
-  [ -e "$DEST/$m" ] && mv "$DEST/$m" "$BACKUP/$m"
+  if [ -e "$DEST/$m" ]; then mv "$DEST/$m" "$BACKUP/$m"; fi
 done
 
 # ② 기존 대상 백업(mv — 원자, 부분 백업 없음) ③ staging → 제자리(mv)
