@@ -40,3 +40,68 @@
 | 〃 | post-fix 타깃 재점검(codex) 발사 | 백그라운드 — 회수 대기. clean 시 task-06(배포+settings+글로벌 CLAUDE.md) 사용자 확인 예정 |
 | 〃 | 재점검(구현 loop 2) 회수 | I4·I6·I7 해소 / I1 부분·I2·I3 잔존 — 2차 수정: 검사 선행·오탐 교정·검증실패 marker·TASK_PATH 인계·격리 직후 기록 거부. 수용 리스크 3건 근거 명시. tests 165 green — 커밋 53eced6 |
 | 〃 | 최종 확인(구현 loop 3) 회수 | I1·I3-a 해소 확정 / 잔존 4건(빈 marker·set-state 미인계(stale TASK_PATH emergency 실측 통과)·수용 근거 문구 오류·Write 도구 미기재) → **전부 즉시 폐쇄**. tests 166 green — 커밋 030e983. **리뷰 루프 상한 3회 도달 — 종료, 잔여 수용 리스크 4건은 ledger 명시 후 사용자 결정 이관** |
+| 〃 | **task-06 사용자 승인** (AskUserQuestion) | "진행 — 세 작업 일괄" 선택 |
+| 〃 | task-06 실행 | ① 글로벌 ~/.claude/CLAUDE.md v4 개정(import 유지) ② settings.json scope/template-guard 2행 제거(정리안대로) ③ **deploy.sh 실배포** — manifest diff·stale dimensions 4종 제거·smoke(배포 훅 + 전체 테스트) 통과, 백업 보존 |
+| 〃 | task-06 신규 세션 실측 smoke | headless(haiku): **V4-YES · 주입 1회 · CLEAN**(v3 잔재 없음) — 이중 주입 해소. 단 원 현상이 런타임 특이였으므로 최종 확정은 사용자의 차기 실세션에서 재확인 필요 |
+| 〃 | 기록 | measurement-log 1행 append + 완료 요약 Opus 워커 위임(실파일 재읽기) — 회수 대기 |
+
+---
+
+## 완료 요약 (Opus 워커 작성 — 실파일 재읽기, 메인 교차 확인 후 채택)
+
+**무엇이 됐나**
+하네스 v3→v4 슬림화: 상시 선독되는 `core.md`를 273줄 → 127줄로 압축하고 루트에서 `src/core.md`로 이동(이중 주입 방지 — 주입 본체는 글로벌 1벌, repo는 배포 소스만). 구현 모드를 5종(auto/lazy/pair/refactor/fast) → **자율성 2택(auto/lazy)**으로 축약하고, 나머지는 규칙으로 흡수(pair 폐지·fast는 "긴급 수정" 예외 규칙·refactor는 JIT 절차 지식). 6칸 정의 게이트를 **인터뷰 → requirement-spec.md 명세서 + SPEC 상태 관측** 게이트로 재설계(SCHEMA=3 → 4, 신규 `set-state.sh` CLI가 유일 상태 기록 주체). 문서 구조는 4종 → **spec + log 2파일**로 통합, `dimensions*.md`(4개) 폐지, playbook 12 → 5, template 8 → 3. 경고 훅 2종(scope-guard·template-guard) 및 set-mode.sh 삭제. hooks 테스트 **166 green**. 순변경 +1447/-2101줄.
+
+**핵심 diff before/after**
+
+① 모드 축약 — v3 `core.md`의 "구현 모드 5종" 표(`git show main:core.md`):
+```
+### 구현 모드 5종 (평평한 레퍼토리 — 훅이 L1 진입 시 강제 선택)
+...
+| 모드 | 파일 수정 주체 | 사용자 확인 시점 | 검증 최소선 | 문서·빚 | 전환·종료 |
+|------|--------------|----------------|------------|---------|----------|
+| **auto** | Claude | 정의·계획 합의 + 외부 발행 | stakes 비례(§5) 전부 즉시 | task-process 라이브 | 태스크 종료 |
+| **lazy** | Claude | 위 + **매 diff 이해 게이트**... | 〃 | 〃 | 〃 |
+```
+→ v4 `src/core.md` §1 "자율성" 절(실파일):
+```
+### 자율성 (모드 — 작업 폴더마다 2택, 권장 기본 auto)
+
+- **auto**: 명세 합의 후 Claude 자율 실행 (검증·리뷰는 §4~5 stakes 비례 — 자율 ≠ 검증 생략).
+- **lazy**: 매 diff 사용자 이해 게이트(PENDING_GATE — `implementation-lazymode.md`). 학습·OSS 기여용.
+- 리팩토링 작업 착수 시 `refactoring.md`의 고정 순서... 를 따른다 — 모드 아닌 절차 지식(JIT).
+```
+
+② gate-guard 차단 메시지 — v3(`git show main:hooks/gate-guard.sh`)의 모드 5택:
+```
+[gate-guard] 작업 모드 미선택(MODE=UNSET). 구현·계획·설계(정의됨) 진입 중입니다. ...
+  ▶ 기록 명령... bash ~/.claude/hooks/set-mode.sh <선택한_모드> .claude/lazymode/$SESSION_ID
+  • auto — 앞단(정의·계획) 합의 후 Claude 자율 실행 ...
+  • lazy — 매 diff 사용자 이해 게이트 ...
+  • pair — 대화로 정의·설계 합의 → TDD ...
+  • refactor — 보존 동작 합의 → 특성테스트 baseline green ...
+  • fast — 스모크(실행 확인) 즉시, 정의·계획·리뷰·테스트·문서는 빚 후불 ...
+```
+→ v4(실파일 `hooks/gate-guard.sh`)의 SPEC 게이트 차단(모드 앞단에 명세 게이트가 신설됨):
+```
+[gate-guard] 요구사항 명세 미합의(SPEC=0) — L1(실행물 변경) 진입 차단.
+복구 순서: ① 전수 인터뷰 → requirement-spec.md 작성(필수 6칸 — 빈 칸 금지, templates/requirement-spec.md)
+  → ② 사용자 합의 답변을 받으면: bash ~/.claude/hooks/set-state.sh spec-approved .claude/lazymode/$SESSION_ID
+  → ③ 자율성 2택(auto/lazy)을 물어 기록 → ④ 이 도구 호출 재시도.
+긴급 수정(장애 대응)은 유일 예외: 새 작업 폴더에 log.md 생성 → 사용자 긴급 확인(+불가역 데이터 턱) →
+  bash ~/.claude/hooks/set-state.sh emergency ...  (MODE=auto·SPEC=1·DEBT=1 — 스모크 즉시, 생략분은 log.md '생략한 검증'에)
+```
+(상태 기록도 `set-mode.sh <모드>` → `set-state.sh spec-approved|mode|emergency|debt-clear|gate-pass`로 통합 — case 블록: `emergency) state_set "$STATE" MODE auto SPEC 1 DEBT 1` 단일 flock 원자 1회.)
+
+**배운 것**
+- 설계 선검증 듀얼 리뷰(3루프)에서 "슬림화 = 방어선 삭제"의 함정이 다수 잡힘: 6칸 stakes를 자율성으로 대체하면 후속 강도 발동 근거가 소실(id 1), fast 빚을 로그 1줄로 축소하면 집행 불가한 silent debt가 됨(id 4) → SPEC/DEBT를 훅 상태로 관측 가능하게 승격.
+- "명세 합의=게이트"를 v3는 훅 상태로 표현 못 했음(id 2) — 절차 선언에 그쳤던 것을 SCHEMA=4 SPEC 전이로 실제 집행화(회귀 아닌 강화).
+- 구현 리뷰(3루프)에서 fail-open 홀이 반복 발견: Bash sed로 상태파일 직접 조작(I1), 리셋 실패 시 이전 SPEC=1 잔존(I2), emergency가 stale TASK_PATH로 통과(L3-2) — set-state 유일 기록 계약 + reset-pending marker 인계로 폐쇄.
+- Bash 의미론 완전 차단은 원리적 불가(§0.6) — 위협 모델을 "적대적 회피"가 아닌 "실수·편의 우회"로 명시하고 backstop 한계를 코드 주석화.
+
+**남은 빚/이월** (review-log "잔여 수용 리스크" — 사용자 결정 이관 4건)
+- ① Bash 의미론 완전 차단 불가 — perl -pi·dd·변수 간접·명령에 set-state.sh 문자열 섞기는 미탐(backstop 한계, 위협 모델=실수 방지).
+- ② set-state 선행조건 TOCTOU — 단일 메인 흐름 전제, 동시 병행 세션에서 리셋 역전 가능.
+- ③ marker 세대 경합 — 동시 다중 리셋 시 경합(단일 메인 흐름 전제로 수용).
+- ④ Bash로 log.md 생성 시 emergency FP — fail-closed 방향(가이드: log.md는 Write 도구로 생성해 훅 관측 경로를 태울 것).
+- **차기**: 실사용 measurement-log 데이터로 v4 게이트(SPEC 전이) UX 검증. (task-06 배포·settings·글로벌 CLAUDE.md는 2026-07-21 완료 — 신규 세션 실측 V4-YES·주입 1회·CLEAN.)
