@@ -54,7 +54,9 @@ STATE="$CWD/.claude/lazymode/$SESSION_ID"
 if [ ! -e "$STATE" ] && [ ! -L "$STATE" ]; then exit 0; fi
 # rc 1 = 판정 불가(flock 등) → PostToolUse 계열: 경고 1줄 + 통과(C2). 리셋을 시도하지 않는다.
 if ! state_ensure_valid "$STATE"; then
-  echo "[task-mode-guard] 경고: 상태 검증 실패(flock/재생성) — 모드 리셋 생략. 이전 모드가 유효할 수 있습니다. .claude/lazymode/$SESSION_ID 확인." >&2
+  # 검증 실패도 리셋 미완 — marker 를 남겨 gate-guard 가 인계(일시적 lock 해제 후 이전 SPEC=1 잔존 통과 차단,
+  # post-fix 재점검 I2). marker 생성 실패 시 경고만(비차단 훅 한계 — 수용).
+  : > "$STATE.reset-pending" 2>/dev/null     && echo "[task-mode-guard] 경고: 상태 검증 실패 — reset-pending marker 기록(gate-guard 가 인계·차단). .claude/lazymode/$SESSION_ID 확인." >&2     || echo "[task-mode-guard] 경고: 상태 검증·marker 기록 모두 실패 — 이전 상태가 유효할 수 있습니다. .claude/lazymode/$SESSION_ID 확인." >&2
   exit 0
 fi
 
@@ -75,7 +77,7 @@ RESET_ARGS=(MODE UNSET SPEC 0 PENDING_GATE 0)
 if ! state_set "$STATE" "${RESET_ARGS[@]}"; then
   # 리셋 실패 = 이전 SPEC=1·MODE 잔존으로 다음 L1 이 무게이트 통과할 수 있다(fail-open, 구현 리뷰 codex#2).
   # durable marker 를 남겨 gate-guard 가 리셋을 인계(재시도 성공 전 차단)하게 한다. marker 생성마저 실패하면 경고만(비차단 훅 한계).
-  if : > "$STATE.reset-pending" 2>/dev/null; then
+  if printf '%s\n' "$CFP" > "$STATE.reset-pending" 2>/dev/null; then   # marker 내용 = 새 작업 폴더(인계 시 TASK_PATH 복원)
     echo "[task-mode-guard] 경고: 리셋 실패 — reset-pending marker 기록(gate-guard 가 인계·차단). .claude/lazymode/$SESSION_ID 확인." >&2
   else
     echo "[task-mode-guard] 경고: 리셋·marker 기록 모두 실패 — 이전 상태가 유효할 수 있습니다. .claude/lazymode/$SESSION_ID 를 확인하세요." >&2

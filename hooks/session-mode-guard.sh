@@ -63,6 +63,7 @@ if [ "$SOURCE" = "clear" ]; then
     echo "[session-mode-guard] 경고: clear 리셋 실패 — 이전 상태가 남을 수 있습니다. .claude/lazymode/$SESSION_ID 확인." >&2
     exit 0
   fi
+  rm -f "$STATE.reset-pending" 2>/dev/null || true   # clear 리셋이 marker 의 목적을 이미 달성 — 잔존 정리
 fi
 
 # 진단: resume/clear의 session_id 거동 실측용 1줄(검증 후 제거 가능).

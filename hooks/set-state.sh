@@ -54,8 +54,10 @@ fi
 
 [ -f "$STATE" ] || { echo "[set-state] 상태파일 없음: $STATE (cwd=$(pwd))" >&2; exit 2; }
 
-# 손상 상태 위 기록 금지 — quarantine/재생성 후 재시도 유도 (판정 불가 = 거부, C2 원칙②)
+# 손상 상태 위 기록 금지 — 판정 불가 = 거부(C2 원칙②). **격리·재생성이 방금 일어났으면 기록 거부**(post-fix I3):
+# 손상 전 합의 상태를 알 수 없으므로 게이트를 처음부터(스펙 합의 재확인) 다시 밟게 한다.
 state_ensure_valid "$STATE" || { echo "[set-state] 상태 검증 실패 — 기록 거부(fail-closed)." >&2; exit 1; }
+[ "${STATE_QUARANTINED:-0}" = "0" ]   || { echo "[set-state] 상태가 손상돼 격리·재생성됨 — 직전 합의를 신뢰할 수 없어 기록 거부. 게이트를 처음부터(명세 합의 재확인) 진행하세요." >&2; exit 2; }
 
 # 전이 선행조건 (구현 리뷰 codex#3): 기록 수단이라도 스펙의 전이 순서 밖 기록은 거부한다.
 case "$CMD" in

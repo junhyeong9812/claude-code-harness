@@ -246,6 +246,25 @@ test_st_08() { # [v4 선행조건] log.md 없는 emergency → 거부 + 상태 �
   assert_state DEBT 0 setstate-em-no-log-debt-unchanged
 }
 
+test_st_09() { # [post-fix I3] 손상 상태 → 격리·재생성 직후 기록 거부(직전 합의 신뢰 불가)
+  printf 'garbage state\n' > "$STATE"
+  set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" spec-approved "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e
+  assert_exit 2 setstate-quarantined-reject
+  ls -d "$STATE".corrupt-* >/dev/null 2>&1 || fail setstate-quarantined-happened
+  assert_state SPEC 0 setstate-quarantined-not-recorded
+}
+
+test_tm_12() { # [post-fix I2] 상태 검증 실패(lock 점유)에도 reset-pending marker 를 남긴다
+  write_state auto
+  mkdir -p "$REPO/docs/plans/lk"; echo t > "$REPO/docs/plans/lk/requirement-spec.md"
+  exec 8>>"$STATE.lock"; flock -x 8
+  run_hook task-mode-guard.sh "$(json_file PostToolUse Write "$REPO/docs/plans/lk/requirement-spec.md")"
+  flock -u 8 2>/dev/null || true; exec 8>&-
+  assert_exit 0 tm-lock-exit
+  [ -e "$STATE.reset-pending" ] || fail tm-lock-marker-created
+  assert_stderr_match 'reset-pending' tm-lock-marker-msg
+}
+
 test_st_06() { # [v4] 미지 명령 → 거부(usage)
   write_state UNSET
   set +e; env HOME="$HOME_DIR" bash "$HOOKS_DIR/set-state.sh" bogus "$STATE" >/dev/null 2>&1; HOOK_EXIT=$?; set -e

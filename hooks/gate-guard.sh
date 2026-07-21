@@ -199,19 +199,24 @@ classify_l0l1() { # <canonical file> → rc 0(L0) / 1(L1)
 # ── Bash 경로: file_path가 없어 산출물 분류가 안 맞는다 — lazy 소프트 리마인더만 (하드 차단 없음, §0.6) ──
 # (Bash 하드 차단은 안 한다: 테스트 실행·정당한 셸 사용의 FP가 큼. 프로토콜+reinject로 보강.)
 if [ "$IS_BASH" = "1" ]; then
-  if ! state_ensure_valid "$STATE"; then
-    echo "[gate-guard] 경고: 상태 검증 실패 — 모드 리마인더를 적용 못 했습니다(Bash·비차단). .claude/lazymode/$SESSION_ID 확인." >&2
-    exit 0
-  fi
-  B_MODE=$(state_get "$STATE" MODE)
   B_CMD=$(echo "$HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
-  # 상태파일 대상 Bash **쓰기**는 하드 차단 (구현 리뷰 codex#1 — sed 로 SPEC/MODE/DEBT 직접 조작 = set-state
-  # 유일 기록 계약 우회). 예외 = set-state.sh 경유(유일 정당 경로 — 훅 소유 스크립트). 읽기(cat·grep)는
-  # 쓰기 패턴이 없어 통과. 리다이렉트는 **대상이 lazymode 경로일 때만**(2>/dev/null 등 오탐 방지).
-  if printf '%s' "$B_CMD" | grep -q '\.claude/lazymode'      && ! printf '%s' "$B_CMD" | grep -q 'set-state\.sh'      && printf '%s' "$B_CMD" | grep -qE '(sed([[:space:]]+-[a-zA-Z]+)*[[:space:]]+-i[^|]*\.claude/lazymode|(^|[|;&[:space:]])(tee|mv|cp|rm|truncate)[[:space:]][^|]*\.claude/lazymode|>[[:space:]]*[^|;&[:space:]]*\.claude/lazymode)'; then
+  # 상태파일 대상 Bash **쓰기** backstop 차단 (구현 리뷰 I1) — **상태검증(ensure_valid)보다 먼저**:
+  # lock 실패(검증 불가)가 이 차단을 우회하지 못하게 한다(post-fix 재점검 교정). 예외 = set-state.sh 경유.
+  # 경로 매칭은 `[^|;&]*` — 파이프·세미콜론·&를 넘지 않아 "rm /tmp/x; grep 상태읽기" 오탐 차단(post-fix 교정).
+  # **한계 명시(§0.6 — 수용 리스크)**: 결정론 backstop 이지 완전 차단이 아니다 — Bash 의미론은 훅이 관찰
+  # 불가(perl -pi·dd·변수 간접 리다이렉트·명령에 set-state.sh 문자열을 섞는 자가 우회 등은 미탐). 유일
+  # 기록 경로 준수는 절차 규칙이고, 이 패턴은 흔한 실수·편의 우회만 잡는다.
+  if printf '%s' "$B_CMD" | grep -q '\.claude/lazymode' \
+     && ! printf '%s' "$B_CMD" | grep -q 'set-state\.sh' \
+     && printf '%s' "$B_CMD" | grep -qE '(sed([[:space:]]+-[a-zA-Z]+)*[[:space:]]+-i[^|;&]*\.claude/lazymode|(^|[|;&[:space:]])(tee|mv|cp|rm|truncate)[[:space:]][^|;&]*\.claude/lazymode|>[[:space:]]*[^|;&[:space:]]*\.claude/lazymode)'; then
     echo "[gate-guard] 상태파일은 훅 소유 — Bash 쓰기(sed -i·tee·redirect·mv·rm 등)로 SPEC/MODE/DEBT 를 직접 바꾸는 것은 차단됩니다. 상태 기록은 'bash ~/.claude/hooks/set-state.sh <명령>' 이 유일한 경로입니다." >&2
     exit 2
   fi
+  if ! state_ensure_valid "$STATE"; then
+    echo "[gate-guard] 경고: 상태 검증 실패 — 모드 리마인더를 적용 못 했습니다(Bash·비차단, 상태쓰기 차단은 위에서 이미 적용). .claude/lazymode/$SESSION_ID 확인." >&2
+    exit 0
+  fi
+  B_MODE=$(state_get "$STATE" MODE)
   # lazy 의 Bash 파일쓰기(sed -i·tee·redirect·heredoc)는 per-diff 게이트를 우회한다 — 소프트 리마인더만.
   if [ "$B_MODE" = "lazy" ] && echo "$B_CMD" | grep -qE '(sed([[:space:]]+-[a-zA-Z]+)*[[:space:]]+-i|(^|[[:space:]|;&])tee[[:space:]]|<<[-]?[[:space:]]*["'"'"']?[A-Za-z_])'; then
     echo "[gate-guard] lazy 모드: Bash로 파일을 수정하면 per-diff 이해 게이트가 우회됩니다. 코드 변경은 Edit/Write로 해 게이트를 태우거나, 이 변경도 before/after 스니펫으로 설명·판정하세요. (implementation-lazymode.md §3 — 소프트 리마인더)" >&2
@@ -293,7 +298,10 @@ fi
 # ── L1 전용: reset-pending 인계 → 상태 확정(부재→시드·손상→격리) → 게이트 ──
 # task-mode-guard 의 리셋이 실패했으면 marker 가 남아 있다 — 여기서 리셋을 재시도하고, 실패 시 차단(fail-closed).
 if [ -e "$STATE.reset-pending" ]; then
-  if state_set "$STATE" MODE UNSET SPEC 0 PENDING_GATE 0 2>/dev/null; then
+  RP_TP=$(head -1 "$STATE.reset-pending" 2>/dev/null || true)   # marker 내용 = 새 작업 폴더 (빈 값 허용 — 구 marker)
+  RP_ARGS=(MODE UNSET SPEC 0 PENDING_GATE 0)
+  [ -n "$RP_TP" ] && RP_ARGS+=(TASK_PATH "$RP_TP")              # TASK_PATH 도 인계(긴급 log.md 판정 정합 — I2)
+  if state_set "$STATE" "${RP_ARGS[@]}" 2>/dev/null; then
     rm -f "$STATE.reset-pending" 2>/dev/null || true   # 인계 성공 — 아래 정상 게이트(UNSET→SPEC 질문)로
   else
     if [ "$EVENT" = "PreToolUse" ]; then

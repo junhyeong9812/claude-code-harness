@@ -568,6 +568,30 @@ test_gt_56d() { # [v4] set-state.sh 경유 Bash 는 허용(유일 정당 경로)
   assert_exit 0 state-bash-read-pass
 }
 
+test_gt_56e() { # [post-fix I1 오탐 회귀] 세미콜론 뒤 상태 읽기(grep) + 앞의 무관한 rm → 차단 안 함(패턴이 ;를 넘지 않음)
+  write_state auto
+  run_hook gate-guard.sh "$(json_bash "rm -f /tmp/unrelated-x; grep MODE .claude/lazymode/$SID")"
+  assert_exit 0 state-bash-semicolon-read-pass
+}
+
+test_gt_56f() { # [post-fix I1] lock 점유(상태 검증 불가)여도 상태파일 쓰기(sed -i)는 차단 — 검사가 검증보다 선행
+  write_state lazy 0
+  exec 8>>"$STATE.lock"; flock -x 8
+  run_hook gate-guard.sh "$(json_bash "sed -i 's/MODE=lazy/MODE=auto/' .claude/lazymode/$SID")"
+  flock -u 8 2>/dev/null || true; exec 8>&-
+  assert_exit 2 state-bash-write-block-under-lock
+}
+
+test_gt_60c() { # [post-fix I2] marker 내용(새 작업 폴더) → 인계 리셋이 TASK_PATH 도 복원
+  write_state auto
+  mkdir -p "$REPO/docs/plans/nx"
+  printf '%s\n' "$REPO/docs/plans/nx" > "$STATE.reset-pending"
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(json_file PreToolUse Write "$REPO/src/a.c")"
+  assert_exit 2 marker-taskpath-block
+  assert_state TASK_PATH "$REPO/docs/plans/nx" marker-taskpath-restored
+}
+
 test_gt_60() { # [v4 구현리뷰 codex#2] reset-pending marker → gate-guard 가 리셋 인계 성공 → marker 제거 + UNSET 게이트
   write_state auto                                     # 직전 작업 잔존: SPEC=1·MODE=auto (marker 없으면 통과했을 상태)
   : > "$STATE.reset-pending"
