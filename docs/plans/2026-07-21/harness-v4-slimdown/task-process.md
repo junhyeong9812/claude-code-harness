@@ -105,3 +105,5 @@
 - ③ marker 세대 경합 — 동시 다중 리셋 시 경합(단일 메인 흐름 전제로 수용).
 - ④ Bash로 log.md 생성 시 emergency FP — fail-closed 방향(가이드: log.md는 Write 도구로 생성해 훅 관측 경로를 태울 것).
 - **차기**: 실사용 measurement-log 데이터로 v4 게이트(SPEC 전이) UX 검증. (task-06 배포·settings·글로벌 CLAUDE.md는 2026-07-21 완료 — 신규 세션 실측 V4-YES·주입 1회·CLEAN.)
+
+| 2026-07-21 | 세션 지식 아카이브 (사용자 요청) | workbench-knowledge MCP 형식으로 5건 아카이브(domain 1: v4 핵심 결정 / issue 3: 이중 주입 실측·deploy set-e·삭제 슬라이스 회귀 / method 1: SPEC 상태 전이 승격) + INDEX.md 갱신 — search_knowledge 검색 smoke 통과 |
