@@ -1,6 +1,6 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
 f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-scan.sh
-52e15277d7d8296a4119f8db6993233bcc9018089a83d9b47a4d3258c66a18a0  cases/detect-layer.sh
+e2fb9522ec08277b3f8ea44414010c474314693fb94b3dc6fdd57d003cf32e6a  cases/detect-layer.sh
 e7182d053acbe1edb76e96824d0a21fb027c0c63d527598b1862091e866c9042  cases/gate-guard.sh
 7e4a9e1911da9318b7c57d49da2fac658b7627ec9f4cf2e4c72d2b2f2f0b97a0  cases/git-guard.sh
 b5946a1adafe6e0d323cba97f6aec98867a52c54ceffa0d0c9f70e2a0c4873fd  cases/misc-guards.sh
@@ -42,6 +42,7 @@ b5946a1adafe6e0d323cba97f6aec98867a52c54ceffa0d0c9f70e2a0c4873fd  cases/misc-gua
 # test: test_dl_empty_stdin
 # test: test_dl_il_line
 # test: test_dl_il_noparent
+# test: test_dl_lock_timeout_drop
 # test: test_dl_missing_cwd_fallback
 # test: test_dl_missing_sid
 # test: test_dl_no_compress_under_cap

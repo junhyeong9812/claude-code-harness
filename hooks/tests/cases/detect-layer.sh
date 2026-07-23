@@ -227,7 +227,23 @@ test_dl_ctrl_chars_stripped() { # CR·ESC 등 C0 제어문자 제거(로그 위�
   assert_file_contains "$ev" '한글유지' dl-ctrl-utf8-kept
 }
 
+test_dl_lock_timeout_drop() { # flock 1s 초과 선점 → 이벤트 드롭·exit 0·기존 보존 (드롭 계약 테스트 고정 — loop2 codex. 정책 자체는 사용자 확인 대기)
+  local ev; ev=$(dl_ev)
+  run_hook detect-layer.sh "$(dl_cc pre /seed)"
+  local before; before=$(cat "$ev")
+  ( exec 9>>"$ev.lock" && flock -x 9 && sleep 2 ) &   # 훅과 동일 락 파일을 2s 점유
+  local holder=$!
+  sleep 0.3                                            # 선점 확보
+  run_hook detect-layer.sh "$(dl_cc post /dropped)"    # -w 1 → 타임아웃
+  local rc=$HOOK_EXIT
+  wait "$holder" 2>/dev/null
+  [ "$rc" = "0" ] || { echo "  [dbg] exit=$rc"; fail dl-locktimeout-exit; }
+  [ "$(cat "$ev")" = "$before" ] || fail dl-locktimeout-preserved
+  assert_file_not_contains "$ev" '/dropped' dl-locktimeout-dropped
+}
+
 test_dl_unreadable_sidecar_preserved() { # 기존 사이드카 읽기 실패 → 원본 보존(덮어쓰기 금지)·exit 0 (loop1 감사 P1 재현)
+  [ "$(id -u)" != "0" ] || return 0   # root 는 권한 실패 재현 불가 — lib.sh 전제(비root)와 정합 (loop2 codex)
   local ev; ev=$(dl_ev)
   run_hook detect-layer.sh "$(dl_cc pre /seed1)"
   run_hook detect-layer.sh "$(dl_cc pre /seed2)"
@@ -251,6 +267,7 @@ test_dl_utf8_boundary_truncate() { # 120B 경계가 멀티바이트 중간이어
 }
 
 test_dl_readonly_dir_sas_inert() { # 하드 불변식 최고점: 쓰기 불가 + SubagentStop → exit 0·기존 사이드카 보존
+  [ "$(id -u)" != "0" ] || return 0   # root 는 권한 실패 재현 불가 — lib.sh 전제(비root)와 정합 (loop2 codex)
   local ev; ev=$(dl_ev)
   run_hook detect-layer.sh "$(dl_cc pre /seed)"          # 기존 사이드카 1행 선재
   local before; before=$(cat "$ev")
