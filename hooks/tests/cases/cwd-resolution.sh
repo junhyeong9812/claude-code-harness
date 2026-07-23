@@ -186,19 +186,9 @@ test_cr_19() { # [P0 회귀] tab/redirect metachar 로 위장한 상태파일 �
   assert_exit 2 p0-redirect-desync-blocked
 }
 
-# ── D. canonical 정규화 (loop1 codex·Opus — 디렉토리 심링크 외부상태·HOME 후행슬래시) ──────
-test_cr_20() { # 디렉토리 심링크로 외부 프로젝트 상태를 앵커하지 못함(realpath 정규화)
-  # 외부 프로젝트에 유효 상태, cwd 는 그 외부를 가리키는 디렉토리 심링크 경유
-  mkdir -p "$SANDBOX/outside/.claude/lazymode"
-  echo "SCHEMA=4" > "$SANDBOX/outside/.claude/lazymode/$SID"
-  mkdir -p "$REPO/link-parent"
-  ln -s "$SANDBOX/outside" "$REPO/link-parent/via"     # $REPO/link-parent/via → 외부
-  # cwd 를 심링크 경유 경로로 주면 realpath 가 실경로($SANDBOX/outside)로 정규화 → 그 조상 탐색
-  local got; got=$(_cr_resolve "$REPO/link-parent/via" "$SID") || true
-  # 실경로 기준 앵커($SANDBOX/outside)를 찾되, 심링크 문자열 경로($REPO/link-parent/via/...)로는 반환 안 함
-  _cr_eq "$got" "$SANDBOX/outside/.claude/lazymode" cr20-canonical-realpath
-}
-
+# ── D. HOME 제외 정규화 (loop2 — realpath 제거·후행슬래시 문자열 정리) ──────
+# 주: 디렉토리 심링크 외부-상태 채택은 sid 난수로 선행조건 부재(loop1 Opus N-A) — realpath 제거로
+#     방어를 얹지 않고 수용. 외부에 같은 sid 상태를 두려면 그 쓰기가 이미 게이트 차단 대상.
 test_cr_21() { # HOME 후행 슬래시여도 글로벌 배포 경로 제외 유지
   mkdir -p "$SANDBOX/h/.claude/lazymode" "$SANDBOX/h/proj/sub"
   echo x > "$SANDBOX/h/.claude/lazymode/$SID"

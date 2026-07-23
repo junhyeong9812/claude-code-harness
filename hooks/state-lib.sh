@@ -41,10 +41,11 @@ state_sanitize_sid() {
 state_resolve_dir() {
   local cwd="${1:-}" sid="${2:-}" d cand i=0 home_lz
   case "$cwd" in /*) ;; *) printf '%s/.claude/lazymode' "$cwd"; return 0 ;; esac
-  # canonical 정규화 — 디렉토리 심링크로 외부 프로젝트 상태를 채택하거나 HOME 제외를 후행 슬래시로
-  # 우회하는 것을 차단(리뷰 loop1 codex·Opus). realpath 부재/실패 시 원문(정규화 없이 = 종전 수준, 약화 아님).
-  cwd=$(realpath -m -- "$cwd" 2>/dev/null || printf '%s' "$cwd")
-  home_lz="${HOME:+$(realpath -m -- "$HOME" 2>/dev/null || printf '%s' "$HOME")/.claude/lazymode}"
+  # realpath 정규화는 쓰지 않는다(리뷰 loop2 재슬라이스): 심링크 추종이 외부 프로젝트 상태를 오히려
+  # 채택하게 만들고(codex), 실질 외부 오채택은 sid 가 세션별 난수라 선행조건이 없다(loop1 Opus N-A —
+  # 조상에 같은 sid 상태를 쓰려면 그 쓰기 자체가 게이트 차단 대상). realpath 는 이식성 함정만 남겨 제거.
+  # HOME 제외 비교용 후행 슬래시만 문자열로 정리(글로벌 배포 경로 오채택 방지).
+  home_lz="${HOME:+${HOME%/}/.claude/lazymode}"
   if [ -n "$sid" ]; then
     d="$cwd"
     while [ -n "$d" ] && [ "$i" -lt 64 ]; do

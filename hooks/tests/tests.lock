@@ -1,6 +1,6 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
 f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-scan.sh
-75269c2f25b1261c373c971e94eb0bc0f9d6b1306c01cdc8bf1e3b08ae9dd1ae  cases/cwd-resolution.sh
+1ecb5d357f374824cca9391ab5fad0701e575860e45a11dda4237911304d198f  cases/cwd-resolution.sh
 dbb769f9ba80c4318fa9b4278328373249d990124dc18f87834a19d34791fe04  cases/detect-layer.sh
 e7182d053acbe1edb76e96824d0a21fb027c0c63d527598b1862091e866c9042  cases/gate-guard.sh
 7e4a9e1911da9318b7c57d49da2fac658b7627ec9f4cf2e4c72d2b2f2f0b97a0  cases/git-guard.sh
@@ -32,7 +32,6 @@ b5946a1adafe6e0d323cba97f6aec98867a52c54ceffa0d0c9f70e2a0c4873fd  cases/misc-gua
 # test: test_cr_17
 # test: test_cr_18
 # test: test_cr_19
-# test: test_cr_20
 # test: test_cr_21
 # test: test_cs_aws_blocked
 # test: test_cs_codex_after_separator_detected
