@@ -204,9 +204,62 @@ test_dl_concurrency() {
   [ -f "$ev" ] || fail dl-conc-nofile
   local bad; bad=$(grep -cvE '^[0-9]+\|(IL|CC|SAS)\|' "$ev" || true)
   [ "$bad" = "0" ] || { echo "  [dbg] bad lines=$bad"; fail dl-conc-corrupt; }   # 찢긴/뒤섞인 행 없음
+  # 정상 경합에서는 전량 기록 — flock -w 1 은 ms 단위 직렬 쓰기 20건에 충분한 마진 (loop1 codex 테스트 강화)
   local total; total=$(dl_nlines "$ev")
-  [ "$total" -ge 1 ]   || fail dl-conc-progress                                  # 최소 1건은 기록(진전)
-  [ "$total" -le "$n" ] || { echo "  [dbg] total=$total > $n"; fail dl-conc-nodup; }  # 유령 증식 없음
+  [ "$total" = "$n" ] || { echo "  [dbg] total=$total want=$n"; fail dl-conc-all-recorded; }
+  # 고유성: 각 입력이 정확히 1회 — 누락+중복이 행수 20을 위장하는 것 차단 (loop1 감사)
+  # 행말 앵커 필수 — /p1 이 /p10~19 에 부분매칭하는 오탐(count=11 실측) 차단
+  for i in $(seq 1 "$n"); do
+    local c; c=$(grep -cE "/p$i\$" "$ev" || true)
+    [ "$c" = "1" ] || { echo "  [dbg] /p$i count=$c"; fail dl-conc-unique; }
+  done
+}
+
+# ── fix verification (loop1 채택 finding 재현 — blind 설계와 구분) ───────────
+test_dl_ctrl_chars_stripped() { # CR·ESC 등 C0 제어문자 제거(로그 위조 차단), UTF-8 보존
+  local ev; ev=$(dl_ev)
+  local msg; msg=$(printf 'ok\r\033[2K한글유지\007end')
+  run_hook detect-layer.sh "$(dl_sas general-purpose idc "$msg")"
+  assert_exit 0 dl-ctrl-exit
+  dl_ngrep_re "$ev" $'\r' dl-ctrl-cr
+  dl_ngrep_re "$ev" $'\033' dl-ctrl-esc
+  dl_ngrep_re "$ev" $'\007' dl-ctrl-bel
+  assert_file_contains "$ev" '한글유지' dl-ctrl-utf8-kept
+}
+
+test_dl_unreadable_sidecar_preserved() { # 기존 사이드카 읽기 실패 → 원본 보존(덮어쓰기 금지)·exit 0 (loop1 감사 P1 재현)
+  local ev; ev=$(dl_ev)
+  run_hook detect-layer.sh "$(dl_cc pre /seed1)"
+  run_hook detect-layer.sh "$(dl_cc pre /seed2)"
+  local before; before=$(cat "$ev")
+  chmod a-r "$ev" || fail dl-unread-setup
+  run_hook detect-layer.sh "$(dl_cc post /must-not-clobber)"
+  local rc=$HOOK_EXIT
+  chmod u+r "$ev"
+  [ "$rc" = "0" ] || { echo "  [dbg] exit=$rc"; fail dl-unread-exit; }
+  [ "$(cat "$ev")" = "$before" ] || fail dl-unread-preserved   # 읽기 실패가 신규 1행 파일로 대체하지 않음
+}
+
+test_dl_utf8_boundary_truncate() { # 120B 경계가 멀티바이트 중간이어도 .events 는 유효 UTF-8 (loop1 감사)
+  command -v iconv >/dev/null 2>&1 || return 0                 # iconv 없는 환경은 폴백 계약(원시 절단) — 스킵
+  local ev; ev=$(dl_ev)
+  local msg; msg="ab$(printf '가%.0s' {1..60})"                # 2B + 60×3B=182B → 경계 120B가 '가' 중간
+  run_hook detect-layer.sh "$(dl_sas general-purpose idu "$msg")"
+  assert_exit 0 dl-utf8-exit
+  iconv -f UTF-8 -t UTF-8 "$ev" >/dev/null 2>&1 || fail dl-utf8-valid   # 파일 전체가 유효 UTF-8
+  assert_file_contains "$ev" 'msg[182]=' dl-utf8-origlen
+}
+
+test_dl_readonly_dir_sas_inert() { # 하드 불변식 최고점: 쓰기 불가 + SubagentStop → exit 0·기존 사이드카 보존
+  local ev; ev=$(dl_ev)
+  run_hook detect-layer.sh "$(dl_cc pre /seed)"          # 기존 사이드카 1행 선재
+  local before; before=$(cat "$ev")
+  chmod a-w "$STATE_DIR" || fail dl-ro-setup
+  run_hook detect-layer.sh "$(dl_sas general-purpose idr hello)"
+  local rc=$HOOK_EXIT
+  chmod u+w "$STATE_DIR"                                  # 정리 우선(트랩 보조) 후 판정
+  [ "$rc" = "0" ] || { echo "  [dbg] exit=$rc"; fail dl-ro-exit; }
+  [ "$(cat "$ev")" = "$before" ] || fail dl-ro-preserved  # 부분 쓰기·손상 없이 기존 내용 그대로
 }
 
 # ── sid sanitize / path-traversal 방어 ──────────────────────────────────────
