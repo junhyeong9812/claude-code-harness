@@ -52,7 +52,7 @@
 | F17 | 3 | codex | root-skip 이 green 집계(skip 미구분) | 기각 — lib.sh:4 비root 전제 문서화(하네스 관례)·Opus "bounded, documented acceptance" 합치. skip 의미론은 테스트 하네스 차원 이월 |  — | — |
 - **리뷰 루프 종료 (3루프 상한 도달 — 투명 기록)**: loop3 신규 채택 1(F16, 테스트 견고성 한정·구현 무변경)을 상한 내 수정. F16 수정분은 재리뷰 불가(상한) — 잔여 리스크: Opus가 사전 검증한 대로 실패 시 red 테스트로 표면화(false-green 불가). 구현 스크립트에 대한 양 리뷰어 판정: **P0/P1 결함 0 · 렌즈 7종 verified(양 source 기여 — 비대칭 없음)**.
 - 대칭 부담: 정확성·spec·동시성·실패경로·보안·테스트 정합성 = opus∥codex 양측 verified(원문 인용 ledger 위 참조) / 완전성 = task-03 항목으로 open(F5).
-- 사용자 확인 대기 2건: ① F2 드롭 정책(flock 1s 실패 시 이벤트 드롭 — spec 명시 없음) ② F7 msg 발췌 120B 로컬 평문(by design 위험 수용).
+- ~~사용자 확인 대기 2건~~ → **2026-07-23 사용자 확정**: ① F2 드롭 정책 **수용** — spec §2에 재합의 1줄 반영(status: fixed/user-approved) ② F7 발췌 평문 **위험 수용 확정**(user-approved). 이월 처분: #1 cwd 오차단·#2 유령 정리·#3 .events 오탐 = 후속 작업 진행 / #4 파일 누적 = 현상 유지 / #5 skip 의미론 = 보류.
 
 ## 생략한 검증
 
