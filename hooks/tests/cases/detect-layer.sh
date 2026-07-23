@@ -231,9 +231,11 @@ test_dl_lock_timeout_drop() { # flock 1s 초과 선점 → 이벤트 드롭·exi
   local ev; ev=$(dl_ev)
   run_hook detect-layer.sh "$(dl_cc pre /seed)"
   local before; before=$(cat "$ev")
-  ( exec 9>>"$ev.lock" && flock -x 9 && sleep 2 ) &   # 훅과 동일 락 파일을 2s 점유
+  ( exec 9>>"$ev.lock" && flock -x 9 && touch "$SANDBOX/dl-held" && sleep 2 ) &   # 훅과 동일 락 파일을 2s 점유
   local holder=$!
-  sleep 0.3                                            # 선점 확보
+  # readiness 핸드셰이크 — 고정 sleep 의 선점 창 제거 (loop3 codex∥opus 합치). 2s 내 미획득 = setup 실패(loud)
+  local w=0; while [ ! -f "$SANDBOX/dl-held" ] && [ "$w" -lt 40 ]; do sleep 0.05; w=$((w+1)); done
+  [ -f "$SANDBOX/dl-held" ] || { wait "$holder" 2>/dev/null; fail dl-locktimeout-setup; }
   run_hook detect-layer.sh "$(dl_cc post /dropped)"    # -w 1 → 타임아웃
   local rc=$HOOK_EXIT
   wait "$holder" 2>/dev/null
