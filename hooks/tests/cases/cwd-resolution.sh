@@ -189,6 +189,21 @@ test_cr_19() { # [P0 회귀] tab/redirect metachar 로 위장한 상태파일 �
 # ── D. HOME 제외 정규화 (loop2 — realpath 제거·후행슬래시 문자열 정리) ──────
 # 주: 디렉토리 심링크 외부-상태 채택은 sid 난수로 선행조건 부재(loop1 Opus N-A) — realpath 제거로
 #     방어를 얹지 않고 수용. 외부에 같은 sid 상태를 두려면 그 쓰기가 이미 게이트 차단 대상.
+test_cr_22() { # [loop3 P0] 비정규 cwd(..) → 조상 탐색 없이 seed 폴백(형제 상태 오채택 차단)
+  mkdir -p "$REPO/a/.claude/lazymode" "$REPO/b"
+  printf 'SCHEMA=4\n' > "$REPO/a/.claude/lazymode/$SID"     # 형제 a 에 같은 sid 상태
+  local got; got=$(_cr_resolve "$REPO/a/../b" "$SID") || true
+  _cr_eq "$got" "$REPO/a/../b/.claude/lazymode" cr22-noncanonical-seed   # a 채택 안 함, 종전 seed 동작
+}
+
+test_cr_23() { # [loop3 Opus P2] HOME 후행 다중 슬래시여도 글로벌 배포 경로 제외 유지
+  mkdir -p "$SANDBOX/hh/.claude/lazymode" "$SANDBOX/hh/proj/sub"
+  echo x > "$SANDBOX/hh/.claude/lazymode/$SID"
+  local got; got=$(env HOME="$SANDBOX/hh//" bash -c '. "$1" 2>/dev/null; state_resolve_dir "$2" "$3"' \
+    _ "$HOOKS_DIR/state-lib.sh" "$SANDBOX/hh/proj/sub" "$SID" 2>/dev/null) || true
+  _cr_eq "$got" "$SANDBOX/hh/proj/sub/.claude/lazymode" cr23-home-multislash-excluded
+}
+
 test_cr_21() { # HOME 후행 슬래시여도 글로벌 배포 경로 제외 유지
   mkdir -p "$SANDBOX/h/.claude/lazymode" "$SANDBOX/h/proj/sub"
   echo x > "$SANDBOX/h/.claude/lazymode/$SID"

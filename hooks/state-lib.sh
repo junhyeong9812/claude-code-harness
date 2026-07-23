@@ -39,13 +39,18 @@ state_sanitize_sid() {
 #   sid 빈 값·비절대 cwd 는 <cwd>/.claude/lazymode 즉시 반환(현행 동등 — stateless/차단 판단은 호출부 소관).
 # 사용: dir=$(state_resolve_dir "$CWD" "$SESSION_ID"); STATE="$dir/$SESSION_ID"
 state_resolve_dir() {
-  local cwd="${1:-}" sid="${2:-}" d cand i=0 home_lz
+  local cwd="${1:-}" sid="${2:-}" d cand i=0 home home_lz
   case "$cwd" in /*) ;; *) printf '%s/.claude/lazymode' "$cwd"; return 0 ;; esac
-  # realpath 정규화는 쓰지 않는다(리뷰 loop2 재슬라이스): 심링크 추종이 외부 프로젝트 상태를 오히려
-  # 채택하게 만들고(codex), 실질 외부 오채택은 sid 가 세션별 난수라 선행조건이 없다(loop1 Opus N-A —
-  # 조상에 같은 sid 상태를 쓰려면 그 쓰기 자체가 게이트 차단 대상). realpath 는 이식성 함정만 남겨 제거.
-  # HOME 제외 비교용 후행 슬래시만 문자열로 정리(글로벌 배포 경로 오채택 방지).
-  home_lz="${HOME:+${HOME%/}/.claude/lazymode}"
+  # 입력 도메인 제한 = 재슬라이스(리뷰 loop3): lexical dirname 조상 탐색은 **정규 절대경로**에서만
+  # well-defined 다. 비정규 성분(`..`·`.`·중복 `/`)이 있으면 dirname 상향이 `..` 를 해소하지 못해
+  # 형제 디렉토리 상태를 오채택할 수 있으므로(codex P0 실증: a/../b 가 형제 a 상태 채택), 조상 탐색을
+  # 하지 않고 종전 seed 동작으로 폴백한다(안전 기본값 — 커널이 접근 시 정규화하니 실위치에 seed).
+  case "$cwd" in *//*|*/./*|*/../*|*/.|*/..) printf '%s/.claude/lazymode' "$cwd"; return 0 ;; esac
+  # realpath 는 쓰지 않는다(loop2): 심링크 추종이 외부 상태를 오히려 채택하고, 실질 외부 오채택은 sid
+  # 가 세션 난수라 선행조건이 없다(loop1 Opus N-A). HOME 제외 비교용 후행 슬래시만 전량 제거(loop3 Opus).
+  home="${HOME:-}"
+  while [ "$home" != "/" ] && [ "$home" != "${home%/}" ]; do home="${home%/}"; done
+  home_lz="${home:+$home/.claude/lazymode}"
   if [ -n "$sid" ]; then
     d="$cwd"
     while [ -n "$d" ] && [ "$i" -lt 64 ]; do
