@@ -82,4 +82,4 @@ state_resolve_dir() {
 
 **⑤ 배운 것** — ⑴`.events` 예외의 regex 토큰경계≠셸 word-split → 우회 P0(loop1). ⑵realpath 를 두 리뷰어가 정반대 평가 → sid 난수 선행조건 부재로 제거(loop2). ⑶경계 방어보다 **입력 도메인 제한**이 lexical dirname well-defined 전제를 지킨 근본 재슬라이스(loop3).
 
-**남은 빚/이월** — DEBT 0. **사용자 확인 대기 1: 명세 §1④ 범위 변경**(#3 `.events` 예외를 "추가"→"철회+수용"으로 — detect-layer 는 훅 프로세스라 gate-guard Bash 가드 대상 아님이 근거). 잔여 수용: HOME 중간 다중슬래시 극단 케이스·3루프 상한 초과분 메인 직접 검증. 이월(hook-detection-layer 에서 넘어온 것 중): #4 .events 파일수 누적(유지 결정)·#5 skip 의미론(보류)·capture-prompt 사이드카 소비자 유무 조사.
+**남은 빚/이월** — DEBT 0. **명세 §1④ 범위 변경 = 사용자 승인 완료(2026-07-23)**: #3 `.events` 예외를 "추가"→"철회+수용"으로 (detect-layer 는 훅 프로세스라 gate-guard Bash 가드 대상 아님이 근거). 작업 종결. 잔여 수용: HOME 중간 다중슬래시 극단 케이스·3루프 상한 초과분 메인 직접 검증. 이월(hook-detection-layer 에서 넘어온 것 중): #4 .events 파일수 누적(유지 결정)·#5 skip 의미론(보류)·capture-prompt 사이드카 소비자 유무 조사.
