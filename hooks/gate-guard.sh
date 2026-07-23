@@ -67,7 +67,7 @@ if [ -z "$SESSION_ID" ]; then
   [ "$EVENT" = "PreToolUse" ] && echo "[gate-guard] session_id 없음 — 게이트 비활성(fail-open). 모드 강제 불가." >&2
   exit 0   # 세션 식별 불가 → inert (fail-open)
 fi
-STATE="$CWD/.claude/lazymode/$SESSION_ID"
+STATE="$(state_resolve_dir "$CWD" "$SESSION_ID")/$SESSION_ID"   # 조상 탐색 — cwd 추종 오차단 수정(gate-cwd-resolution)
 
 # ── 경로 분류 헬퍼 (canonical 경로 기준 — 문자열 glob 아님, C1 판별표) ────────────────
 canon_file() { # echo canonical path | 실패 시 비-0
@@ -206,7 +206,10 @@ if [ "$IS_BASH" = "1" ]; then
   # **한계 명시(§0.6 — 수용 리스크)**: 결정론 backstop 이지 완전 차단이 아니다 — Bash 의미론은 훅이 관찰
   # 불가(perl -pi·dd·변수 간접 리다이렉트·명령에 set-state.sh 문자열을 섞는 자가 우회 등은 미탐). 유일
   # 기록 경로 준수는 절차 규칙이고, 이 패턴은 흔한 실수·편의 우회만 잡는다.
-  if printf '%s' "$B_CMD" | grep -q '\.claude/lazymode' \
+  # .events(.lock) 관측 사이드카만 만지는 명령은 예외(detect-layer 소유·강제력 없음 — gate-cwd-resolution #3).
+  # 따옴표 제거 후 lazymode 토큰 추출 — 전 토큰이 .events(.lock)로 끝날 때만 예외, 하나라도 아니면 보수적 차단.
+  B_LZ_NONEV=$(printf '%s' "$B_CMD" | tr -d '\042\047' | grep -oE '\.claude/lazymode[^ |;&]*' | grep -vE '\.events(\.lock)?$' | head -1 || true)
+  if [ -n "$B_LZ_NONEV" ] \
      && ! printf '%s' "$B_CMD" | grep -q 'set-state\.sh' \
      && printf '%s' "$B_CMD" | grep -qE '(sed([[:space:]]+-[a-zA-Z]+)*[[:space:]]+-i[^|;&]*\.claude/lazymode|(^|[|;&[:space:]])(tee|mv|cp|rm|truncate)[[:space:]][^|;&]*\.claude/lazymode|>[[:space:]]*[^|;&[:space:]]*\.claude/lazymode)'; then
     echo "[gate-guard] 상태파일은 훅 소유 — Bash 쓰기(sed -i·tee·redirect·mv·rm 등)로 SPEC/MODE/DEBT 를 직접 바꾸는 것은 차단됩니다. 상태 기록은 'bash ~/.claude/hooks/set-state.sh <명령>' 이 유일한 경로입니다." >&2
@@ -277,6 +280,8 @@ esac
 #    Claude가 MODE=auto 등을 직접 써서 모드 게이트·fast 빚을 우회하는 것을 차단(7/3 우회의 Edit/Write판).
 #    Bash 경로(IS_BASH=1)는 위 IS_BASH 분기에서 이미 종료 — 훅 bash 쓰기와 구분 불가라 소프트 리마인더만(§0.6 FP).
 case "$CFILE" in
+  */.claude/lazymode/*.events|*/.claude/lazymode/*.events.lock)
+    : ;;   # 관측 사이드카(detect-layer 소유·강제력 없음) — 하드거부 제외, 아래 일반 분류로(repo 내=L1) (gate-cwd-resolution #3)
   */.claude/lazymode/*)
     if [ "$EVENT" = "PreToolUse" ]; then
       echo "[gate-guard] 상태파일은 훅 소유(state-lib) — Claude 직접 편집(Edit/Write) 금지. 상태 기록은 사용자 답변 후 'bash ~/.claude/hooks/set-state.sh <명령> .claude/lazymode/$SESSION_ID' 가 유일한 경로입니다(spec-approved | mode <auto|lazy> | emergency | debt-clear | gate-pass)." >&2

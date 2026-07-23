@@ -22,7 +22,13 @@ SID=$(jqr '.session_id // empty' | tr -cd 'A-Za-z0-9_-')
 
 CWD=$(jqr '.cwd // empty')
 if [ -z "$CWD" ] || [ ! -d "$CWD" ]; then CWD="$PWD"; fi
-STATE_DIR="$CWD/.claude/lazymode"
+# 조상 탐색 — .events 를 세션 상태파일이 있는 lazymode 에 모은다(gate-cwd-resolution). 로드 실패 시 종전 동작.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if . "$SCRIPT_DIR/state-lib.sh" 2>/dev/null && command -v state_resolve_dir >/dev/null 2>&1; then
+  STATE_DIR="$(state_resolve_dir "$CWD" "$SID")"
+else
+  STATE_DIR="$CWD/.claude/lazymode"
+fi
 mkdir -p "$STATE_DIR" 2>/dev/null || exit 0
 SIDECAR="$STATE_DIR/$SID.events"
 

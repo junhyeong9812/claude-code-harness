@@ -33,7 +33,7 @@ fi
 SESSION_ID=$(state_sanitize_sid "$(echo "$HOOK_INPUT" | jq -r '(.session_id // "") | if type == "string" and test("^[A-Za-z0-9-]+\\z") then . else "" end' 2>/dev/null || true)")
 [ -z "$SESSION_ID" ] && exit 0
 
-STATE="$CWD/.claude/lazymode/$SESSION_ID"
+STATE="$(state_resolve_dir "$CWD" "$SESSION_ID")/$SESSION_ID"   # 조상 탐색 — cwd 추종 오차단 수정(gate-cwd-resolution)
 if [ ! -e "$STATE" ] && [ ! -L "$STATE" ]; then exit 0; fi
 # rc 1 = 판정 불가(flock/재생성) → UserPromptSubmit(비차단): 경고 1줄 + 통과(C2). 모드 재주입 생략.
 if ! state_ensure_valid "$STATE"; then

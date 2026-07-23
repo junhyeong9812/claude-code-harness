@@ -30,6 +30,32 @@ state_sanitize_sid() {
   fi
 }
 
+# 상태 디렉토리 해소 — cwd 원시 사용의 추종 오차단 수정 (gate-cwd-resolution 2026-07-23 실측:
+#   Bash persistent cd 가 훅 입력 cwd 를 추종시켜 하위 디렉토리에 UNSET 시드 → SPEC=0 거짓 차단).
+# 계약: <cwd>부터 조상으로 올라가며 <dir>/.claude/lazymode/<sid> 가 **실존 정규 파일**(심링크 제외)인
+#   디렉토리를 찾아 <dir>/.claude/lazymode 반환. 없으면 <cwd>/.claude/lazymode (신규 seed 지점 — 현행 동등).
+#   같은 sid 파일만 앵커로 채택 — 타 세션·타 프로젝트 상태 오채택 불가(게이트 강도 불변).
+#   $HOME/.claude/lazymode 는 채택 제외(글로벌 배포 경로 — 프로젝트 상태 아님). 성분 상한 64(루프 가드).
+#   sid 빈 값·비절대 cwd 는 <cwd>/.claude/lazymode 즉시 반환(현행 동등 — stateless/차단 판단은 호출부 소관).
+# 사용: dir=$(state_resolve_dir "$CWD" "$SESSION_ID"); STATE="$dir/$SESSION_ID"
+state_resolve_dir() {
+  local cwd="${1:-}" sid="${2:-}" d cand i=0
+  case "$cwd" in /*) ;; *) printf '%s/.claude/lazymode' "$cwd"; return 0 ;; esac
+  if [ -n "$sid" ]; then
+    d="$cwd"
+    while [ -n "$d" ] && [ "$i" -lt 64 ]; do
+      cand="$d/.claude/lazymode/$sid"
+      if [ "$d/.claude/lazymode" != "${HOME:-}/.claude/lazymode" ] && [ -f "$cand" ] && [ ! -L "$cand" ]; then
+        printf '%s/.claude/lazymode' "$d"; return 0
+      fi
+      [ "$d" = "/" ] && break
+      d=$(dirname -- "$d")
+      i=$((i+1))
+    done
+  fi
+  printf '%s/.claude/lazymode' "$cwd"
+}
+
 # MODE enum 검증 — auto|lazy + UNSET. 구 모드값(pair·refactor·fast 및 v2 계열)은 여기서 탈락 → 손상 처리(quarantine).
 state_valid_mode() {
   case "${1:-}" in

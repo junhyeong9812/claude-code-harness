@@ -49,7 +49,7 @@ if [ -z "$CWD" ] || [ ! -d "$CWD" ]; then
 fi
 SESSION_ID=$(state_sanitize_sid "$(echo "$HOOK_INPUT" | jq -r '(.session_id // "") | if type == "string" and test("^[A-Za-z0-9-]+\\z") then . else "" end' 2>/dev/null || true)")
 [ -z "$SESSION_ID" ] && exit 0
-STATE="$CWD/.claude/lazymode/$SESSION_ID"
+STATE="$(state_resolve_dir "$CWD" "$SESSION_ID")/$SESSION_ID"   # 조상 탐색 — cwd 추종 오차단 수정(gate-cwd-resolution)
 # 진짜 부재면 리셋할 상태 없음(session-mode-guard가 생성) → exit. 존재하면 손상 검사·정리.
 if [ ! -e "$STATE" ] && [ ! -L "$STATE" ]; then exit 0; fi
 
