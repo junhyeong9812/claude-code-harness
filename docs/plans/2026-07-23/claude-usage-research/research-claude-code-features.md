@@ -40,7 +40,7 @@ Screen reader 모드(`--ax-screen-reader`, 2.1.208) · fullscreen 마우스 클�
 1. `permission_mode` 값 확장(`auto`·`dontAsk` 추가) · `effort` 필드+`$CLAUDE_EFFORT` · `prompt_id`(2.1.196~) · PreToolUse `defer` 결정 추가
 2. **matcher 정확일치 수정(2.1.195)** — 하이픈 식별자 substring 매칭 버그 제거
 3. **auto mode가 PreToolUse `ask`를 덮어쓰던 버그 수정(2.1.211·207)** — 이제 훅 `ask`가 floor
-4. **SessionStart 신뢰 워크스페이스 요구(2.1.218)** — 미신뢰 폴더에서 SessionStart 훅 미실행(신규 clone 배포 훅 침묵 가능)
+4. ~~SessionStart 신뢰 워크스페이스 요구(2.1.218)~~ — **정정: 원문 정밀 조사 결과 대상은 서브에이전트 frontmatter 훅 한정**(일반 SessionStart 훅 아님). `research-hooks-contracts.md` 정본
 5. SessionStart 결정 필드 확장(`sessionTitle`·`reloadSkills`·`watchPaths`·`additionalContext`·`initialUserMessage`) · 헤드리스 SessionStart 스트리밍 수정(2.1.204) · `terminalSequence` 출력 · frontmatter 훅(skills/subagents 인라인) · 플러그인 `${user_config.*}` shell-form 거부(2.1.207)
 
 > 이벤트별 정확한 입력 JSON·타임아웃·exit 계약은 1회 페치 요약 — 채택 전 hooks.md 원문 재확인(특히 exit code 계약이 이벤트마다 다름).

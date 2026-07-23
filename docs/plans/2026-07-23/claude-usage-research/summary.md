@@ -17,7 +17,7 @@
 
 - 설치 버전 **2.1.218** — matcher 정확일치(2.1.195)·auto mode ask-floor(2.1.211) 수정 **모두 포함**.
 - settings.json matcher 실측: `"Bash"` · `"Edit|Write|MultiEdit"` — 하이픈 식별자 없음 → **2.1.195 변경 영향 없음**. git-guard의 `ask`는 auto mode에서도 floor로 동작(2.1.211+ 충족).
-- 유의 1건: **SessionStart 신뢰 워크스페이스 요구(2.1.218)** — 미신뢰 폴더에서 session-mode-guard 미실행 가능. 신규 머신/clone 배포 시나리오(README 설치 안내)에 trust 수락 선행 명시 후보.
+- ~~유의: SessionStart 신뢰 워크스페이스 요구(2.1.218)~~ → **정정(hooks.md 원문 정밀 조사)**: 해당 게이팅의 대상은 **서브에이전트 frontmatter 훅**이지 settings 기반 일반 SessionStart 훅이 아님. session-mode-guard 침묵 우려·README trust 후보는 철회. 정본: `research-hooks-contracts.md`.
 
 ### ③ playbooks→Skills 이식 타당성 (확인만 — 미착수)
 
@@ -37,8 +37,7 @@
 
 ## 남은 후보 (사용자 결정 대기)
 
-- playbooks→Skills 이식 착수 여부(L1 게이트행)
-- 새 훅 이벤트 채택 정밀 조사(hooks.md 원문) 여부
+- playbooks→Skills 이식 착수 여부(L1 게이트행) — 메인 권고: 실측 사고 없음 → 보류
+- 새 훅 이벤트: 정밀 조사 **완료**(`research-hooks-contracts.md`) — 채택 후보 ConfigChange(차단형)·SubagentStop(관측형)·InstructionsLoaded(프로브 선행). 배선 착수 여부 대기
 - WebSearch 정책 vs 실측 불일치 처리 방향
-- README에 SessionStart trust 전제 추가 여부
 - 코딩 밖 표면(Cowork·Connectors)은 하네스 밖 개인 선택
