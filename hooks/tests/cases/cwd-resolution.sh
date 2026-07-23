@@ -1,7 +1,7 @@
 # cwd-resolution.sh — gate-cwd-resolution 케이스 (blind, 계약 기반)
 #   A. state_resolve_dir 단위(state-lib 신설) — 조상 앵커·심링크/타 sid 제외·$HOME 제외·비절대/빈 sid·성분 상한
 #   B. 훅 적용 — gate-guard 사고재현(조상 상태로 통과·sub 미시드)·회귀 시드·capture-prompt/detect-layer 사이드카 조상 기록
-#   C. gate-guard .events 예외 — .events/.events.lock 은 하드거부 제외, 상태파일/.prompt/.turn 은 유지, Bash 쓰기 패턴
+#   C. gate-guard 상태 보호 — lazymode 전체(.events 포함) 하드거부·Bash 차단 유지(loop1 P0: .events 예외 철회)
 # 설계: blind 워커(구현·state-lib 미열람 계약), 통합: 메인.
 
 # ── 케이스-로컬 헬퍼 ──
@@ -137,14 +137,13 @@ test_cr_13() { # detect-layer(ConfigChange): .events 사이드카가 조상 lazy
   [ ! -e "$REPO/sub/.claude" ] || fail detect-no-sub-sidecar
 }
 
-# ── C. gate-guard .events 예외 (#3) ──────────────────────────────────────────
-test_cr_14() { # .events / .events.lock Edit·Write → 하드거부 아님 → 일반분류(L1) → auto 통과(exit 0)
+# ── C. gate-guard 상태 보호 (loop1 P0: .events 예외 철회 — lazymode 전체 보호 복원) ──────────
+test_cr_14() { # .events Edit/Write → lazymode 아래이므로 하드거부(exit 2) — 예외 없음
   write_state auto
   run_hook gate-guard.sh "$(json_file PreToolUse Edit "$STATE_DIR/$SID.events")"
-  assert_exit 0 events-edit-not-hardblocked
-  assert_stderr_no_match '훅 소유' events-edit-no-hardblock-msg
+  assert_exit 2 events-edit-hardblocked
   run_hook gate-guard.sh "$(json_file PreToolUse Write "$STATE_DIR/$SID.events.lock")"
-  assert_exit 0 eventslock-write-not-hardblocked
+  assert_exit 2 eventslock-write-hardblocked
 }
 
 test_cr_15() { # 상태파일(<sid>)·.prompt·.turn Edit/Write → 하드거부 유지(exit 2)
@@ -158,10 +157,10 @@ test_cr_15() { # 상태파일(<sid>)·.prompt·.turn Edit/Write → 하드거부
   assert_exit 2 turn-edit-hardblock
 }
 
-test_cr_16() { # Bash: echo > .../.claude/lazymode/foo.events → 차단 안 됨(exit 0)
+test_cr_16() { # Bash: echo > .../.claude/lazymode/foo.events → 차단(exit 2) — 예외 철회로 lazymode 쓰기 전부 차단
   write_state auto
   run_hook gate-guard.sh "$(json_bash "echo x > .claude/lazymode/foo.events")"
-  assert_exit 0 bash-events-not-blocked
+  assert_exit 2 bash-events-blocked
 }
 
 test_cr_17() { # Bash: echo > .../.claude/lazymode/<sid> → 차단(exit 2, set-state 안내)
@@ -177,8 +176,33 @@ test_cr_18() { # Bash: rm .../.claude/lazymode (디렉토리) → 차단(exit 2)
   assert_exit 2 bash-rm-lazymode-dir-block
 }
 
-test_cr_19() { # Bash: 한 명령에 .events + 상태파일 동시 → 보수 차단(exit 2)
+test_cr_19() { # [P0 회귀] tab/redirect metachar 로 위장한 상태파일 쓰기 → 차단 유지 (예외 철회 확증)
   write_state auto
-  run_hook gate-guard.sh "$(json_bash "echo a > .claude/lazymode/foo.events; echo b > .claude/lazymode/$SID")"
-  assert_exit 2 bash-combined-events-and-state-block
+  # loop1 P0: >.../<sid><TAB>.events 로 예외를 속여 상태파일에 리다이렉트하려는 시도
+  run_hook gate-guard.sh "$(json_bash "echo MODE=auto >.claude/lazymode/$SID	.events")"
+  assert_exit 2 p0-tab-desync-blocked
+  # >.../<sid>>y.events truncate 위장
+  run_hook gate-guard.sh "$(json_bash "echo x >.claude/lazymode/$SID>y.events")"
+  assert_exit 2 p0-redirect-desync-blocked
+}
+
+# ── D. canonical 정규화 (loop1 codex·Opus — 디렉토리 심링크 외부상태·HOME 후행슬래시) ──────
+test_cr_20() { # 디렉토리 심링크로 외부 프로젝트 상태를 앵커하지 못함(realpath 정규화)
+  # 외부 프로젝트에 유효 상태, cwd 는 그 외부를 가리키는 디렉토리 심링크 경유
+  mkdir -p "$SANDBOX/outside/.claude/lazymode"
+  echo "SCHEMA=4" > "$SANDBOX/outside/.claude/lazymode/$SID"
+  mkdir -p "$REPO/link-parent"
+  ln -s "$SANDBOX/outside" "$REPO/link-parent/via"     # $REPO/link-parent/via → 외부
+  # cwd 를 심링크 경유 경로로 주면 realpath 가 실경로($SANDBOX/outside)로 정규화 → 그 조상 탐색
+  local got; got=$(_cr_resolve "$REPO/link-parent/via" "$SID") || true
+  # 실경로 기준 앵커($SANDBOX/outside)를 찾되, 심링크 문자열 경로($REPO/link-parent/via/...)로는 반환 안 함
+  _cr_eq "$got" "$SANDBOX/outside/.claude/lazymode" cr20-canonical-realpath
+}
+
+test_cr_21() { # HOME 후행 슬래시여도 글로벌 배포 경로 제외 유지
+  mkdir -p "$SANDBOX/h/.claude/lazymode" "$SANDBOX/h/proj/sub"
+  echo x > "$SANDBOX/h/.claude/lazymode/$SID"
+  local got; got=$(env HOME="$SANDBOX/h/" bash -c '. "$1" 2>/dev/null; state_resolve_dir "$2" "$3"' \
+    _ "$HOOKS_DIR/state-lib.sh" "$SANDBOX/h/proj/sub" "$SID" 2>/dev/null) || true
+  _cr_eq "$got" "$SANDBOX/h/proj/sub/.claude/lazymode" cr21-home-trailing-slash-excluded
 }

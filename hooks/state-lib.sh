@@ -39,13 +39,17 @@ state_sanitize_sid() {
 #   sid 빈 값·비절대 cwd 는 <cwd>/.claude/lazymode 즉시 반환(현행 동등 — stateless/차단 판단은 호출부 소관).
 # 사용: dir=$(state_resolve_dir "$CWD" "$SESSION_ID"); STATE="$dir/$SESSION_ID"
 state_resolve_dir() {
-  local cwd="${1:-}" sid="${2:-}" d cand i=0
+  local cwd="${1:-}" sid="${2:-}" d cand i=0 home_lz
   case "$cwd" in /*) ;; *) printf '%s/.claude/lazymode' "$cwd"; return 0 ;; esac
+  # canonical 정규화 — 디렉토리 심링크로 외부 프로젝트 상태를 채택하거나 HOME 제외를 후행 슬래시로
+  # 우회하는 것을 차단(리뷰 loop1 codex·Opus). realpath 부재/실패 시 원문(정규화 없이 = 종전 수준, 약화 아님).
+  cwd=$(realpath -m -- "$cwd" 2>/dev/null || printf '%s' "$cwd")
+  home_lz="${HOME:+$(realpath -m -- "$HOME" 2>/dev/null || printf '%s' "$HOME")/.claude/lazymode}"
   if [ -n "$sid" ]; then
     d="$cwd"
     while [ -n "$d" ] && [ "$i" -lt 64 ]; do
       cand="$d/.claude/lazymode/$sid"
-      if [ "$d/.claude/lazymode" != "${HOME:-}/.claude/lazymode" ] && [ -f "$cand" ] && [ ! -L "$cand" ]; then
+      if [ "$d/.claude/lazymode" != "$home_lz" ] && [ -f "$cand" ] && [ ! -L "$cand" ]; then
         printf '%s/.claude/lazymode' "$d"; return 0
       fi
       [ "$d" = "/" ] && break
