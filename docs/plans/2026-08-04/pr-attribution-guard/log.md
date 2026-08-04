@@ -26,4 +26,19 @@
 ## 생략한 검증
 (없음)
 
+- 2026-08-04|deploy.sh 배포(core.md·git-guard.sh·테스트 2파일, 자체 smoke 통과, 백업 .deploy-backup-2427680) + 배포본 실호출 스모크 4종(인라인 차단 2·전역옵션형 차단 2·clean 통과 0·push ask 유지) 전부 기대값|완료
+
 ## 완료 요약
+
+커밋 eb0d7f8(가드+테스트 227)·a06a8ca(문서 정합). 핵심 diff(실파일 발췌):
+
+```bash
+# hooks/git-guard.sh — 신규(§6.4 확장)
+GH_PRE='(^|[^[:alnum:]_./-])(command[[:space:]]+)?([^[:space:]]*/)?gh'
+if echo "$SCAN_COMMAND" | grep -qE "${GH_PRE}${GIT_OPTS}(pr|issue)${GIT_OPTS}(create|edit|comment|merge|review|close|reopen)([[:space:]]|\$)"; then
+  if has_trailer; then ... exit 2
+# has_trailer 확장: GW 패턴이 Claude·Codex 양쪽 매칭
+```
+
+발단 소급 조치: workbench PR #44~68 25건 본문 footer 전수 제거(gh pr edit --body-file, 잔존 0 재확인).
+잔여 한계(절차 규칙 — core §6 명기): --body-file 실파일 경유·release/discussion/gist/api 표면·워커 내부 gh 호출.
