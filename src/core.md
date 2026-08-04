@@ -97,11 +97,11 @@
 
 - **기준소스·접속**: 기준소스는 명세서 칸③. DB·외부 접속정보는 사용자에게 요청 — credential 파일시스템 grep 금지.
 - **스코프**: 문서 작업과 구현 작업을 섞지 않는다. code 커밋에 docs 자동 포함 금지. 포팅·이관에서 원본 삭제·재구성은 명시 요청 시만. 검증 과정 출처(codex·리뷰)는 커밋·주석에 기재 금지(log ledger 소유).
-- **git**: **push는 사용자 확인 후**(git-guard가 `ask` 반환 — 네이티브 승인 UI, 추측 push 금지). 커밋은 승인 게이트 없음 — 단 AI trailer(`Co-Authored-By: Claude` 등)는 하드 차단. `--force`·`reset --hard`·`branch -D`·`checkout .`·파괴적 삭제는 명시 요청 시만.
-- **외부 발행(훅 강제는 push뿐 — 나머지 절차 규칙)**: 이슈·MR/PR 생성·원격 브랜치 생성은 **각각 사용자 확인**(추측 발행 금지). 브랜치 base·이름, MR/PR target·draft도 확인. **브랜치 우선** — main 직접 작업 금지. 커밋 정리는 의미 단위, push된 커밋 rebase 금지.
+- **git**: **push는 사용자 확인 후**(git-guard가 `ask` 반환 — 네이티브 승인 UI, 추측 push 금지). 커밋은 승인 게이트 없음 — 단 AI attribution(`Co-Authored-By: Claude`·`Generated with … Claude/Codex` 등)은 커밋 메시지·**모든 발행 본문(PR/이슈/코멘트/릴리즈 등) 금지**. 훅 하드 차단 범위는 `gh pr|issue create/edit/comment/merge/review/close/reopen` 인라인 본문까지 — 파일 경유 본문(`--body-file`)·그 외 gh 표면(release·api 등)·워커 내부 호출은 훅이 못 보므로 절차 준수. `--force`·`reset --hard`·`branch -D`·`checkout .`·파괴적 삭제는 명시 요청 시만.
+- **외부 발행(훅 강제는 push ask·발행 본문 attribution 차단뿐 — 나머지 절차 규칙)**: 이슈·MR/PR 생성·원격 브랜치 생성은 **각각 사용자 확인**(추측 발행 금지). 브랜치 base·이름, MR/PR target·draft도 확인. **브랜치 우선** — main 직접 작업 금지. 커밋 정리는 의미 단위, push된 커밋 rebase 금지.
 - **불가역(git 밖 포함)**: DB 변경 실행·마이그레이션·대량 삭제·원본 덮어쓰기 = 개별 사용자 확인 후. **파괴적 조작 직전 현재 브랜치·HEAD·경로·대상 재확인**(실측: 상태 오인이 최고 강도 사고 유형).
 - **배포**: 하네스 배포는 deploy.sh 경유만(manifest diff → 백업+원자 교체 → 신규 세션 smoke). **D9 예외**: 배포 직후 smoke 실패 한정, 직전 백업 즉시 복원은 승인 없이 실행 + 사후 보고.
-- **활성 훅**(배포 단일 출처 = 이 repo): `git-guard`(push ask·AI trailer 차단) · `codex-scan`(시크릿 backstop) · `gate-guard`(C1·C2·SPEC/MODE 게이트) · `session-mode-guard` · `reinject-mode`·`capture-prompt` · `task-mode-guard`(spec|log 리셋) · `detect-layer`(관측 전용 — InstructionsLoaded·ConfigChange·SubagentStop → 세션 `.events` 사이드카, 차단 없음). 테스트: `hooks/tests/run.sh`.
+- **활성 훅**(배포 단일 출처 = 이 repo): `git-guard`(push ask·커밋/gh 발행 attribution 차단) · `codex-scan`(시크릿 backstop) · `gate-guard`(C1·C2·SPEC/MODE 게이트) · `session-mode-guard` · `reinject-mode`·`capture-prompt` · `task-mode-guard`(spec|log 리셋) · `detect-layer`(관측 전용 — InstructionsLoaded·ConfigChange·SubagentStop → 세션 `.events` 사이드카, 차단 없음). 테스트: `hooks/tests/run.sh`.
 
 ## 7. 문서·기록
 

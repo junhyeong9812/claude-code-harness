@@ -78,7 +78,7 @@ Claude Code로 작업하면 산출물 문서가 계속 늘어난다. 이 repo의
 │   ├── task-mode-guard.sh     #   새 작업 폴더(spec·log 생성) → SPEC·MODE 리셋 (DEBT 는 유지 — 크로스-태스크 빚)
 │   ├── session-mode-guard.sh  #   SessionStart 상태 시드·복구·quarantine
 │   ├── reinject-mode.sh       #   매 턴 모드·빚(DEBT) 재주입 (컨텍스트 요약 후 일관성)
-│   ├── git-guard.sh           #   push 네이티브 승인(ask) 위임 + AI trailer 하드 차단
+│   ├── git-guard.sh           #   push 네이티브 승인(ask) 위임 + 커밋/gh 발행 attribution 하드 차단
 │   ├── codex-scan.sh          #   codex 호출 명령의 시크릿 backstop
 │   ├── capture-prompt.sh      #   push 승인 판정용 프롬프트 사이드카
 │   ├── deploy.sh              #   manifest diff → 백업+원자 교체 → stale 최상위 파일 정리 → smoke (실패 시 D9 자동 복원)

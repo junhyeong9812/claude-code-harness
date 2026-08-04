@@ -17,6 +17,8 @@
 2. push라면 사용자에게 `[Push 확인] 리모트/브랜치/커밋 수`를 보고하고 명시 승인을 받는다.
 3. docs 단독 커밋이라면 "문서 커밋해도 될까요?"를 확인받는다.
 4. trailer 차단이라면 메시지에서 trailer를 제거하고 다시 커밋한다.
+5. gh 발행 attribution 차단이라면 PR/이슈 본문·코멘트에서 attribution 줄을 제거하고 재실행한다.
+   검사 대상은 복합 명령 전체다 — 다른 세그먼트(grep 인자 등)의 attribution 문자열이 원인이면 명령을 분리한다.
 
 **주의**: git-guard는 `cwd`로 세션 jsonl과 git repo를 찾는다. **다른 repo로 `cd`해서 커밋하면 cwd가 원래 repo를 가리켜 가드가 엉뚱한 repo를 평가**할 수 있다. 의도된 repo에서 직접 실행한다.
 
