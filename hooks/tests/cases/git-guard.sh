@@ -196,3 +196,93 @@ test_gg_c2_empty_scan_no_trailer_fp() { # [C2 ② · codex F3 2026-07-20] 폴백
   run_hook git-guard.sh "$(json_bash '# commit 메시지에 Co-Authored-By: Claude 를 넣지 말 것')"
   assert_exit 0 empty-scan-nofp-b
 }
+
+# ── (f) gh 발행 attribution 가드 (§6.4 확장 2026-08-04 — PR #44~68 본문 유출 실측 후 추가) ──
+# 명령 검출=정제(SCAN), 매칭=raw(has_trailer 재사용). 파일 경유 본문(--body-file)은 관측 불가 — 절차 규칙.
+
+test_gg_gh_pr_create_attribution_block() { # [green] gh pr create 인라인 본문의 footer 차단 (exit 2)
+  run_hook git-guard.sh "$(json_bash 'gh pr create --title x --body "요약 ... 🤖 Generated with [Claude Code](https://claude.com/claude-code)"')"
+  assert_exit 2 gh-pr-create-block
+  assert_stderr_match '발행' gh-pr-create-msg
+}
+
+test_gg_gh_pr_heredoc_body_block() { # [green · load-bearing 가정 실증] heredoc 본문도 raw 매칭으로 차단
+  run_hook git-guard.sh "$(json_bash 'gh pr create --body "$(cat <<EOF
+요약
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"')"
+  assert_exit 2 gh-pr-heredoc-block
+}
+
+test_gg_gh_issue_coauthored_block() { # [green] gh issue create 본문의 Co-Authored-By 차단
+  run_hook git-guard.sh "$(json_bash 'gh issue create --title t --body "본문 Co-Authored-By: Claude <noreply@anthropic.com>"')"
+  assert_exit 2 gh-issue-block
+}
+
+test_gg_gh_pr_merge_attribution_block() { # [green] gh pr merge --body(squash 메시지) 도 차단
+  run_hook git-guard.sh "$(json_bash 'gh pr merge 5 --squash --body "feat: x — Generated with Claude"')"
+  assert_exit 2 gh-merge-block
+}
+
+test_gg_gh_pr_clean_passes() { # [green] attribution 없는 정상 발행은 무관여 (오탐 시 gh 마비 — 회귀 잠금)
+  run_hook git-guard.sh "$(json_bash 'gh pr create --title x --body "요약: 사이드바 분할"')"
+  assert_exit 0 gh-clean-pass
+  assert_stderr_no_match '발행' gh-clean-no-warn
+}
+
+test_gg_gh_product_name_passes() { # [green] bare "Claude Code" 제품명 언급은 통과 (커밋 가드와 동일 오탐 경계)
+  run_hook git-guard.sh "$(json_bash 'gh issue create --title bug --body "Claude Code 앱에서 재현되는 버그"')"
+  assert_exit 0 gh-product-pass
+}
+
+test_gg_gh_non_publish_passes() { # [green] gh 발행 아닌 명령의 attribution 텍스트는 이 가드 무관여
+  run_hook git-guard.sh "$(json_bash 'gh pr view 44 --json body')"
+  assert_exit 0 gh-view-pass
+  run_hook git-guard.sh "$(json_bash 'grep -rn "Generated with Claude" docs/')"
+  assert_exit 0 gh-grep-pass
+}
+
+test_gg_gh_quoted_command_no_fp() { # [green] 인용 안 "gh pr create ..." 텍스트는 명령 아님 — SCAN 인용 비움이 오탐 차단
+  run_hook git-guard.sh "$(json_bash 'echo "gh pr create --body Generated with Claude 는 금지"')"
+  assert_exit 0 gh-quoted-nofp
+}
+
+# ── (g) gh 가드 듀얼 리뷰 반영 (2026-08-04 — P1 전역옵션·Codex 우회·수용 한계 잠금) ──
+
+test_gg_gh_global_opts_block() { # [green · 리뷰 P1] 서브커맨드 앞/동사 앞 전역 옵션 형태도 차단 (gh 실문법 유효 — 우회 아님)
+  run_hook git-guard.sh "$(json_bash 'gh -R owner/repo pr create --body "🤖 Generated with [Claude Code](https://claude.com/claude-code)"')"
+  assert_exit 2 gh-gopt-pre-block
+  run_hook git-guard.sh "$(json_bash 'gh --repo owner/repo issue create --body "Co-Authored-By: Claude"')"
+  assert_exit 2 gh-gopt-long-block
+  run_hook git-guard.sh "$(json_bash 'gh pr -R owner/repo create --body "Generated with Claude"')"
+  assert_exit 2 gh-gopt-mid-block
+}
+
+test_gg_gh_review_close_verbs_block() { # [green · 리뷰 P2] review/close/reopen 도 발행 표면 — --body/--comment 인라인 차단
+  run_hook git-guard.sh "$(json_bash 'gh pr review 5 --approve --body "Generated with Claude"')"
+  assert_exit 2 gh-review-block
+  run_hook git-guard.sh "$(json_bash 'gh issue close 1 --comment "Co-Authored-By: Claude"')"
+  assert_exit 2 gh-close-block
+}
+
+test_gg_gh_codex_attribution_block() { # [green · 리뷰 P2] "Generated with Codex" 도 §6.4 대상 (Claude 한정 우회 봉쇄)
+  run_hook git-guard.sh "$(json_bash 'gh pr create --body "Generated with Codex"')"
+  assert_exit 2 gh-codex-block
+}
+
+test_gg_gh_compound_fp_accepted() { # [green · 리뷰 P2-3 수용 오탐 잠금] raw 전체 매칭 — 다른 세그먼트의 attribution + 깨끗한 발행 = 차단(보수)
+  # 커밋 trailer 가드와 동일 설계. 해소법 = 명령 분리(분리하면 각각 통과 — 아래 두 assert 가 그 짝).
+  run_hook git-guard.sh "$(json_bash 'grep -rn "Generated with Claude" docs/ && gh pr create --body "clean"')"
+  assert_exit 2 gh-compound-fp-block
+  assert_stderr_match '명령을 분리' gh-compound-fp-hint
+  run_hook git-guard.sh "$(json_bash 'gh pr create --body "clean"')"
+  assert_exit 0 gh-compound-split-a
+}
+
+test_gg_gh_uncovered_surfaces_documented() { # [green · 리뷰 P2-2 미커버 한계 잠금] release·gist·api 는 범위 밖(절차 규칙) — 훅 주석·core §6 이 정본
+  run_hook git-guard.sh "$(json_bash 'gh release create v1 --notes "Generated with Claude"')"
+  assert_exit 0 gh-release-uncovered
+  run_hook git-guard.sh "$(json_bash 'gh api repos/o/r/pulls -f body="Generated with Claude"')"
+  assert_exit 0 gh-api-uncovered
+}

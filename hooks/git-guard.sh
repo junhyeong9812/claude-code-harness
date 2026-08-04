@@ -10,6 +10,9 @@
 #   (v3 후속 2026-07-20: 명령 변형 시 pending clobber·"main에머지" 키워드 엣지·마찰 해소).
 #   커밋은 로컬·가역이라 승인 경계 밖(docs 혼합 커밋 금지는 core v4 §6 스코프 절차 규칙 — 경고 훅은 v4에서 제거).
 #   커밋 메시지의 Claude/Codex trailer 금지(§6.4)는 push 와 별개로 여기서 계속 즉시 차단(exit 2)한다.
+#   같은 정책을 gh 발행 표면(pr|issue create/edit/comment/merge 인라인 본문)에도 적용한다
+#   (2026-08-04: PR #44~68 본문 25건에 attribution footer 유출 실측 — 커밋만 막고 발행이 뚫려 있었다).
+#   관측 한계: --body-file 등 파일 경유 본문·워커 내부 gh 호출은 훅이 내용을 못 본다 — core §6 절차 규칙이 담당.
 #
 # push 감지 로직(GIT_PRE/GIT_OPTS 정규식·heredoc/주석 정제·git -C/-c/command/cd/alias 우회 탐지)은
 #   v3 그대로 **유지**한다 — 커버리지 회귀 금지. 이게 permission `Bash(git push:*)` glob 규칙보다
@@ -18,7 +21,7 @@
 #   문자열 판정 잔여 한계(전부 부자연스러운 명령 형태): heredoc 태그 추출 첫 << · 행중 # 주석 ·
 #   산술 시프트 $((x<<y)) · 한 줄 다중 heredoc · 여러 줄 인용 문자열.
 #
-# 종료 코드: 0 통과(비push) · 0 + stdout ask JSON(push 감지) · 2 trailer 차단.
+# 종료 코드: 0 통과(비push) · 0 + stdout ask JSON(push 감지) · 2 trailer/gh 발행 attribution 차단.
 # C2 판정 원칙: ① 게이트 대상 판정 불가(stdin 파싱 실패) → 통과 + stderr 경고 1줄
 #   (fail-closed 면 전 Bash 마비 — 런타임 제공 입력이라 조작면 아님). ② push 의심인데 정제 실패로
 #   판정 불가 → ask(보수) — 옛 보수 차단(exit 2)에서 승인 채널 이동에 맞춰 ask 로 완화.
@@ -44,6 +47,9 @@ if [ -z "$CWD" ] || [ ! -d "$CWD" ]; then CWD="$PWD"; fi
 # 서브커맨드 앞 전역 옵션 허용
 GIT_PRE='(^|[^[:alnum:]_./-])(command[[:space:]]+)?([^[:space:]]*/)?git'
 GIT_OPTS='([[:space:]]+-[^[:space:]]+([[:space:]]+[^[:space:]]+)?)*[[:space:]]+'
+# gh 발행 가드용 — git 과 동일 구조(경계·command/경로 프리픽스). 전역 옵션은 GIT_OPTS 재사용으로
+# 서브커맨드 앞(gh -R o/r pr …)·동사 앞(gh pr -R o/r create) 양쪽 허용(리뷰 P1 2026-08-04).
+GH_PRE='(^|[^[:alnum:]_./-])(command[[:space:]]+)?([^[:space:]]*/)?gh'
 
 # 판정 대상 정제 — 2단계 (리뷰 P2-19·loop2 fable#4):
 #   ① SCAN_NOHD: heredoc 본문·전행 주석 제거, 인용은 유지 (전역옵션 추출용)
@@ -94,7 +100,7 @@ emit_ask() { # $1 = reason
 }
 # 커밋 trailer 매칭(단일 출처) — 실 trailer만: Co-Authored-By 계열 + "Generated with ... Claude".
 #   bare "Claude Code"(제품명)는 오탐이라 제외(2026-07-20). raw COMMAND 검사(메시지는 인용 안).
-has_trailer() { echo "$COMMAND" | grep -qiE 'Co-Authored-By:[[:space:]]*.*(Claude|Codex|Anthropic)|Generated with[[:space:]]*.*Claude'; }
+has_trailer() { echo "$COMMAND" | grep -qiE 'Co-Authored-By:[[:space:]]*.*(Claude|Codex|Anthropic)|Generated with[[:space:]]*.*(Claude|Codex)'; }
 emit_trailer_block() {
   # ⚠ raw 명령($COMMAND)을 stderr 에 echo 하지 않는다(codex 리뷰 #1 2026-07-20): 복합 명령에 push URL
   #   크리덴셜·토큰이 있으면 trailer 차단 메시지로 그대로 유출된다(push_report 정적화와 같은 유출 class).
@@ -139,6 +145,31 @@ fi
 # ─────────────────────────────────────────────
 if echo "$SCAN_COMMAND" | grep -qE "${GIT_PRE}${GIT_OPTS}commit([[:space:]]|\$)"; then
   if has_trailer; then emit_trailer_block; fi
+fi
+
+# ─────────────────────────────────────────────
+# gh 발행 attribution 가드(§6.4 확장 2026-08-04) — PR·이슈 발행 표면의 인라인 본문에 AI attribution 하드 차단.
+#   대상 동사 = pr|issue 의 create/edit/comment/merge/review/close/reopen (--body·--comment 인라인 본문 표면).
+#   명령 검출은 정제 명령(SCAN_COMMAND — 인용 비움: echo "gh pr create" 오탐 방지), trailer 매칭은
+#   raw($COMMAND — heredoc·인용 본문 포함, has_trailer 단일 출처). 제품명 bare "Claude Code" 는 여전히 통과.
+#   정제 실패 경로는 커밋 trailer 와 동일하게 미탐지 수용(C2 ② 주석 참조).
+#   관측 한계(전부 core §6 절차 규칙 담당 — 리뷰 2026-08-04 실측): ① 실파일 경유 본문(--body-file /path —
+#   단 `--body-file - <<HD` heredoc 은 raw 에 실려 잡힌다) ② 워커 내부 gh 호출 ③ 미커버 gh 표면
+#   (release·discussion·gist·api -f body=…). 수용 오탐(케이스로 잠금): 매칭이 명령 세그먼트가 아니라
+#   raw 전체라, 복합 명령의 다른 부분(grep 인자 등)에 attribution 문자열이 있어도 gh 발행 동반 시 차단
+#   — 커밋 trailer 가드와 동일 설계(보수 방향), 해소법은 명령 분리.
+# ─────────────────────────────────────────────
+if echo "$SCAN_COMMAND" | grep -qE "${GH_PRE}${GIT_OPTS}(pr|issue)${GIT_OPTS}(create|edit|comment|merge|review|close|reopen)([[:space:]]|\$)"; then
+  if has_trailer; then
+    # raw 명령은 echo 하지 않는다(커밋 trailer 차단과 같은 크리덴셜 유출 class).
+    cat >&2 <<'EOF'
+[git-guard] gh 발행 명령의 본문에 Claude/Codex attribution이 감지되어 차단했습니다.
+정책(§6.4): PR·이슈 본문/코멘트/머지 메시지에 Co-Authored-By / Generated with Claude 등 attribution을 넣지 않습니다.
+(명령 전문은 유출 방지를 위해 출력하지 않습니다. 검사 대상은 복합 명령 전체라 다른 세그먼트의
+ attribution 문자열도 차단 원인일 수 있습니다 — 본문에서 attribution 을 제거하거나 명령을 분리해 다시 실행하세요.)
+EOF
+    exit 2
+  fi
 fi
 
 # ─────────────────────────────────────────────
