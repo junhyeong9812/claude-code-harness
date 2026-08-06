@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "workbench-knowledge": {
+      "args": [
+        "--knowledge-root",
+        "/home/jun/.local/share/com.multiterminal.dev/archive/claude-code-harness-440fe1467811bf0f/knowledge"
+      ],
+      "command": "/home/jun/.local/share/claude-workbench/knowledge-mcp"
+    }
+  }
+}
