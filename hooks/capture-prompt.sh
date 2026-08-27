@@ -27,14 +27,18 @@ SESSION_ID=$(jqr '.session_id // empty' | tr -cd 'A-Za-z0-9_-')
 PROMPT=$(jqr '.prompt // empty')
 
 # 조상 탐색 — 사이드카를 세션 상태파일이 있는 lazymode 에 모은다(cwd 추종 분산 → 턴 결속 파괴 방지,
-# gate-cwd-resolution). state-lib 로드 실패 시 종전 동작(cwd 기준) — 이 훅의 inert 계약 유지.
+# gate-cwd-resolution). 위치를 확정 못 하면(로드 실패·보장 실패) **아무것도 쓰지 않는다** — inert 계약 유지.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if . "$SCRIPT_DIR/state-lib.sh" 2>/dev/null && command -v state_resolve_dir >/dev/null 2>&1; then
-  STATE_DIR="$(state_resolve_dir "$CWD" "$SESSION_ID")"
-else
-  STATE_DIR="$CWD/.claude/lazymode"
+# state-lib 로드 실패 = **inert**(A-08): 종전의 "$CWD 기준 직접 mkdir" 폴백은 resolver 를 우회해
+#   사이드카를 하위 디렉토리에 흩뿌리는 유출 경로였다 — 위치를 확정 못 하면 아무것도 쓰지 않는다.
+if ! . "$SCRIPT_DIR/state-lib.sh" 2>/dev/null \
+   || ! command -v state_resolve_dir >/dev/null 2>&1 \
+   || ! command -v state_ensure_dir >/dev/null 2>&1; then
+  exit 0
 fi
-mkdir -p "$STATE_DIR" 2>/dev/null || true
+STATE_DIR="$(state_resolve_dir "$CWD" "$SESSION_ID")"
+# 디렉토리·자기무시 .gitignore 보장 실패(심링크 포함) → 아무 파일도 쓰지 않고 inert (A-04/A-07)
+state_ensure_dir "$STATE_DIR" || exit 0
 SIDECAR="$STATE_DIR/$SESSION_ID.prompt"
 TURN_FILE="$STATE_DIR/$SESSION_ID.turn"
 

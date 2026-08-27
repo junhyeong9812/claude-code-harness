@@ -27,18 +27,18 @@ test_cr_02() { # 앵커가 조상, cwd 는 하위 디렉토리 → 조상 lazymo
   _cr_eq "$got" "$REPO/.claude/lazymode" cr02-ancestor-anchor
 }
 
-test_cr_03() { # 앵커 전무 → cwd 시드 지점(종전 동작 동등)
-  mkdir -p "$REPO/sub"
-  local got; got=$(_cr_resolve "$REPO/sub" "$SID") || true
-  _cr_eq "$got" "$REPO/sub/.claude/lazymode" cr03-not-found-seed
+test_cr_03() { # 앵커 전무 + 비-repo cwd → cwd 시드 지점(종전 동작 동등). repo 내부 폴백은 2026-08-28 부터 워크트리 루트(sd_01)
+  mkdir -p "$SANDBOX/outside/sub"
+  local got; got=$(_cr_resolve "$SANDBOX/outside/sub" "$SID") || true
+  _cr_eq "$got" "$SANDBOX/outside/sub/.claude/lazymode" cr03-not-found-seed
 }
 
-test_cr_04() { # 조상의 심링크(<sid>)는 앵커 불가(정규 파일만) → cwd 시드
+test_cr_04() { # 중간 조상(sub)의 심링크(<sid>)는 앵커 불가(정규 파일만) → 워크트리 루트 폴백(sub 아님 — 판별력 유지, 2026-08-28 재배치)
   echo real > "$SANDBOX/realstate"
-  ln -s "$SANDBOX/realstate" "$REPO/.claude/lazymode/$SID"
-  mkdir -p "$REPO/sub"
-  local got; got=$(_cr_resolve "$REPO/sub" "$SID") || true
-  _cr_eq "$got" "$REPO/sub/.claude/lazymode" cr04-symlink-not-anchored
+  mkdir -p "$REPO/sub/.claude/lazymode" "$REPO/sub/deep"
+  ln -s "$SANDBOX/realstate" "$REPO/sub/.claude/lazymode/$SID"
+  local got; got=$(_cr_resolve "$REPO/sub/deep" "$SID") || true
+  _cr_eq "$got" "$REPO/.claude/lazymode" cr04-symlink-not-anchored
 }
 
 test_cr_04b() { # 가까운 조상 심링크는 건너뛰고 먼 조상 정규 파일을 앵커
@@ -50,11 +50,11 @@ test_cr_04b() { # 가까운 조상 심링크는 건너뛰고 먼 조상 정규 �
   _cr_eq "$got" "$REPO/.claude/lazymode" cr04b-skip-symlink-adopt-real
 }
 
-test_cr_05() { # 타 sid 파일이 조상에 있어도 비채택 → cwd 시드
-  echo x > "$REPO/.claude/lazymode/${SID}x2"
-  mkdir -p "$REPO/sub"
-  local got; got=$(_cr_resolve "$REPO/sub" "$SID") || true
-  _cr_eq "$got" "$REPO/sub/.claude/lazymode" cr05-other-sid-not-anchored
+test_cr_05() { # 중간 조상(sub)에 타 sid 파일이 있어도 비채택 → 워크트리 루트 폴백(sub 아님 — 판별력 유지, 2026-08-28 재배치)
+  mkdir -p "$REPO/sub/.claude/lazymode" "$REPO/sub/deep"
+  echo x > "$REPO/sub/.claude/lazymode/${SID}x2"
+  local got; got=$(_cr_resolve "$REPO/sub/deep" "$SID") || true
+  _cr_eq "$got" "$REPO/.claude/lazymode" cr05-other-sid-not-anchored
 }
 
 test_cr_05b() { # 같은 sid 가 여러 조상에 있으면 가장 가까운 조상(첫 <dir>) 채택
@@ -83,9 +83,10 @@ test_cr_08() { # 빈 sid → 즉시 cwd/.claude/lazymode (유효 상태가 있�
   _cr_eq "$got" "$REPO/.claude/lazymode" cr08-empty-sid-immediate
 }
 
-test_cr_09() { # 성분 상한 64: cwd 가 앵커보다 80 단계 아래 → 상한이 조상 앵커 도달 차단 → cwd 시드
-  write_state auto
-  local deep="$REPO" i
+test_cr_09() { # 성분 상한 64: 비-repo 트리에서 cwd 가 앵커보다 80 단계 아래 → 상한이 조상 앵커 도달 차단 → cwd 시드 (2026-08-28 비-repo 재배치 — repo 안이면 루트 폴백이 상한 의미를 가린다)
+  mkdir -p "$SANDBOX/outside/.claude/lazymode"
+  echo x > "$SANDBOX/outside/.claude/lazymode/$SID"
+  local deep="$SANDBOX/outside" i
   for ((i=0; i<80; i++)); do deep="$deep/l"; done
   mkdir -p "$deep"
   local got; got=$(_cr_resolve "$deep" "$SID") || true
@@ -104,13 +105,14 @@ test_cr_10() { # [사고 재현] 조상 상태 auto·SPEC=1 + cwd=하위 + Edit(
   assert_state MODE auto accident-ancestor-mode-intact
 }
 
-test_cr_11() { # [회귀] 조상에 상태 전무 + cwd=하위 → cwd(sub)에 UNSET 시드 → 차단(exit 2)
+test_cr_11() { # [회귀] 조상에 상태 전무 + cwd=하위 → 워크트리 루트에 UNSET 시드(sub 미시드) → 차단(exit 2). 2026-08-28: 시드 지점 sub→루트
   mkdir -p "$REPO/sub"
   local j; j=$(jq -cn --arg f "$REPO/src.txt" --arg c "$REPO/sub" --arg s "$SID" \
     '{hook_event_name:"PreToolUse", tool_name:"Edit", tool_input:{file_path:$f}, cwd:$c, session_id:$s}')
   run_hook gate-guard.sh "$j"
   assert_exit 2 no-ancestor-seed-block
-  assert_file_contains "$REPO/sub/.claude/lazymode/$SID" "MODE=UNSET" no-ancestor-sub-unset
+  assert_file_contains "$REPO/.claude/lazymode/$SID" "MODE=UNSET" no-ancestor-root-unset
+  [ ! -e "$REPO/sub/.claude" ] || fail no-ancestor-sub-not-seeded
 }
 
 test_cr_12() { # capture-prompt: 조상 상태 존재 시 .prompt·.turn 사이드카가 조상 lazymode 에 기록(cwd=sub 여도)

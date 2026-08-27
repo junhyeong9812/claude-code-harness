@@ -33,10 +33,13 @@ state_sanitize_sid() {
 # 상태 디렉토리 해소 — cwd 원시 사용의 추종 오차단 수정 (gate-cwd-resolution 2026-07-23 실측:
 #   Bash persistent cd 가 훅 입력 cwd 를 추종시켜 하위 디렉토리에 UNSET 시드 → SPEC=0 거짓 차단).
 # 계약: <cwd>부터 조상으로 올라가며 <dir>/.claude/lazymode/<sid> 가 **실존 정규 파일**(심링크 제외)인
-#   디렉토리를 찾아 <dir>/.claude/lazymode 반환. 없으면 <cwd>/.claude/lazymode (신규 seed 지점 — 현행 동등).
+#   디렉토리를 찾아 <dir>/.claude/lazymode 반환. 없으면 **cwd 가 속한 git 워크트리 루트**/.claude/lazymode
+#   (2026-08-28 — 아래 폴백 블록의 채택 조건 참조), 그마저 불가하면 <cwd>/.claude/lazymode (종전 seed 지점).
 #   같은 sid 파일만 앵커로 채택 — 타 세션·타 프로젝트 상태 오채택 불가(게이트 강도 불변).
 #   $HOME/.claude/lazymode 는 채택 제외(글로벌 배포 경로 — 프로젝트 상태 아님). 성분 상한 64(루프 가드).
-#   sid 빈 값·비절대 cwd 는 <cwd>/.claude/lazymode 즉시 반환(현행 동등 — stateless/차단 판단은 호출부 소관).
+#   비절대·비정규 cwd 는 <cwd>/.claude/lazymode 즉시 반환(현행 동등). sid 빈 값은 조상 탐색만 생략하고
+#   아래 폴백(git 워크트리 루트 → cwd)을 탄다 — set-state 인자 없음 경로가 이 규칙으로 루트 상태를 찾는다
+#   (stateless/차단 판단은 호출부 소관).
 # 사용: dir=$(state_resolve_dir "$CWD" "$SESSION_ID"); STATE="$dir/$SESSION_ID"
 state_resolve_dir() {
   local cwd="${1:-}" sid="${2:-}" d cand i=0 home home_lz
@@ -63,7 +66,58 @@ state_resolve_dir() {
       i=$((i+1))
     done
   fi
+  # 폴백(조상 앵커 없음) = **cwd 가 속한 git 워크트리 루트** (2026-08-28 review-context-and-sidecar-fix A):
+  #   하위 디렉토리 cwd 마다 상태·사이드카가 흩어져 프로젝트 트리를 오염시키던 유출을 차단한다.
+  #   판정 = cwd 기준 `rev-parse --show-toplevel`(GIT_DIR/GIT_WORK_TREE 상속 무시 — gate-guard 동일 규약).
+  #   채택 조건: rc 0 · 비공백 · 절대경로 · cwd 가 root 자체이거나 `$root/` 접두(**문자열 prefix** — realpath
+  #   는 쓰지 않는다, 위 loop2 근거 동일) · `$root/.claude/lazymode` 가 $HOME 글로벌 배포 경로가 아님.
+  #   비-repo·bare(--show-toplevel rc≠0)·판정 불가·조건 불일치 = 종전 폴백(cwd 기준 .claude/lazymode, 안전측).
+  #   워크트리는 그 워크트리 루트가 폴백된다(per-worktree 상태 모델 불변).
+  local root grc=1
+  if root=$(env -u GIT_DIR -u GIT_WORK_TREE git -C "$cwd" rev-parse --show-toplevel 2>/dev/null); then grc=0; fi
+  if [ "$grc" = 0 ] && [ -n "$root" ]; then
+    case "$root" in
+      /*)
+        case "$cwd" in
+          "$root"|"$root"/*)
+            if [ "$root/.claude/lazymode" != "$home_lz" ]; then
+              printf '%s/.claude/lazymode' "$root"; return 0
+            fi
+            ;;
+        esac
+        ;;
+    esac
+  fi
   printf '%s/.claude/lazymode' "$cwd"
+}
+
+# 상태 디렉토리 보장 — mkdir -p + **자기무시 `.gitignore`(내용 `*`)** 생성 (2026-08-28
+#   review-context-and-sidecar-fix I1: 상태파일·사이드카가 프로젝트 `git status` 에 뜨지 않게 한다).
+# 계약 (설계 선검증 A-04·A-07):
+#   rc 0 = **디렉토리 실존 AND `<dir>/.gitignore` 실존**(내용 불문 — 기존 파일은 절대 덮어쓰지 않는다).
+#   rc 1 = 그 보장 실패 = **판정 불가**. 특히 `<dir>` 또는 그 부모(`.claude`)가 **심링크면 아무것도 쓰지 않고
+#     rc 1** — 심링크 경유 쓰기는 상태·사이드카를 트리 밖으로 내보내 .gitignore 보호를 무력화한다.
+#   호출부: state_init·state_set·state_ensure_valid 는 rc 1 을 그대로 전파(기존 "판정 불가 → rc 1" 의미 —
+#     호출부 fail-closed 동작 그대로), 사이드카 훅(capture-prompt·detect-layer·session-mode-guard)은
+#     아무 파일도 쓰지 않고 inert(exit 0). 쓰기는 temp+mv 원자.
+state_ensure_dir() { # <dir> → rc 0(보장됨) / 1(판정 불가·심링크·실패)
+  local dir="${1:-}" parent gi tmp
+  [ -n "$dir" ] || return 1
+  parent=$(dirname -- "$dir" 2>/dev/null) || return 1
+  # 심링크 방어(A-07) — <dir> 자신 또는 부모(.claude). 검사 전 어떤 쓰기도 하지 않는다.
+  if [ -L "$dir" ] || [ -L "$parent" ]; then return 1; fi
+  mkdir -p "$dir" 2>/dev/null || true
+  [ -d "$dir" ] || return 1
+  gi="$dir/.gitignore"
+  if [ ! -e "$gi" ] && [ ! -L "$gi" ]; then
+    tmp=$(mktemp "$dir/.gitignore.XXXXXX" 2>/dev/null) || return 1
+    if printf '*\n' > "$tmp" 2>/dev/null; then
+      mv -n "$tmp" "$gi" 2>/dev/null || true    # -n: 경합으로 이미 생겼으면 기존 파일 보존
+    fi
+    rm -f "$tmp" 2>/dev/null || true            # mv 성공 시 no-op / 실패·경합 시 temp 잔재 정리
+  fi
+  [ -e "$gi" ] || return 1                      # 성공 조건 = .gitignore 실존(내용 불문)
+  return 0
 }
 
 # MODE enum 검증 — auto|lazy + UNSET. 구 모드값(pair·refactor·fast 및 v2 계열)은 여기서 탈락 → 손상 처리(quarantine).
@@ -102,7 +156,7 @@ _state_seed_unset() {
 state_init() {
   local p="$1" dir lock
   dir=$(dirname -- "$p"); lock="$p.lock"
-  mkdir -p "$dir" 2>/dev/null || true
+  state_ensure_dir "$dir" || return 1        # 보장 실패(심링크 포함) = 판정 불가 → 호출부 fail-closed
   (
     exec 9>>"$lock" 2>/dev/null || exit 1
     flock -x -w 2 9 2>/dev/null || exit 1
@@ -125,7 +179,7 @@ state_set() {
   # 제외 regex = SCHEMA + 모든 대상 key (짝수 인덱스)
   i=0
   while [ "$i" -lt "$n" ]; do keyre="$keyre|${pairs[$i]}"; i=$((i+2)); done
-  mkdir -p "$dir" 2>/dev/null || true
+  state_ensure_dir "$dir" || return 1        # 보장 실패(심링크 포함) = 판정 불가 → 호출부 fail-closed
   (
     exec 9>>"$lock" 2>/dev/null || exit 1
     flock -x -w 2 9 2>/dev/null || exit 1
@@ -161,10 +215,18 @@ state_set() {
 #       rc 1 = 판정 불가(flock 획득 실패·open 실패·재생성/격리 rename 실패) → 호출부 fail-closed.
 #   격리 rename 실패 시 원본을 **보존**하고 rc 1(포렌식 증거 삭제 금지 — rm 안 함).
 state_ensure_valid() {
-  local p="$1" lock="$1.lock" r
+  local p="$1" lock="$1.lock" r _sed_dir
   STATE_QUARANTINED=0
-  # lock open 전 상태 디렉토리 보장 — 디렉토리 부재가 open 실패(fail-closed 차단)로 새지 않게. 실패 시 아래 'E' 경로.
-  mkdir -p "$(dirname -- "$p")" 2>/dev/null || true
+  # lock open 전 상태 디렉토리 보장 — 디렉토리 부재가 open 실패(fail-closed 차단)로 새지 않게.
+  # 보장 실패 중 **디렉토리 자체를 못 얻은 경우**(부재·심링크)만 판정 불가 rc 1(A-07 유출 차단).
+  # **디렉토리는 실존하는데 .gitignore 만 못 만든 경우**(읽기전용 등)는 rc 1 로 삼키지 않고 진행한다:
+  #   그 상태에선 새 파일 자체를 못 써 유출이 발생할 수 없고, 여기서 조기 rc 1 을 내면 PostToolUse 가
+  #   '경고+통과'로 수렴해 **갱신 실패의 exit 2 신호가 사라진다**(silent failure — 실패는 아래 lock·쓰기
+  #   단계에서 종전대로 구분돼 state_set 이 loud 하게 실패한다. tests/cases/gate-guard.sh test_gt_06 이 고정).
+  if ! state_ensure_dir "$(dirname -- "$p")"; then
+    _sed_dir=$(dirname -- "$p")
+    if [ ! -d "$_sed_dir" ] || [ -L "$_sed_dir" ] || [ -L "$(dirname -- "$_sed_dir")" ]; then return 1; fi
+  fi
   r=$(
     exec 9>>"$lock" 2>/dev/null || { printf 'E'; exit 0; }
     flock -x -w 2 9 2>/dev/null || { printf 'E'; exit 0; }

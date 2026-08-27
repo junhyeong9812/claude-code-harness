@@ -11,11 +11,34 @@
 → ④ 수정 → 테스트 → ⑤ 재리뷰(①로) … 종료 조건 충족 시 탈출, 최대 3루프
 ```
 
-- **⓪ review packet**: 페이즈 시작 base SHA를 작업 폴더 log.md에 고정. packet = `base SHA..current` **누적 diff** + spec (이번 루프 수정 diff는 참고로만 별도 표기 — 마지막 수정만 보면 전체 일관성 문제를 놓친다). **보안 스캔(§5) 통과한 동일 packet을 양쪽에 제공** — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
-- **⓪′ spec 기준 판정 (구현이 아닌 spec)**: packet에 **spec 원문**을 포함하고, 리뷰어 프롬프트에 "구현이 그럴듯한가가 아니라 **spec과 일치하는가**로 판정하라"를 명시한다 — 잘못된 구현을 "의도대로"로 오검증한 사고(03c 관찰)를 spec 원문 대조로 차단. 구현 diff는 "무엇이 바뀌었나"의 근거일 뿐, 정답의 기준이 아니다.
-- **① 병렬 리뷰**: Opus 워커(Agent 호출, model: opus) ∥ codex(`codex exec`, read-only). **입력 격리는 실행으로 강제한다**: Opus 워커 프롬프트에는 packet만 포함(다른 파일 읽기 지시 금지), codex는 repo 밖 임시 디렉터리에 packet 파일만 두고 실행 — read-only는 packet-only가 아니다. packet 외 접근이 발생했으면 비대칭 입력으로 표시하고 정상 종료로 인정하지 않는다.
+- **⓪ review packet** (2026-08-27 실측 — diff-only packet이 untracked 누락 오탐 11작업·Opus 단독 채택 37%의 원인): 페이즈 시작 base SHA를 작업 폴더 log.md에 고정. packet = ① **누적 diff** — base 커밋 vs **index+작업트리**(staged·unstaged 모두) ② **untracked 정규 파일 전문**(index 무변경 — `git add -N` 금지). symlink는 target 1줄, FIFO·socket·device는 타입 1줄, binary는 `file` 타입 1줄. **파일당 1MB·총 5MB 상한** — 초과분은 *절단하지 않고* 목록만 넣어 `packet truncated`로 표시하고 사용자에게 보고한다. ③ **spec 원문**(⓪′) ④ **연관 파일 목록** — 변경 hunk의 심볼(함수·타입·설정키)로 돌린 `git grep`의 **명령 원문과 원시 결과를 그대로** 붙인다. 이건 **탐색 힌트지 증거 범위가 아니다** — 메인이 해석·선별·요약을 덧붙이지 않는다(사전 판단 유입 방지). ⑤ 이번 루프 수정 diff는 참고로만 별도 표기(마지막 수정만 보면 전체 일관성 문제를 놓친다) ⑥ **read-only 미러**(①). **보안 스캔(§5①)은 packet 전체 + 미러 전체**에 적용하고, 통과한 동일 입력을 양쪽에 제공 — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
+
+```bash
+# repo 루트에서 실행 (하위 디렉터리 cwd면 untracked 수집이 그 서브트리로 잘린다)
+BASE=<페이즈 시작 SHA>; OUT=<packet 저장 디렉터리>; MAX_F=1048576; MAX_T=5242880
+git diff --binary "$BASE" -- > "$OUT/packet-diff.md"          # ① base vs index+작업트리
+git ls-files --others --exclude-standard -z |                 # ② untracked (index 무변경)
+  { tot=0; while IFS= read -r -d '' f; do
+      sz=$(stat -c %s "$f" 2>/dev/null || echo 0)
+      if   [ -L "$f" ];   then echo "symlink: $f -> $(readlink "$f")"
+      elif [ ! -f "$f" ]; then echo "special: $f ($(stat -c %F "$f"))"
+      elif [ "$sz" -gt "$MAX_F" ] || [ $((tot+sz)) -gt "$MAX_T" ]; then echo "packet truncated (목록만): $f ($sz B)"
+      elif [ -s "$f" ] && file -b --mime-encoding "$f" | grep -q binary; then echo "binary: $f ($(file -b "$f"))"
+      else tot=$((tot+sz)); git diff --no-index /dev/null "$f" || true   # rc 1 = 차이 있음(정상)
+      fi
+    done; } >> "$OUT/packet-diff.md"
+# ④ 탐색 힌트 — 명령 원문과 원시 결과를 그대로 packet에 (메인 해석 금지)
+git grep -n --untracked '<변경 심볼>' -- . > "$OUT/packet-related-raw.txt"
+# ⑥ read-only 미러 — tracked 작업트리 내용 + 승인된 untracked 정규 파일만
+mirror=$(mktemp -d); git ls-files -z | tar --null -T - -cf - | tar -xf - -C "$mirror"
+#   ignored(.env 등)·.git·~/.claude·대화 저장소는 미러에 없다. §5① 스캔을 미러 전체에도 돌린 뒤 리뷰어에 전달.
+#   리뷰 종료 후: rm -rf "$mirror"
+```
+
+- **⓪′ spec 기준 판정 (구현이 아닌 spec)**: packet ③는 **spec 원문**이며, 리뷰어 프롬프트에 "구현이 그럴듯한가가 아니라 **spec과 일치하는가**로 판정하라"를 명시한다 — 잘못된 구현을 "의도대로"로 오검증한 사고(03c 관찰)를 spec 원문 대조로 차단. 구현 diff는 "무엇이 바뀌었나"의 근거일 뿐, 정답의 기준이 아니다.
+- **① 병렬 리뷰**: Opus 워커(Agent 호출, model: opus) ∥ codex(`codex exec` — §5②). **리뷰어는 packet + read-only 미러를 받고, 원 repo가 아니라 미러를 탐색한다** — packet-only가 아니라 **미러-only**다. 미러 = tracked 작업트리 내용 + 승인된 untracked 정규 파일이며 **ignored 파일(`.env` 등)·`.git`·`~/.claude`·대화 저장소는 미러에 없다**(⓪ ⑥). Opus 워커는 미러 경로에서 Read/Grep/Glob 허용·**Edit/Write/Bash 쓰기 금지**, codex는 **cwd=미러**(§5②) — 양쪽 프롬프트에 **"미러 밖 읽기 금지"**를 명시하고 리뷰 종료 후 미러를 삭제한다. **절단 계약의 본질은 파일 차단이 아니라 맥락 차단이다** — 리뷰어에게 주지 않는 것: 대화 맥락·구현 의도·메인의 사전 판단·(①단계에서) 다른 리뷰어의 원문. packet 밖 미러 파일을 근거로 쓴 finding은 **`file:line` 필수**(메인이 재현할 수 있어야 채택 — §2 자격조건 ②). 비대칭 플래그는 **한쪽만 미러 접근이 가능했던 경우**에만 붙인다.
 - **① 실패 분기**: 한쪽 실패 시 1회 재시도 → 그래도 실패면 **`review blocked`** — 정상 종료 불가. 같은 packet으로 동등한 대체 독립 리뷰어를 실행하면 루프 계속 가능. 사용자가 단일 리뷰 진행을 명시 승인하면 **`user override`로 기록**하고 잔여 리스크를 보고 — 머지 가부는 사용자 결정 (높음 codex 스킵 불가 — core §4).
-- **② 메인 종합**: 중복 병합 + finding별 채택/기각. **허용 근거는 packet 안(diff·spec·리뷰 원문)으로 제한** — 기각 사유도 file:line 또는 spec 조항에 귀속. 숨은 구현 의도·대화 맥락을 근거로 쓰지 않는다 (절단 계약 보호).
+- **② 메인 종합**: 중복 병합 + finding별 채택/기각. **허용 근거는 packet + 미러 실파일(`file:line` — 원 repo와 동일 내용)로 제한** — 기각 사유도 file:line 또는 spec 조항에 귀속. **대화 맥락·숨은 구현 의도는 근거로 쓰지 않는다** (절단 계약 보호).
 - **③ codex 종합 감사 (1회)**: 입력 = packet + 양 리뷰 원문 + 메인 채택/기각표. 역할은 "메인 판정 오류·누락 후보 지적"까지 — codex가 자기 finding의 기각을 재검토하는 것이므로 **독립 리뷰 1표가 아니라 종합 품질 감사**다. 추가 왕복 금지.
 - **④ 수정 → 테스트**: core §4 검증대로. finding 재현 테스트는 **"fix verification test"로 분류** — blind 테스트 설계(구현 diff 미열람 계약)와 구분하고, 그 계약을 소급 오염시키지 않는다.
 - **⑤ 재리뷰**: ①로 복귀. 입력은 갱신된 누적 diff packet.
@@ -26,7 +49,7 @@
 
 ## 2. finding 규칙
 
-- **자격 조건 (전부 충족해야 finding)**: ① 현재 diff가 도입·변경한 **산출물**(코드·문서·정책 등) ② **근거 위치** — `file:line`, 또는 "diff에 *없는 것*"(완전성·통합 렌즈) finding은 누락 산출물 경로·deploy 단계·runtime 계약 형식 허용 ③ 실질 리스크(코드=정확성·성능·유지보수 / 문서·정책=정확성·일관성·운영·유지보수 중 무엇인지 명시) ④ spec 또는 변경 의도와의 연결. 하나라도 없으면 "범위 밖" 또는 open question — 단순 선호·취향은 finding이 아니다.
+- **자격 조건 (전부 충족해야 finding)**: ① 현재 diff가 도입·변경한 **산출물**(코드·문서·정책 등) ② **근거 위치** — `file:line`(**packet 밖 미러 파일도 `file:line`을 적으면 허용** — 메인 재현 가능성이 조건), 또는 "diff에 *없는 것*"(완전성·통합 렌즈) finding은 누락 산출물 경로·deploy 단계·runtime 계약 형식 허용 ③ 실질 리스크(코드=정확성·성능·유지보수 / 문서·정책=정확성·일관성·운영·유지보수 중 무엇인지 명시) ④ spec 또는 변경 의도와의 연결. 하나라도 없으면 "범위 밖" 또는 open question — 단순 선호·취향은 finding이 아니다.
 - **상태 ledger** (필수 필드 — 종료 판정의 입력): `id / first_seen_loop / source(opus·codex·감사·main-synthesis) / 근거(file:line, 또는 diff-밖 finding은 누락 경로·deploy·runtime 계약) / disposition(채택·기각·범위 밖·open question) / status(open·fixed·user-deferred·unresolved) / fixed_in_loop`. 기록 위치: **작업 폴더 `log.md`의 리뷰 ledger 섹션**(`templates/log.md` — 이 스키마의 인스턴스 + finding별 실질 내용. core §7). **종료식**: open = disposition=채택 AND status=open / 신규 채택 = first_seen_loop=현재 루프 AND disposition=채택. **finding 단위**: 같은 `file:line`·같은 불변식 위반은 1건(출처가 둘이면 source 병기) — 쪼개거나 합쳐 종료식을 조작하지 않는다. 코드 변경 없이 테스트만 추가한 수정도 재점검 대상. **메인 종합 중 양 리뷰 비교로 발견한 결함**은 `source: main-synthesis`로 등록 — 독립 신호는 아니나 유효 finding(귀속·자격은 동일).
 - **대칭 부담 (신규 채택 finding 0인 루프 — 무근거 통과 차단)**: finding 0을 종료로 인정하려면 §3 렌즈마다 **applicable / not-applicable을 근거 1줄로 판정**하고(예: "동시성 = N/A: 단일 인스턴스 read-only"), **applicable 렌즈를 전부 `verified`로 입증**한다. **고정 개수 요구 없음** — 적용 안 되는 렌즈를 형식 충족용으로 verified 처리하는 것이 더 큰 위반(과거 "필수 finding 강제 → 날조" 재현). **verified ledger 필드**: `lens / 근거(file:line, 또는 "diff에 *없는 것*" 렌즈는 누락 산출물 경로·deploy 단계·runtime 계약 허용) / how(충족 방식 1줄) / source(opus·codex)`. 근거는 병렬 리뷰 원문에서 인용(메인 사후 창작 금지). **양쪽 균형**: applicable 렌즈를 Opus·codex가 합쳐서 전부 커버하면 충족 — applicable verified 전체를 통틀어 한 source(opus 또는 codex)의 기여가 0건이면 종료는 가능하되 `비대칭` 플래그로 리스크 기록(편향 공유 가능성). 中·높음 공통, 신규 finding 있는 루프엔 불필요(검사가 이미 입증됨).
 - 애매하면 단정하지 않는다 — open question으로 남긴다 ("이 컬렉션의 최대 크기는 어디서 제한되나?").
@@ -64,7 +87,7 @@
 
 > ①~③은 codex를 실제로 호출하는 절차. §1 ⓪·①의 "보안 스캔·codex 실행"이 이 절을 참조한다.
 
-- **① 보안 스캔 (전송 전 필수)**: packet에서 `sk-`·`ghp_`·`AKIA`·`PRIVATE KEY`·`password|token|secret[:=]` 값·PII·내부 호스트/경로를 스캔 — 매칭 0건만 자동 통과, 발견 시 오탐 여부 개별 판정 후 redact 또는 사용자 확인.
-- **② 호출**: `cat 입력.md | codex exec --skip-git-repo-check --dangerously-bypass-approvals-and-sandbox -c model_reasoning_effort=medium --ephemeral -o 출력.md -` (Bash, 백그라운드 권장).
+- **① 보안 스캔 (전송 전 필수)**: **packet 전체(누적 diff·untracked 전문·spec·연관 파일 원시 결과) + 미러 전체**에서 `sk-`·`ghp_`·`AKIA`·`PRIVATE KEY`·`password|token|secret[:=]` 값·PII·내부 호스트/경로를 스캔 — 매칭 0건만 자동 통과, 발견 시 오탐 여부 개별 판정 후 redact(미러 파일은 미러에서 redact) 또는 사용자 확인 — 해소 못 하면 `review blocked`.
+- **② 호출**: `cd "$mirror" && cat 입력.md | codex exec --skip-git-repo-check --dangerously-bypass-approvals-and-sandbox -c model_reasoning_effort=medium --ephemeral -o 출력.md -` (Bash, 백그라운드 권장) — **cwd=미러**(§1 ①), 미러는 git repo가 아니므로 `--skip-git-repo-check`가 필요하다. packet 파일 경로를 함께 넘기고 "미러 밖 읽기 금지"를 프롬프트에 명시한다.
 - **③ 비대화형 PATH 함정**: codex는 nvm 설치라 Claude Bash(비대화형)의 PATH에 안 잡힌다 — `CODEX=$(ls ~/.nvm/versions/node/*/bin/codex 2>/dev/null | head -1)`로 전체 경로를 확보한다(`which codex` 실패 ≠ 미설치).
-- **④ 샌드박스 중첩 페널티 (2026-07-20 실측)**: Claude Bash가 이미 외부 샌드박스라, `-s read-only`로 codex를 부르면 codex가 **자체 bubblewrap 샌드박스를 중첩 생성**하려다 user namespace 문제로 모델갱신 자식이 hang → 매 호출 **+~30s** 고정 페널티(`failed to refresh available models: timeout waiting for child process to exit`). **리뷰는 codex가 셸을 실행하지 않으므로**(읽기·추론만) `--dangerously-bypass-approvals-and-sandbox`가 안전하고 이 페널티를 없앤다. config `model_reasoning_effort=high`도 리뷰를 느리게 하니 호출 시 `medium`으로 낮춘다(52s→12s 실측). **타임아웃을 너무 짧게(≤4분) 걸면 high-effort 추론을 완주 전 죽인다** — 넉넉히(6분+) 주거나 백그라운드로 회수하라. (codex가 셸 명령을 실제 실행하는 용도라면 bypass 금지 — 리뷰 전용.)
+- **④ 샌드박스 중첩 페널티 (2026-07-20 실측)**: Claude Bash가 이미 외부 샌드박스라, `-s read-only`로 codex를 부르면 codex가 **자체 bubblewrap 샌드박스를 중첩 생성**하려다 user namespace 문제로 모델갱신 자식이 hang → 매 호출 **+~30s** 고정 페널티(`failed to refresh available models: timeout waiting for child process to exit`). **리뷰는 codex가 셸을 실행하지 않고**(읽기·추론만) **대상이 일회용 미러(§1 ①)라 쓰기 위험이 없으므로** `--dangerously-bypass-approvals-and-sandbox`가 안전하고 이 페널티를 없앤다. config `model_reasoning_effort=high`도 리뷰를 느리게 하니 호출 시 `medium`으로 낮춘다(52s→12s 실측). **타임아웃을 너무 짧게(≤4분) 걸면 high-effort 추론을 완주 전 죽인다** — 넉넉히(6분+) 주거나 백그라운드로 회수하라. (codex가 셸 명령을 실제 실행하는 용도라면 bypass 금지 — 리뷰 전용.)

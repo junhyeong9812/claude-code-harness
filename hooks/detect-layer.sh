@@ -22,14 +22,19 @@ SID=$(jqr '.session_id // empty' | tr -cd 'A-Za-z0-9_-')
 
 CWD=$(jqr '.cwd // empty')
 if [ -z "$CWD" ] || [ ! -d "$CWD" ]; then CWD="$PWD"; fi
-# 조상 탐색 — .events 를 세션 상태파일이 있는 lazymode 에 모은다(gate-cwd-resolution). 로드 실패 시 종전 동작.
+# 조상 탐색 — .events 를 세션 상태파일이 있는 lazymode 에 모은다(gate-cwd-resolution).
+# 위치를 확정 못 하면(로드 실패·보장 실패) 아무것도 쓰지 않는다(inert).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if . "$SCRIPT_DIR/state-lib.sh" 2>/dev/null && command -v state_resolve_dir >/dev/null 2>&1; then
-  STATE_DIR="$(state_resolve_dir "$CWD" "$SID")"
-else
-  STATE_DIR="$CWD/.claude/lazymode"
+# state-lib 로드 실패 = **inert**(A-08): 종전의 "$CWD 기준 직접 mkdir" 폴백은 resolver 를 우회해
+#   .events 사이드카를 하위 디렉토리에 흩뿌리는 유출 경로였다 — 위치 미확정이면 아무것도 쓰지 않는다.
+if ! . "$SCRIPT_DIR/state-lib.sh" 2>/dev/null \
+   || ! command -v state_resolve_dir >/dev/null 2>&1 \
+   || ! command -v state_ensure_dir >/dev/null 2>&1; then
+  exit 0
 fi
-mkdir -p "$STATE_DIR" 2>/dev/null || exit 0
+STATE_DIR="$(state_resolve_dir "$CWD" "$SID")"
+# 디렉토리·자기무시 .gitignore 보장 실패(심링크 포함) → 아무 파일도 쓰지 않고 inert (A-04/A-07)
+state_ensure_dir "$STATE_DIR" || exit 0
 SIDECAR="$STATE_DIR/$SID.events"
 
 # sanitize: 개행·탭·`|` → 공백 + 잔여 C0 제어문자·DEL 제거(CR·ESC 로그 위조 차단 — 리뷰 loop1 codex∥Opus 합치).

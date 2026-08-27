@@ -39,15 +39,23 @@ SOURCE=$(echo "$HOOK_INPUT" | jq -r '.source // empty')
 
 [ -z "$SESSION_ID" ] && exit 0   # 세션 식별 불가 → inert (gate-guard도 fail-open)
 
-STATE_DIR="$CWD/.claude/lazymode"
+# 상태 디렉토리 = 조상 앵커 → git 워크트리 루트 → cwd (state_resolve_dir 단일 결정자 — 2026-08-28:
+#   종전엔 이 훅만 "$CWD/.claude/lazymode" 를 직접 써서 하위 디렉토리 cwd 마다 상태가 흩어졌다).
+STATE_DIR="$(state_resolve_dir "$CWD" "$SESSION_ID")"
 STATE="$STATE_DIR/$SESSION_ID"
-mkdir -p "$STATE_DIR" 2>/dev/null || true
+# 디렉토리·자기무시 .gitignore 보장 실패(심링크 포함) → 아무 파일도 쓰지 않고 inert (A-04/A-07)
+if ! state_ensure_dir "$STATE_DIR"; then
+  echo "[session-mode-guard] 경고: 상태 디렉토리 보장 실패(심링크·권한 등) — 상태 초기화 생략(통과)." >&2
+  exit 0
+fi
 
 # stale prune: 30일 경과 세션 파일 제거 (session_id 재사용 시 옛 모드 부활 방지).
 # 활성 세션 파일은 매 edit의 sed로 mtime이 갱신돼 살아남는다.
 # **`*.lock` 제외**: lock 파일을 unlink 하면 활성 writer가 잡은 inode와 새 open 이 다른 inode가 돼
 # 상호배제가 깨진다(split-lock). lock 은 prune 대상이 아니다.
-find "$STATE_DIR" -maxdepth 1 -type f ! -name '*.lock' -mtime +30 -delete 2>/dev/null || true
+# **`.gitignore` 제외**: 자기무시 marker 는 mtime 이 갱신되지 않아 30일 뒤 prune 되면 상태·사이드카가
+# 다시 git 에 노출된다(state_ensure_dir 는 부재 시에만 재생성하므로 복구가 다음 mkdir 까지 지연).
+find "$STATE_DIR" -maxdepth 1 -type f ! -name '*.lock' ! -name '.gitignore' -mtime +30 -delete 2>/dev/null || true
 
 # 손상 검사(존재 시 quarantine+UNSET 재생성) + 부재-시드. init-if-absent 는 state_ensure_valid 안에서 처리.
 # rc 1 = 판정 불가(flock/재생성) → SessionStart(비차단): 경고 1줄 + 통과(C2). 초기화·모드 주입 생략.

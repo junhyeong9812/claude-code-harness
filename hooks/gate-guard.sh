@@ -114,18 +114,26 @@ is_claude_deploy_path() { # <canonical file> → rc 0/1/2
 # (DOCS/→docs/ fold 가 대문자 디렉토리에 L0 를 잘못 부여한 회귀가 재설계를 유발). L0 부여의 docs/ 여부는
 # 리터럴 소문자 `docs` 컴포넌트로만 인정하고, **정책/배포 배제(→L1)** 매칭만 fold 로 과게이트(안전).
 # 준비명령(basename·tr) 실패·빈 결과는 안전측 L1(재설계#5).
+# **docs-root 분기(2026-08-28)**: git 루트 basename 자체가 리터럴 소문자 `docs` 인 repo(예: jun-bank/docs —
+# 문서 전용 독립 repo)는 rel 에 `docs/` 컴포넌트가 없어 전 파일이 L1 로 걸려 게이트 교착이 실측됐다.
+# 이때는 repo 전체를 순수 문서로 보고 컴포넌트 검사를 건너뛴다(정책 파일 배제는 그대로 유지).
 # **#6 정책 경로 앵커**: 정책 디렉토리(hooks/·playbooks/·templates/)는 canonical **$ROOT 직속**
 # (repo 루트 직속)에만 존재한다 — 그런 경로는 rel 에 `docs/` 컴포넌트가 없어 애초에 이 함수에 도달하지 않고
 # classify 의 "repo 내 비-docs → L1" 로 걸린다. 따라서 **docs 하위**의 hooks/playbooks/templates 이름
 # 디렉토리(예: docs/foo/hooks/design.md)는 정책이 아니라 순수 문서이므로 L0 여야 한다. 과거의 `after`
 # 컴포넌트 매칭은 이 순수 문서를 잘못 L1 로 앵커해 제거했다(#6). 정책 **파일**(base name) 배제는 유지.
 is_docs_exempt() { # <canonical file> <repo root> → rc 0/1
-  local cf="$1" root="$2" rel base base_lc
+  local cf="$1" root="$2" rel base base_lc root_base
   rel="${cf#"$root"/}"
   [ "$rel" != "$cf" ] || return 1                # repo 밖(방어 — 호출부에서 이미 걸러짐)
   [ -n "$rel" ] || return 1                       # 빈 rel(준비 실패) → 안전측 L1
-  # docs/ 컴포넌트 필수 — **리터럴 소문자만**(fold 안 함). DOCS/·Docs/ 등 대문자는 docs 아님 → L1.
-  case "/$rel" in */docs/*) ;; *) return 1 ;; esac
+  # 루트 basename 이 리터럴 소문자 `docs` 면 repo 전체가 문서 → 컴포넌트 검사 생략(docs-root 분기).
+  #   **fold 금지**(위 재설계#1 과 동일 근거): `Docs`·`DOCS`·`x-docs` 는 비대상 → 종전 컴포넌트 판정.
+  root_base=$(basename -- "$root") || return 1    # basename 실패 → 안전측 L1
+  if [ "$root_base" != "docs" ]; then
+    # docs/ 컴포넌트 필수 — **리터럴 소문자만**(fold 안 함). DOCS/·Docs/ 등 대문자는 docs 아님 → L1.
+    case "/$rel" in */docs/*) ;; *) return 1 ;; esac
+  fi
   # 이하 정책 파일 배제(→L1)는 fold 허용 — 과게이트는 안전측이라 대소문자 우회를 fold 로 닫는다.
   base=$(basename -- "$cf") || return 1           # basename 실패 → 안전측 L1
   base_lc=$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]') || return 1

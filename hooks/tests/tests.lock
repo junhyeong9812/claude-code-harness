@@ -1,10 +1,11 @@
 a482b885eb9f790650845f61a2873cecbd7da0e1415c68841f39f99c0bc022e1  baseline.manifest
 f211184fe40bf182b2453af9fc525cf43388617c551186c7e0bb75509f49e112  cases/codex-scan.sh
-51b024cd243152a84665677d4c09ce85c599117020872189d1e5822fd120ac18  cases/cwd-resolution.sh
+6134db44707df9941bd84e2138545a591586475459c5e5bc89f3c6ad8174fd9b  cases/cwd-resolution.sh
 dbb769f9ba80c4318fa9b4278328373249d990124dc18f87834a19d34791fe04  cases/detect-layer.sh
 e7182d053acbe1edb76e96824d0a21fb027c0c63d527598b1862091e866c9042  cases/gate-guard.sh
 b8f9275979d0bddaad36acc8ccc418fb5c97ce48c5520982edb82d6ef167466b  cases/git-guard.sh
 b5946a1adafe6e0d323cba97f6aec98867a52c54ceffa0d0c9f70e2a0c4873fd  cases/misc-guards.sh
+f9c4b8eb51e17f48fa1e975db297bfbc9d0bf23989a172444fa1944213acee3d  cases/sidecar-docsroot.sh
 90897bfb9e7914f528fb039a2d6a31d2263a7e03faa0498dd8fbb25bbd4c52a3  cases/state-schema.sh
 6a778fcb02db6ec70cf1b1d559ac8e28463c93d1339d66be2f85698ac26f6565  lib.sh
 777067bad35fd92d87e997a08a22b9994faff59eb3d99329e7197aca863c4f81  run.sh
@@ -193,6 +194,26 @@ b5946a1adafe6e0d323cba97f6aec98867a52c54ceffa0d0c9f70e2a0c4873fd  cases/misc-gua
 # test: test_rm_04
 # test: test_rm_05
 # test: test_rm_06
+# test: test_sd_01
+# test: test_sd_02
+# test: test_sd_03
+# test: test_sd_04
+# test: test_sd_05
+# test: test_sd_06
+# test: test_sd_07
+# test: test_sd_08
+# test: test_sd_09
+# test: test_sd_10
+# test: test_sd_11
+# test: test_sd_12
+# test: test_sd_13
+# test: test_sd_14
+# test: test_sd_15
+# test: test_sd_16
+# test: test_sd_17
+# test: test_sd_18
+# test: test_sd_19
+# test: test_sd_20
 # test: test_sg_01
 # test: test_sg_02
 # test: test_ss_01

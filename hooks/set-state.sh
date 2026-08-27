@@ -39,9 +39,13 @@ esac
 
 STATE="${1:-}"
 
-# 상태파일: 인자 우선. 없으면 ./.claude/lazymode 의 단일 session 파일 자동 선택(모호하면 거부).
+# 상태파일: 인자 우선. 없으면 상태 디렉토리의 단일 session 파일 자동 선택(모호하면 거부).
+# **경로 해소는 훅과 같은 resolver**(state_resolve_dir — 조상 앵커 → git 워크트리 루트 → cwd)를 쓴다:
+#   상태가 워크트리 루트에 있고 cwd 가 하위일 때, 안내 명령의 상대경로 `.claude/lazymode/<sid>` 가
+#   "상태파일 없음"으로 실패해 게이트가 교착되던 것을 막는다(2026-08-28 설계 선검증 A-02).
 if [ -z "$STATE" ]; then
-  d=".claude/lazymode"
+  d=$(state_resolve_dir "$PWD" "" 2>/dev/null || true)
+  [ -n "$d" ] || d=".claude/lazymode"
   files=$(ls "$d" 2>/dev/null | grep -E '^[A-Za-z0-9_-]+$' || true)   # session_id 파일만(.lock·.corrupt-*·.state.* 제외)
   cnt=$(printf '%s\n' "$files" | grep -c . || true)
   if [ "$cnt" = "1" ]; then
@@ -50,6 +54,26 @@ if [ -z "$STATE" ]; then
     echo "[set-state] $d 의 상태파일이 ${cnt}개라 모호합니다 — 경로를 명시하세요: set-state.sh $CMD <state_file>" >&2
     exit 2
   fi
+else
+  # 인자가 **상대경로 + 실존하지 않음** 일 때만 resolver 로 재해소한다(절대경로·실존 파일은 종전 그대로).
+  case "$STATE" in
+    /*) ;;
+    *)
+      if [ ! -e "$STATE" ]; then
+        sid=$(basename -- "$STATE" 2>/dev/null || true)
+        case "$sid" in
+          ''|*[!A-Za-z0-9-]*) ;;   # session_id 형식([A-Za-z0-9-]) 밖 → 해소하지 않음(종전 오류 경로 유지)
+          *)
+            rd=$(state_resolve_dir "$PWD" "$sid" 2>/dev/null || true)
+            if [ -n "$rd" ] && [ -f "$rd/$sid" ]; then
+              STATE="$rd/$sid"
+              echo "[set-state] 상대경로 재해소: $rd/$sid" >&2
+            fi
+            ;;
+        esac
+      fi
+      ;;
+  esac
 fi
 
 [ -f "$STATE" ] || { echo "[set-state] 상태파일 없음: $STATE (cwd=$(pwd))" >&2; exit 2; }
