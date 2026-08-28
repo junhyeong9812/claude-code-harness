@@ -37,7 +37,7 @@ mkpacket() {
              git diff --no-index /dev/null "$f" || { rc=$?; [ "$rc" -le 1 ] || echo "packet error: $f (rc=$rc)"; }
         fi
       done; } >> "$PKT/packet-diff.md"
-  n_hdr=$(grep -c '^### untracked: ' "$PKT/packet-diff.md"); n_ls=$(git ls-files --others --exclude-standard -- . "${EXCLP[@]}" | wc -l)
+  n_hdr=$(grep -c '^### untracked: ' "$PKT/packet-diff.md"); n_ls=$(git ls-files --others --exclude-standard -z -- . "${EXCLP[@]}" | tr -dc '\0' | wc -c)   # NUL 기준 — 개행 포함 파일명 안전
   [ "$n_hdr" = "$n_ls" ] || { echo "untracked 수집 불일치: 헤더 $n_hdr vs ls $n_ls"; return 1; }; [ "$n_ls" -gt 0 ] || echo "untracked 0건"
   # ④ 탐색 힌트 — 명령 원문과 원시 결과를 그대로 (메인 해석 금지)
   git grep -n --untracked '<변경 심볼>' -- . "${EXCLP[@]}" > "$PKT/packet-related-raw.txt"
