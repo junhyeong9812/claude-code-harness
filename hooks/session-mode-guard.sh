@@ -43,11 +43,15 @@ SOURCE=$(echo "$HOOK_INPUT" | jq -r '.source // empty')
 #   종전엔 이 훅만 "$CWD/.claude/lazymode" 를 직접 써서 하위 디렉토리 cwd 마다 상태가 흩어졌다).
 STATE_DIR="$(state_resolve_dir "$CWD" "$SESSION_ID")"
 STATE="$STATE_DIR/$SESSION_ID"
-# 디렉토리·자기무시 .gitignore 보장 실패(심링크 포함) → 아무 파일도 쓰지 않고 inert (A-04/A-07)
-if ! state_ensure_dir "$STATE_DIR"; then
-  echo "[session-mode-guard] 경고: 상태 디렉토리 보장 실패${STATE_ENSURE_REASON:+ (원인: $STATE_ENSURE_REASON)} — 상태 초기화 생략(통과)." >&2
-  exit 0
-fi
+# 상태 디렉토리 보장 rc 분기(A-01b/A-02): rc 1(디렉토리 확보 실패·심링크)·rc 2(사용자 조치 필요)는
+#   아무 파일도 쓰지 않고 inert, rc 3(환경 실패 — 읽기전용 등)은 경고만 하고 종전대로 진행한다.
+_ED_RC=0; state_ensure_dir "$STATE_DIR" || _ED_RC=$?
+case "$_ED_RC" in
+  0) ;;
+  3) echo "[session-mode-guard] 경고: 상태 디렉토리 보호 미보장${STATE_ENSURE_REASON:+ (원인: $STATE_ENSURE_REASON)} — 상태파일이 git status 에 노출될 수 있습니다(계속)." >&2 ;;
+  *) echo "[session-mode-guard] 경고: 상태 디렉토리 보장 실패${STATE_ENSURE_REASON:+ (원인: $STATE_ENSURE_REASON)} — 상태 초기화 생략(통과)." >&2
+     exit 0 ;;
+esac
 
 # stale prune: 30일 경과 세션 파일 제거 (session_id 재사용 시 옛 모드 부활 방지).
 # 활성 세션 파일은 매 edit의 sed로 mtime이 갱신돼 살아남는다.

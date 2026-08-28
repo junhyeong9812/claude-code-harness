@@ -11,11 +11,12 @@
 → ④ 수정 → 테스트 → ⑤ 재리뷰(①로) … 종료 조건 충족 시 탈출, 최대 3루프
 ```
 
-- **⓪ review packet** (2026-08-27 실측 — diff-only packet이 untracked 누락 오탐 11작업·Opus 단독 채택 37%의 원인): 페이즈 시작 base SHA를 작업 폴더 log.md에 고정. packet = ① **누적 diff** — base 커밋 vs **index+작업트리**(staged·unstaged 모두). tracked 대용량 binary는 `git diff --stat`으로 크기를 먼저 보고 `-- ':(exclude)<path>'`로 빼되 목록에 표기한다. ② **untracked 정규 파일 전문**(index 무변경 — `git add -N` 금지). 항목마다 `### untracked: <경로> (<크기>)` 헤더를 먼저 적어 **빈 파일도 가시화**한다. symlink는 target 1줄, FIFO·socket·device는 타입 1줄, binary는 `file` 타입 1줄. **untracked 한정으로 파일당 1MB·총 5MB 상한** — 초과분은 *절단하지 않고* 목록만 넣어 `packet truncated`로 표시하고 사용자에게 보고한다. **현재 작업 폴더의 `log.md`는 제외**한다(리뷰 ledger·메인 판단이 리뷰어에게 새는 경로). ③ **spec 원문**(⓪′) ④ **연관 파일 목록** — 변경 hunk의 심볼(함수·타입·설정키)로 돌린 `git grep`의 **명령 원문과 원시 결과를 그대로** 붙인다. 이건 **탐색 힌트지 증거 범위가 아니다** — 메인이 해석·선별·요약을 덧붙이지 않는다(사전 판단 유입 방지). ⑤ 이번 루프 수정 diff는 참고로만 별도 표기(마지막 수정만 보면 전체 일관성 문제를 놓친다) ⑥ **read-only 미러**(①) — tracked(심링크 제외) + ②에서 본문을 붙인 untracked만, `log.md` 제외, packet 산출물은 미러 안 `_packet/`에 둔다. **보안 스캔(§5①)은 packet 전체 + 미러 전체**에 적용하고, 통과한 동일 입력을 양쪽에 제공 — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
+- **⓪ review packet** (2026-08-27 실측 — diff-only packet이 untracked 누락 오탐 11작업·Opus 단독 채택 37%의 원인): 페이즈 시작 base SHA와 **실제 `$OUT`·미러 경로**를 작업 폴더 log.md에 고정(임시 경로라 사후 재현의 유일한 단서). packet = ① **누적 diff** — base 커밋 vs **index+작업트리**(staged·unstaged 모두). tracked 대용량 binary는 `git diff --stat`으로 크기를 먼저 보고 `-- ':(exclude)<path>'`로 빼되 목록에 표기한다. ② **untracked 정규 파일 전문**(index 무변경 — `git add -N` 금지). 항목마다 `### untracked: <경로> (<크기>)` 헤더를 먼저 적어 **빈 파일도 가시화**한다. symlink는 target 1줄, FIFO·socket·device는 타입 1줄, binary는 `file` 타입 1줄. **untracked 한정으로 파일당 1MB·총 5MB 상한** — 초과분은 *절단하지 않고* 목록만 넣어 `packet truncated`로 표시하고 사용자에게 보고한다. **현재 작업 폴더의 `log.md`는 제외**한다(리뷰 ledger·메인 판단이 리뷰어에게 새는 경로). ③ **spec 원문**(⓪′) ④ **연관 파일 목록** — 변경 hunk의 심볼(함수·타입·설정키)로 돌린 `git grep`의 **명령 원문과 원시 결과를 그대로** 붙인다. 이건 **탐색 힌트지 증거 범위가 아니다** — 메인이 해석·선별·요약을 덧붙이지 않는다(사전 판단 유입 방지). ⑤ 이번 루프 수정 diff는 참고로만 별도 표기(마지막 수정만 보면 전체 일관성 문제를 놓친다) ⑥ **read-only 미러**(①) — tracked(심링크 제외) + ②에서 본문을 붙인 untracked만, `log.md` 제외, packet 산출물은 미러 안 `_packet/`에 둔다. **보안 스캔(§5①)은 packet 전체 + 미러 전체**에 적용하고, 통과한 동일 입력을 양쪽에 제공 — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
 
 ```bash
 # repo 루트에서 실행 (하위 디렉터리 cwd면 untracked 수집이 그 서브트리로 잘린다)
-set -o pipefail; BASE=<페이즈 시작 SHA>; OUT=<packet 저장 디렉터리>; TASK=docs/plans/<날짜>/<작업>
+set -o pipefail; BASE=<페이즈 시작 SHA>; OUT=$(mktemp -d); TASK=docs/plans/<날짜>/<작업>
+#   OUT·mirror는 반드시 repo 밖 — repo 안에 두면 packet 산출물이 untracked로 잡혀 자기 자신을 읽는다
 MAX_F=1048576; MAX_T=5242880                       # untracked 한정 상한
 git diff --stat "$BASE" --                         # ① 크기 점검 → 대용량 binary는 ':(exclude)<path>'로 제외+목록 표기
 git diff --binary "$BASE" -- > "$OUT/packet-diff.md"          # ① base vs index+작업트리
@@ -33,14 +34,14 @@ git ls-files --others --exclude-standard -z |                 # ② untracked (i
       fi
     done; } >> "$OUT/packet-diff.md"
 # ④ 탐색 힌트 — 명령 원문과 원시 결과를 그대로 packet에 (메인 해석 금지)
-git grep -n --untracked '<변경 심볼>' -- . > "$OUT/packet-related-raw.txt"
-# ⑥ read-only 미러 — tracked(심링크·log.md 제외) + ②에서 본문을 붙인 untracked만
+git grep -n --untracked '<변경 심볼>' -- . ':(exclude)'"$TASK"/log.md > "$OUT/packet-related-raw.txt"
+# ⑥ read-only 미러 — tracked(심링크·삭제분·log.md 제외) + ②에서 본문을 붙인 untracked만
 mirror=$(mktemp -d)
 git ls-files -z -- . ":(exclude)$TASK/log.md" \
-  | { while IFS= read -r -d '' f; do [ -L "$f" ] || printf '%s\0' "$f"; done; } \
+  | { while IFS= read -r -d '' f; do [ -L "$f" ] && continue; [ -e "$f" ] || continue; printf '%s\0' "$f"; done; } \
   | tar --null -T - -cf - | tar -xf - -C "$mirror" || { echo "mirror 생성 실패"; exit 1; }
-while IFS= read -r f; do install -D -m 0444 "$f" "$mirror/$f"; done < "$OUT/untracked-included.txt"
-for q in packet-diff.md packet-related-raw.txt; do install -D -m 0444 "$OUT/$q" "$mirror/_packet/$q"; done
+while IFS= read -r f; do install -D -m 0444 "$f" "$mirror/$f" || { echo "mirror 복사 실패: $f"; exit 1; }; done < "$OUT/untracked-included.txt"
+for q in packet-diff.md packet-related-raw.txt; do install -D -m 0444 "$OUT/$q" "$mirror/_packet/$q" || { echo "mirror 복사 실패: $q"; exit 1; }; done
 #   spec 원문·리뷰 프롬프트(입력.md)도 $mirror/_packet/ 에. ignored(.env 등)·.git·~/.claude·대화 저장소·log.md는 미러에 없다.
 #   §5① 스캔을 미러 전체에 돌린 뒤 전달. 리뷰 종료 후: rm -rf "$mirror"
 ```

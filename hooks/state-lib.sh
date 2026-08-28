@@ -93,17 +93,21 @@ state_resolve_dir() {
 
 # 상태 디렉토리 보장 — mkdir -p + **자기무시 `.gitignore`(내용 `*`)** 생성 (2026-08-28
 #   review-context-and-sidecar-fix I1: 상태파일·사이드카가 프로젝트 `git status` 에 뜨지 않게 한다).
-# 계약 (듀얼 리뷰 loop1 L1-01 — rc 3분류):
-#   rc 0 = 보장됨: 디렉토리 실존 AND `<dir>/.gitignore` 가 **정규 파일(심링크 아님)이고 `*` 한 줄을 포함**.
+# 계약 (codex 종합 감사 A-01·A-02 — rc 4분류: **누가 고쳐야 하는가**로 나눈다):
+#   rc 0 = 보장됨: 디렉토리 실존 AND `<dir>/.gitignore` 가 **정규 파일(심링크 아님)**이고 `*` 행을 포함하며
+#          **`!` 로 시작하는 재포함 행이 하나도 없음**(`!` 가 있으면 `*` 가 무력화돼 보호가 성립하지 않는다).
 #   rc 1 = **디렉토리 확보 실패**(빈 인자·`<dir>` 또는 부모(.claude) 심링크·mkdir 실패) = 판정 불가.
 #          심링크면 검사 전 **아무것도 쓰지 않는다** — 심링크 경유 쓰기는 상태·사이드카를 트리 밖으로
 #          내보내 .gitignore 보호를 무력화한다.
-#   rc 2 = 디렉토리는 있으나 **보호 미보장**(.gitignore 가 심링크/내용 불일치/생성 실패). 상태 조작 자체는
-#          가능하므로 호출부는 **진행하되 경고 1줄** — 여기서 fail-closed 하면 읽기전용 디렉토리에서
+#   rc 2 = **사용자가 고쳐야 하는 미보장**(gitignore-mismatch·gitignore-symlink). 우리가 손댈 수 없고
+#          (기존 파일 무수정) 방치하면 상태·사이드카가 계속 git 에 노출되므로 **상태 writer 는 fail-closed** —
+#          REASON 에 조치 안내를 담아 사용자가 고치게 만든다.
+#   rc 3 = **환경 실패**(gitignore-create-failed·gitignore-missing — 읽기전용 디렉토리 등). 사용자 설정 문제가
+#          아니고 새 파일 자체를 못 써 유출도 못 일어난다 → writer 는 **진행 + 경고**. 여기서 fail-closed 하면
 #          '갱신 실패'의 loud 한 exit 2 신호가 '경고+통과'로 수렴해 사라진다(gate-guard test_gt_06).
 #   기존 `.gitignore` 는 **절대 덮어쓰지 않는다**(사용자 파일 무수정 — 불일치는 rc 2 로 알린다).
-#   전역 `STATE_ENSURE_REASON` = 실패 사유 1줄(호출부 메시지에 노출). 쓰기는 temp+mv 원자.
-state_ensure_dir() { # <dir> → rc 0(보장) / 1(디렉토리 확보 실패) / 2(보호 미보장)
+#   전역 `STATE_ENSURE_REASON` = 실패 사유 + 조치 1줄(호출부 메시지에 노출). 쓰기는 temp+mv 원자.
+state_ensure_dir() { # <dir> → rc 0(보장) / 1(디렉토리 확보 실패) / 2(사용자 조치 필요) / 3(환경 실패)
   local dir="${1:-}" parent gi tmp
   STATE_ENSURE_REASON=""
   [ -n "$dir" ] || { STATE_ENSURE_REASON="empty-dir"; return 1; }
@@ -115,23 +119,29 @@ state_ensure_dir() { # <dir> → rc 0(보장) / 1(디렉토리 확보 실패) / 
   [ -d "$dir" ] || { STATE_ENSURE_REASON="mkdir-failed: $dir"; return 1; }
   gi="$dir/.gitignore"
   # 심링크(dangling 포함)는 -e 로 안 잡히므로 **-L 을 먼저** 본다 — 그 위에 쓰지 않는다.
-  if [ -L "$gi" ]; then STATE_ENSURE_REASON="gitignore-symlink: $gi"; return 2; fi
+  if [ -L "$gi" ]; then STATE_ENSURE_REASON="$(_state_gi_symlink_reason "$gi")"; return 2; fi
   if [ ! -e "$gi" ]; then
     tmp=$(mktemp "$dir/.gitignore.XXXXXX" 2>/dev/null) \
-      || { STATE_ENSURE_REASON="gitignore-create-failed: $gi"; return 2; }
+      || { STATE_ENSURE_REASON="gitignore-create-failed: $gi (디렉토리 쓰기 권한 확인)"; return 3; }
     if printf '*\n' > "$tmp" 2>/dev/null; then
       mv -n "$tmp" "$gi" 2>/dev/null || true    # -n: 경합으로 이미 생겼으면 기존 파일 보존
     fi
     rm -f "$tmp" 2>/dev/null || true            # mv 성공 시 no-op / 실패·경합 시 temp 잔재 정리
   fi
-  if [ -L "$gi" ]; then STATE_ENSURE_REASON="gitignore-symlink: $gi"; return 2; fi   # 경합 재확인
-  [ -f "$gi" ] || { STATE_ENSURE_REASON="gitignore-missing: $gi"; return 2; }
-  # 보호 성립 조건 = `*` 한 줄이 실제로 들어 있음(다른 내용이면 무수정 + rc 2 로 알린다).
-  grep -qxF '*' "$gi" 2>/dev/null || { STATE_ENSURE_REASON="gitignore-mismatch: $gi"; return 2; }
+  if [ -L "$gi" ]; then STATE_ENSURE_REASON="$(_state_gi_symlink_reason "$gi")"; return 2; fi  # 경합 재확인
+  [ -f "$gi" ] || { STATE_ENSURE_REASON="gitignore-missing: $gi (디렉토리 쓰기 권한 확인)"; return 3; }
+  # 보호 성립 = `*` 행이 있고 **`!` 재포함 행이 없음**. 둘 중 하나라도 어긋나면 무수정 + rc 2(사용자 조치).
+  if ! grep -qxF '*' "$gi" 2>/dev/null || grep -q '^!' "$gi" 2>/dev/null; then
+    STATE_ENSURE_REASON="$(_state_gi_mismatch_reason "$gi")"; return 2
+  fi
   return 0
 }
 
-# rc 2(보호 미보장) 공통 경고 — 상태 조작은 계속하되 유출 가능성을 소리 내어 알린다(무음 금지).
+# rc 2 사유 문자열(조치 안내 포함) — 메시지 단일 출처.
+_state_gi_mismatch_reason() { printf "gitignore-mismatch: %s — 그 파일에 '*' 한 줄을 넣고 '!' 행을 제거하세요" "$1"; }
+_state_gi_symlink_reason()  { printf "gitignore-symlink: %s — 심링크를 지우고 '*' 한 줄짜리 정규 파일로 바꾸세요" "$1"; }
+
+# rc 3(환경 실패) 공통 경고 — 상태 조작은 계속하되 유출 가능성을 소리 내어 알린다(무음 금지).
 _state_warn_unprotected() {
   echo "[state-lib] 경고: 상태 디렉토리 보호 미보장(${STATE_ENSURE_REASON:-unknown}) — 상태파일이 git status에 노출될 수 있습니다." >&2
 }
@@ -173,8 +183,11 @@ state_init() {
   local p="$1" dir lock _ed_rc
   dir=$(dirname -- "$p"); lock="$p.lock"
   _ed_rc=0; state_ensure_dir "$dir" || _ed_rc=$?
-  [ "$_ed_rc" != 1 ] || return 1             # 디렉토리 확보 실패(심링크 포함) = 판정 불가 → 호출부 fail-closed
-  [ "$_ed_rc" = 0 ] || _state_warn_unprotected   # rc 2 = 보호 미보장 — 진행하되 경고
+  case "$_ed_rc" in
+    0) ;;
+    3) _state_warn_unprotected ;;            # 환경 실패 — 진행하되 경고(gt_06: 갱신 실패의 loud 신호 보존)
+    *) return 1 ;;                           # rc 1(디렉토리 확보 실패)·rc 2(사용자 조치 필요) = fail-closed
+  esac
   (
     exec 9>>"$lock" 2>/dev/null || exit 1
     flock -x -w 2 9 2>/dev/null || exit 1
@@ -198,8 +211,11 @@ state_set() {
   i=0
   while [ "$i" -lt "$n" ]; do keyre="$keyre|${pairs[$i]}"; i=$((i+2)); done
   _ed_rc=0; state_ensure_dir "$dir" || _ed_rc=$?
-  [ "$_ed_rc" != 1 ] || return 1             # 디렉토리 확보 실패(심링크 포함) = 판정 불가 → 호출부 fail-closed
-  [ "$_ed_rc" = 0 ] || _state_warn_unprotected   # rc 2 = 보호 미보장 — 진행하되 경고
+  case "$_ed_rc" in
+    0) ;;
+    3) _state_warn_unprotected ;;            # 환경 실패 — 진행하되 경고(gt_06: 갱신 실패의 loud 신호 보존)
+    *) return 1 ;;                           # rc 1(디렉토리 확보 실패)·rc 2(사용자 조치 필요) = fail-closed
+  esac
   (
     exec 9>>"$lock" 2>/dev/null || exit 1
     flock -x -w 2 9 2>/dev/null || exit 1
@@ -238,12 +254,15 @@ state_ensure_valid() {
   local p="$1" lock="$1.lock" r _ed_rc
   STATE_QUARANTINED=0
   # lock open 전 상태 디렉토리 보장 — 디렉토리 부재가 open 실패(fail-closed 차단)로 새지 않게.
-  # rc 구분(L1-01): 디렉토리 확보 실패(rc 1)만 판정 불가로 전파하고, 보호 미보장(rc 2)은 진행 + 경고 —
-  #   rc 2 에서 fail-closed 하면 PostToolUse 가 '경고+통과'로 수렴해 갱신 실패의 exit 2 신호가 사라진다
-  #   (silent failure — tests/cases/gate-guard.sh test_gt_06 이 고정).
+  # rc 구분(A-01b/A-02): rc 1(디렉토리 확보 실패)·rc 2(사용자 조치 필요 = mismatch/symlink)는 판정 불가로
+  #   전파하고, rc 3(환경 실패 — 읽기전용 등)만 진행 + 경고한다. rc 3 에서 fail-closed 하면 PostToolUse 가
+  #   '경고+통과'로 수렴해 갱신 실패의 exit 2 신호가 사라진다(silent failure — test_gt_06 이 고정).
   _ed_rc=0; state_ensure_dir "$(dirname -- "$p")" || _ed_rc=$?
-  [ "$_ed_rc" != 1 ] || return 1
-  [ "$_ed_rc" = 0 ] || _state_warn_unprotected
+  case "$_ed_rc" in
+    0) ;;
+    3) _state_warn_unprotected ;;
+    *) return 1 ;;
+  esac
   r=$(
     exec 9>>"$lock" 2>/dev/null || { printf 'E'; exit 0; }
     flock -x -w 2 9 2>/dev/null || { printf 'E'; exit 0; }

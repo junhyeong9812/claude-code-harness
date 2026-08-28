@@ -154,6 +154,11 @@ test_sd_07() { # [GREEN 회귀] .gitignore 가 다른 내용으로 이미 있으
   run_hook capture-prompt.sh "$(_sd_json_prompt "keepme probe" "$REPO")"
   assert_exit 0 sd07-capture-exit
   _sd_no_sidecar_under "$REPO" sd07-capture-inert-when-unprotected
+  # 사용자가 고쳐야 하는 미보장(rc 2) → L1 쓰기는 fail-closed 차단 + 조치 안내 노출 (A-01b/A-02)
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(_sd_json_file PreToolUse Edit "$REPO/src/a.c" "$REPO")"
+  assert_exit 2 sd07-mismatch-l1-blocked
+  assert_stderr_match 'gitignore-mismatch' sd07-mismatch-reason-shown
 }
 
 test_sd_08() { # [RED@base] 30일 초과 .gitignore 가 session-mode-guard 의 stale prune 에 삭제되면 안 된다
@@ -299,4 +304,26 @@ test_sd_23() { # [L1-09] state-lib 부재 → detect-layer 는 .events 를 만�
   assert_exit 0 sd23-detect-exit
   local out; out=$(find "$REPO" "$SANDBOX/nolib23" -name '*.events' 2>/dev/null | head -5)
   [ -z "$out" ] || { echo "  [dbg] events: $(printf '%s' "$out" | tr '\n' ' ')"; fail sd23-no-events-without-state-lib; }
+}
+
+test_sd_24() { # [A-01a] `*` 가 있어도 `!` 재포함 행이 있으면 보호 미성립 → L1 차단 + 조치 안내(파일 무수정)
+  local g="$REPO/.claude/lazymode/.gitignore"
+  printf '*\n!abc\n' > "$g"
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(_sd_json_file PreToolUse Edit "$REPO/src/a.c" "$REPO")"
+  assert_exit 2 sd24-negation-blocked
+  assert_stderr_match 'gitignore-mismatch' sd24-negation-reason
+  assert_file_contains "$g" '!abc' sd24-user-file-untouched
+}
+
+test_sd_25() { # [A-02] 읽기전용 상태 디렉토리(환경 실패 rc 3) → 종전대로 통과 + '보호 미보장' 경고
+  if [ "$(id -u)" = "0" ]; then return 0; fi   # root 는 chmod 를 무시 — 이 케이스 무의미(skip)
+  write_state auto 0 0 1                       # MODE=auto·SPEC=1 (게이트 통과 상태)
+  : > "$STATE.lock"                            # 읽기전용 디렉토리에서도 lock open 이 되도록 선생성
+  mkdir -p "$REPO/src"
+  chmod 555 "$STATE_DIR"
+  run_hook gate-guard.sh "$(_sd_json_file PreToolUse Edit "$REPO/src/a.c" "$REPO")"
+  chmod 755 "$STATE_DIR"
+  assert_exit 0 sd25-readonly-dir-passes
+  assert_stderr_match '보호 미보장' sd25-readonly-warns
 }
