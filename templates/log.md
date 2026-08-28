@@ -15,6 +15,8 @@
 
 > 스키마 정본 = `playbooks/review.md §2`. 필드 삭제 금지 — 파일만 통합된 것.
 
+- review packet: base SHA / `$OUT` / mirror 경로 (루프마다 1행 — 임시 경로라 여기가 유일한 기록)
+
 | id | first_seen_loop | source | 근거(file:line) | disposition | status | fixed_in_loop |
 |----|-----------------|--------|-----------------|-------------|--------|---------------|
 | | | | | | | |

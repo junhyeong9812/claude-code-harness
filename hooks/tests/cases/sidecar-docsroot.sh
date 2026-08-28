@@ -372,3 +372,25 @@ test_sd_29() { # [loop3 F1] 심링크 .claude 는 cwd 로 조용히 갈아타지
   [ ! -e "$REPO/sub/.claude" ] || fail sd29-no-cwd-fallback-seed
   [ ! -e "$REPO/sub/deep/.claude" ] || fail sd29-no-deep-fallback-seed
 }
+
+test_sd_30() { # [L3-03] reset-pending 인계 실패 경로에서도 원인(gitignore-mismatch)이 사라지지 않는다
+  local g="$REPO/.claude/lazymode/.gitignore"
+  write_state auto 0 0 1
+  printf 'keepme\n' > "$g"
+  : > "$STATE.reset-pending"
+  mkdir -p "$REPO/src"
+  run_hook gate-guard.sh "$(_sd_json_file PreToolUse Edit "$REPO/src/a.c" "$REPO")"
+  assert_exit 2 sd30-reset-pending-blocked
+  assert_stderr_match 'gitignore-mismatch' sd30-reset-pending-reason-shown
+}
+
+test_sd_31() { # [L3-02] rc 3(환경 실패)에서 capture-prompt 는 inert 가 아니라 '경고 후 진행'이다
+  if [ "$(id -u)" = "0" ]; then return 0; fi   # root 는 권한을 무시 — 이 케이스 무의미(skip)
+  chmod 555 "$STATE_DIR"
+  run_hook capture-prompt.sh "$(_sd_json_prompt "readonly probe" "$REPO")"
+  chmod 755 "$STATE_DIR"
+  assert_exit 0 sd31-capture-exit
+  assert_stderr_match '보호 미보장' sd31-readonly-warns
+  assert_stderr_no_match '사이드카 생략' sd31-not-inert-path
+  _sd_no_sidecar_under "$REPO" sd31-readonly-no-write   # 쓰기 불가라 결과적으로 기록은 없다
+}

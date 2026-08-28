@@ -312,14 +312,15 @@ if [ -e "$STATE.reset-pending" ]; then
   RP_TP=$(head -1 "$STATE.reset-pending" 2>/dev/null || true)   # marker 내용 = 새 작업 폴더 (빈 값 허용 — 구 marker)
   RP_ARGS=(MODE UNSET SPEC 0 PENDING_GATE 0)
   [ -n "$RP_TP" ] && RP_ARGS+=(TASK_PATH "$RP_TP")              # TASK_PATH 도 인계(긴급 log.md 판정 정합 — I2)
-  if state_set "$STATE" "${RP_ARGS[@]}" 2>/dev/null; then
+  # 2>/dev/null 금지(L3-03): state-lib 의 "보호 미보장" 경고까지 삼켜 원인이 사라진다.
+  if state_set "$STATE" "${RP_ARGS[@]}"; then
     rm -f "$STATE.reset-pending" 2>/dev/null || true   # 인계 성공 — 아래 정상 게이트(UNSET→SPEC 질문)로
   else
     if [ "$EVENT" = "PreToolUse" ]; then
-      echo "[gate-guard] 새 작업 리셋 미완(reset-pending) — 상태 갱신이 계속 실패해 안전 차단(fail-closed). .claude/lazymode/$SESSION_ID 권한·lock 을 확인하세요." >&2
+      echo "[gate-guard] 새 작업 리셋 미완(reset-pending)${STATE_ENSURE_REASON:+ (원인: $STATE_ENSURE_REASON)} — 상태 갱신이 계속 실패해 안전 차단(fail-closed). .claude/lazymode/$SESSION_ID 권한·lock 을 확인하세요." >&2
       exit 2
     fi
-    echo "[gate-guard] 경고: reset-pending 인계 실패(PostToolUse) — 상태 미갱신." >&2
+    echo "[gate-guard] 경고: reset-pending 인계 실패(PostToolUse)${STATE_ENSURE_REASON:+ (원인: $STATE_ENSURE_REASON)} — 상태 미갱신." >&2
     exit 0
   fi
 fi

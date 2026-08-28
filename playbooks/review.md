@@ -11,22 +11,23 @@
 → ④ 수정 → 테스트 → ⑤ 재리뷰(①로) … 종료 조건 충족 시 탈출, 최대 3루프
 ```
 
-- **⓪ review packet** (2026-08-27 실측 — diff-only packet이 untracked 누락 오탐 11작업·Opus 단독 채택 37%의 원인): 페이즈 시작 base SHA와 **실제 `$OUT`·미러 경로**를 작업 폴더 log.md에 고정(임시 경로라 사후 재현의 유일한 단서). packet = ① **누적 diff** — base 커밋 vs **index+작업트리**(staged·unstaged 모두). tracked 대용량 binary는 `git diff --stat`으로 크기를 먼저 보고 `-- ':(exclude)<path>'`로 빼되 목록에 표기한다. ② **untracked 정규 파일 전문**(index 무변경 — `git add -N` 금지). 항목마다 `### untracked: <경로> (<크기>)` 헤더를 먼저 적어 **빈 파일도 가시화**한다. symlink는 target 1줄, FIFO·socket·device는 타입 1줄, binary는 `file` 타입 1줄. **untracked 한정으로 파일당 1MB·총 5MB 상한** — 초과분은 *절단하지 않고* 목록만 넣어 `packet truncated`로 표시하고 사용자에게 보고한다. **현재 작업 폴더의 `log.md`는 제외**한다(리뷰 ledger·메인 판단이 리뷰어에게 새는 경로). ③ **spec 원문**(⓪′) ④ **연관 파일 목록** — 변경 hunk의 심볼(함수·타입·설정키)로 돌린 `git grep`의 **명령 원문과 원시 결과를 그대로** 붙인다. 이건 **탐색 힌트지 증거 범위가 아니다** — 메인이 해석·선별·요약을 덧붙이지 않는다(사전 판단 유입 방지). ⑤ 이번 루프 수정 diff는 참고로만 별도 표기(마지막 수정만 보면 전체 일관성 문제를 놓친다) ⑥ **read-only 미러**(①) — tracked 정규 파일 + ②에서 본문을 붙인 untracked만, `log.md` 제외, packet 산출물은 미러 안 `_packet/`에 둔다. **리뷰어에게 주는 것은 `$PKT`(= 미러의 `_packet/`)뿐이고 `$RES`(codex 출력·워커 회수물·로그)는 주지 않는다.** **보안 스캔(§5①)은 packet 전체 + 미러 전체**에 적용하고, 통과한 동일 입력을 양쪽에 제공 — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
+- **⓪ review packet** (2026-08-27 실측 — diff-only packet이 untracked 누락 오탐 11작업·Opus 단독 채택 37%의 원인): 페이즈 시작 base SHA와 **실제 `$OUT`·미러 경로**를 작업 폴더 log.md에 고정(임시 경로라 사후 재현의 유일한 단서). packet = ① **누적 diff** — base 커밋 vs **index+작업트리**(staged·unstaged 모두). tracked 대용량 binary는 `git diff --stat`으로 크기를 먼저 보고 `-- ':(exclude)<path>'`로 빼되 목록에 표기한다. ② **untracked 정규 파일 전문**(index 무변경 — `git add -N` 금지). 항목마다 `### untracked: <경로> (<크기>)` 헤더를 먼저 적어 **빈 파일도 가시화**한다. symlink는 target 1줄, FIFO·socket·device는 타입 1줄, binary는 `file` 타입 1줄. **untracked 한정으로 파일당 1MB·총 5MB 상한** — 초과분은 *절단하지 않고* 목록만 넣어 `packet truncated`로 표시하고 사용자에게 보고한다. **모든 작업 ledger(`docs/plans/**/log.md`)와 `docs/measurement-log.md`를 제외**한다(리뷰 ledger·메인 판단이 리뷰어에게 새는 경로 — 현재 작업 폴더만이 아니다). ③ **spec 원문**(⓪′) ④ **연관 파일 목록** — 변경 hunk의 심볼(함수·타입·설정키)로 돌린 `git grep`의 **명령 원문과 원시 결과를 그대로** 붙인다. 이건 **탐색 힌트지 증거 범위가 아니다** — 메인이 해석·선별·요약을 덧붙이지 않는다(사전 판단 유입 방지). ⑤ 이번 루프 수정 diff는 참고로만 별도 표기(마지막 수정만 보면 전체 일관성 문제를 놓친다) ⑥ **read-only 미러**(①) — tracked 정규 파일 + ②에서 본문을 붙인 untracked만, **모든 ledger·measurement-log 제외**, packet 산출물은 미러 안 `_packet/`에 둔다. **리뷰어에게 주는 것은 `$PKT`(= 미러의 `_packet/`)뿐이고 `$RES`(codex 출력·워커 회수물·로그)는 주지 않는다.** **보안 스캔(§5①)은 packet 전체 + 미러 전체**에 적용하고, 통과한 동일 입력을 양쪽에 제공 — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
 
 ```bash
 # repo 루트에서 실행(하위 cwd면 untracked 수집이 잘린다). 함수는 현재 셸에서 돌아 실패해도 셸이 죽지 않고 $OUT/$PKT/$RES/$mirror가 남는다
 set -o pipefail; OUT=$(mktemp -d); PKT="$OUT/packet"; RES="$OUT/results"; mkdir -p "$PKT" "$RES"
 #   OUT·mirror는 반드시 repo 밖 — repo 안에 두면 packet 산출물이 untracked로 잡혀 자기 자신을 읽는다
 BASE=<페이즈 시작 SHA>; TASK=docs/plans/<날짜>/<작업>; MAX_F=1048576; MAX_T=5242880   # 상한은 untracked 한정
+EXCLP=(':(exclude,glob)docs/plans/**/log.md' ':(exclude)docs/measurement-log.md')   # 모든 작업 ledger·측정로그 제외
 mkpacket() {
   [ -f "$TASK/requirement-spec.md" ] && install -m 0444 "$TASK/requirement-spec.md" "$PKT/spec.md" \
     || { echo "spec 원문 없음: $TASK/requirement-spec.md"; return 1; }   # ③ spec 원문 — 판정 기준(없으면 packet 불성립)
-  git diff --stat "$BASE" -- . ":(exclude)$TASK/log.md"        # ① 크기 점검 → 대용량 binary는 ':(exclude)<path>' 추가
-  git diff --binary "$BASE" -- . ":(exclude)$TASK/log.md" > "$PKT/packet-diff.md"    # ① base vs index+작업트리
+  git diff --stat "$BASE" -- . "${EXCLP[@]}"                   # ① 크기 점검 → 대용량 binary는 ':(exclude)<path>' 추가
+  git diff --binary "$BASE" -- . "${EXCLP[@]}" > "$PKT/packet-diff.md"               # ① base vs index+작업트리
   : > "$OUT/untracked-included.txt"
-  git ls-files --others --exclude-standard -z |                # ② untracked (index 무변경)
+  git ls-files --others --exclude-standard -z -- . "${EXCLP[@]}" |   # ② untracked (index 무변경)
     { tot=0; while IFS= read -r -d '' f; do
-        case "$f" in "$TASK"/log.md) continue;; esac           # 리뷰 ledger·메인 판단 차단
+        case "$f" in docs/plans/*/*/log.md|docs/measurement-log.md) continue;; esac   # ledger·메인 판단 차단(이중 가드)
         sz=$(stat -c %s "$f" 2>/dev/null || echo 0); echo "### untracked: $f ($sz B)"
         if   [ -L "$f" ];   then echo "symlink: $f -> $(readlink "$f")"
         elif [ ! -f "$f" ]; then echo "special: $f ($(stat -c %F "$f"))"
@@ -36,25 +37,28 @@ mkpacket() {
              git diff --no-index /dev/null "$f" || { rc=$?; [ "$rc" -le 1 ] || echo "packet error: $f (rc=$rc)"; }
         fi
       done; } >> "$PKT/packet-diff.md"
+  n_hdr=$(grep -c '^### untracked: ' "$PKT/packet-diff.md"); n_ls=$(git ls-files --others --exclude-standard -- . "${EXCLP[@]}" | wc -l)
+  [ "$n_hdr" = "$n_ls" ] || { echo "untracked 수집 불일치: 헤더 $n_hdr vs ls $n_ls"; return 1; }; [ "$n_ls" -gt 0 ] || echo "untracked 0건"
   # ④ 탐색 힌트 — 명령 원문과 원시 결과를 그대로 (메인 해석 금지)
-  git grep -n --untracked '<변경 심볼>' -- . ':(exclude)'"$TASK"/log.md > "$PKT/packet-related-raw.txt"
-  # ⑥ read-only 미러 — tracked 정규 파일(심링크·삭제분·gitlink 제외) + ②에서 본문을 붙인 untracked만
+  git grep -n --untracked '<변경 심볼>' -- . "${EXCLP[@]}" > "$PKT/packet-related-raw.txt"
+  # ⑥ read-only 미러 — tracked 정규 파일(심링크·삭제분·gitlink·ledger 제외) + ②에서 본문을 붙인 untracked만
   mirror=$(mktemp -d)
-  git ls-files -z -- . ":(exclude)$TASK/log.md" \
+  git ls-files -z -- . "${EXCLP[@]}" \
     | { while IFS= read -r -d '' f; do [ -L "$f" ] && continue; [ -f "$f" ] || continue; printf '%s\0' "$f"; done; } \
     | tar --null -T - -cf - | tar -xf - -C "$mirror" || { echo "mirror 생성 실패"; rm -rf "$mirror"; return 1; }
   while IFS= read -r f; do install -D -m 0444 "$f" "$mirror/$f" || { echo "mirror 복사 실패: $f"; rm -rf "$mirror"; return 1; }; done < "$OUT/untracked-included.txt"
   for q in "$PKT"/*; do install -D -m 0444 "$q" "$mirror/_packet/${q##*/}" || { echo "_packet 복사 실패: $q"; rm -rf "$mirror"; return 1; }; done
+  chmod -R a-w "$mirror"          # 디렉터리까지 쓰기 제거 → 정리는 반드시 chmod 되돌린 뒤 (아래 주석)
 }
 mkpacket || echo "packet 생성 실패 — 위 메시지 확인"
 set +o pipefail
 #   $PKT = 리뷰어 제공물(packet-diff·related-raw·spec 원문) → 미러의 _packet/ 로만 전달 / $RES = codex 출력·워커 회수물·로그(리뷰어에 주지 않는다)
 #   _packet/엔 공통 packet만 — 프롬프트는 각 호출의 stdin·Agent 프롬프트로만 주고 다른 리뷰어의 프롬프트·출력은 넣지 않는다(①단계 원문 격리)
-#   ignored(.env 등)·.git·~/.claude·대화 저장소·log.md는 미러에 없다. §5① 스캔을 미러 전체에 돌린 뒤 전달. 리뷰 종료 후: rm -rf "$mirror"
+#   ignored(.env)·.git·~/.claude·대화 저장소·모든 ledger(log.md)·measurement-log는 미러에 없다. §5① 스캔 후 전달. 정리: chmod -R u+w "$mirror" && rm -rf "$mirror" (a-w면 rm 실패 — 실측)
 ```
 
 - **⓪′ spec 기준 판정 (구현이 아닌 spec)**: packet ③는 **spec 원문**이며, 리뷰어 프롬프트에 "구현이 그럴듯한가가 아니라 **spec과 일치하는가**로 판정하라"를 명시한다 — 잘못된 구현을 "의도대로"로 오검증한 사고(03c 관찰)를 spec 원문 대조로 차단. 구현 diff는 "무엇이 바뀌었나"의 근거일 뿐, 정답의 기준이 아니다.
-- **① 병렬 리뷰**: Opus 워커(Agent 호출, model: opus) ∥ codex(`codex exec` — §5②). **리뷰어는 packet + read-only 미러를 받고, 원 repo가 아니라 미러를 탐색한다** — packet-only가 아니라 **미러-only**다. 미러 = tracked 작업트리 내용 + 승인된 untracked 정규 파일이며 **ignored 파일(`.env` 등)·`.git`·`~/.claude`·대화 저장소는 미러에 없다**(⓪ ⑥). Opus 워커는 미러 경로에서 Read/Grep/Glob 허용·**Edit/Write/Bash 쓰기 금지**, codex는 **cwd=미러**(§5②) — 양쪽 프롬프트에 **"미러(`_packet/` 포함) 밖 읽기 금지"**를 명시하고 리뷰 종료 후 미러를 삭제한다. **리뷰어에게 주는 문서는 spec 원문뿐** — `log.md`(리뷰 ledger)·`measurement-log`·대화 요약은 주지 않는다. `_packet/`엔 공통 packet만 두고 **프롬프트는 각 호출의 stdin·Agent 프롬프트로만** 전달한다 — 다른 리뷰어의 프롬프트·출력은 넣지 않는다(①단계 원문 격리). **절단 계약의 본질은 파일 차단이 아니라 맥락 차단이다** — 리뷰어에게 주지 않는 것: 대화 맥락·구현 의도·메인의 사전 판단·(①단계에서) 다른 리뷰어의 원문. 이 금지는 **워커 브리핑 본문에도 적용된다** — 점검 대상 지목은 spec 조항 인용으로만 하고, 가설 목록·"특히 …가 의심된다" 류는 쓰지 않는다. packet 밖 미러 파일을 근거로 쓴 finding은 **`file:line` 필수**(메인이 재현할 수 있어야 채택 — §2 자격조건 ②). 비대칭 플래그는 **한쪽만 미러 접근이 가능했던 경우**에만 붙인다.
+- **① 병렬 리뷰**: Opus 워커(Agent 호출, model: opus) ∥ codex(`codex exec` — §5②). **리뷰어는 packet + read-only 미러를 받고, 원 repo가 아니라 미러를 탐색한다** — packet-only가 아니라 **미러-only**다. 미러 = tracked 작업트리 내용 + 승인된 untracked 정규 파일이며 **ignored 파일(`.env` 등)·`.git`·`~/.claude`·대화 저장소는 미러에 없다**(⓪ ⑥). Opus 워커는 미러 경로에서 Read/Grep/Glob 허용·**Edit/Write/Bash 쓰기 금지**, codex는 **cwd=미러**(§5②) — 양쪽 프롬프트에 **"미러(`_packet/` 포함) 밖 읽기 금지"**를 명시하고 리뷰 종료 후 미러를 삭제한다. **리뷰어에게 주는 문서는 spec 원문뿐** — **어느 작업의 것이든** `log.md`(리뷰 ledger)·`measurement-log`·대화 요약은 주지 않는다. `_packet/`엔 공통 packet만 두고 **프롬프트는 각 호출의 stdin·Agent 프롬프트로만** 전달한다 — 다른 리뷰어의 프롬프트·출력은 넣지 않는다(①단계 원문 격리). **절단 계약의 본질은 파일 차단이 아니라 맥락 차단이다** — 리뷰어에게 주지 않는 것: 대화 맥락·구현 의도·메인의 사전 판단·(①단계에서) 다른 리뷰어의 원문. 이 금지는 **워커 브리핑 본문에도 적용된다** — 점검 대상 지목은 spec 조항 인용으로만 하고, 가설 목록·"특히 …가 의심된다" 류는 쓰지 않는다. packet 밖 미러 파일을 근거로 쓴 finding은 **`file:line` 필수**(메인이 재현할 수 있어야 채택 — §2 자격조건 ②). 비대칭 플래그는 **한쪽만 미러 접근이 가능했던 경우**에만 붙인다.
 - **① 실패 분기**: 한쪽 실패 시 1회 재시도 → 그래도 실패면 **`review blocked`** — 정상 종료 불가. 같은 packet으로 동등한 대체 독립 리뷰어를 실행하면 루프 계속 가능. 사용자가 단일 리뷰 진행을 명시 승인하면 **`user override`로 기록**하고 잔여 리스크를 보고 — 머지 가부는 사용자 결정 (높음 codex 스킵 불가 — core §4).
 - **② 메인 종합**: 중복 병합 + finding별 채택/기각. **허용 근거는 packet + 미러 실파일(`file:line` — 원 repo와 동일 내용)로 제한** — 기각 사유도 file:line 또는 spec 조항에 귀속. **대화 맥락·숨은 구현 의도는 근거로 쓰지 않는다** (절단 계약 보호).
 - **③ codex 종합 감사 (1회)**: 입력 = packet + 양 리뷰 원문 + 메인 채택/기각표. 역할은 "메인 판정 오류·누락 후보 지적"까지 — codex가 자기 finding의 기각을 재검토하는 것이므로 **독립 리뷰 1표가 아니라 종합 품질 감사**다. 추가 왕복 금지.

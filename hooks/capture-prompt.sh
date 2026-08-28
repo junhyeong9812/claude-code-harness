@@ -37,12 +37,16 @@ if ! . "$SCRIPT_DIR/state-lib.sh" 2>/dev/null \
   exit 0
 fi
 STATE_DIR="$(state_resolve_dir "$CWD" "$SESSION_ID")"
-# 디렉토리·자기무시 .gitignore 보장 실패 → 아무 파일도 쓰지 않고 inert. **무음 금지**(L2-06): 왜 사이드카가
-#   없는지 stderr 1줄로 남긴다 — 조용한 스킵은 실측 최다 사고 유형(silent failure)이다.
-if ! state_ensure_dir "$STATE_DIR"; then
-  echo "[capture-prompt] 경고: 사이드카 생략 (원인: ${STATE_ENSURE_REASON:-unknown})" >&2
-  exit 0
-fi
+# 상태 디렉토리 보장 rc 분기(L3-02 — session-mode-guard 와 동형): rc 3(환경 실패 — 읽기전용 등)은 경고만
+#   하고 **종전대로 진행**하고(쓸 수 있으면 기록된다), rc 1·2(디렉토리 확보 실패·사용자 조치 필요)는 경고 후
+#   inert. 어느 쪽이든 **무음 금지**(L2-06) — 왜 그렇게 됐는지 stderr 1줄로 남긴다.
+_ED_RC=0; state_ensure_dir "$STATE_DIR" || _ED_RC=$?
+case "$_ED_RC" in
+  0) ;;
+  3) echo "[capture-prompt] 경고: 상태 디렉토리 보호 미보장 (원인: ${STATE_ENSURE_REASON:-unknown}) — 사이드카가 git status 에 노출될 수 있습니다(계속)." >&2 ;;
+  *) echo "[capture-prompt] 경고: 사이드카 생략 (원인: ${STATE_ENSURE_REASON:-unknown})" >&2
+     exit 0 ;;
+esac
 SIDECAR="$STATE_DIR/$SESSION_ID.prompt"
 TURN_FILE="$STATE_DIR/$SESSION_ID.turn"
 
