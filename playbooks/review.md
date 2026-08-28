@@ -11,32 +11,42 @@
 → ④ 수정 → 테스트 → ⑤ 재리뷰(①로) … 종료 조건 충족 시 탈출, 최대 3루프
 ```
 
-- **⓪ review packet** (2026-08-27 실측 — diff-only packet이 untracked 누락 오탐 11작업·Opus 단독 채택 37%의 원인): 페이즈 시작 base SHA를 작업 폴더 log.md에 고정. packet = ① **누적 diff** — base 커밋 vs **index+작업트리**(staged·unstaged 모두) ② **untracked 정규 파일 전문**(index 무변경 — `git add -N` 금지). symlink는 target 1줄, FIFO·socket·device는 타입 1줄, binary는 `file` 타입 1줄. **파일당 1MB·총 5MB 상한** — 초과분은 *절단하지 않고* 목록만 넣어 `packet truncated`로 표시하고 사용자에게 보고한다. ③ **spec 원문**(⓪′) ④ **연관 파일 목록** — 변경 hunk의 심볼(함수·타입·설정키)로 돌린 `git grep`의 **명령 원문과 원시 결과를 그대로** 붙인다. 이건 **탐색 힌트지 증거 범위가 아니다** — 메인이 해석·선별·요약을 덧붙이지 않는다(사전 판단 유입 방지). ⑤ 이번 루프 수정 diff는 참고로만 별도 표기(마지막 수정만 보면 전체 일관성 문제를 놓친다) ⑥ **read-only 미러**(①). **보안 스캔(§5①)은 packet 전체 + 미러 전체**에 적용하고, 통과한 동일 입력을 양쪽에 제공 — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
+- **⓪ review packet** (2026-08-27 실측 — diff-only packet이 untracked 누락 오탐 11작업·Opus 단독 채택 37%의 원인): 페이즈 시작 base SHA를 작업 폴더 log.md에 고정. packet = ① **누적 diff** — base 커밋 vs **index+작업트리**(staged·unstaged 모두). tracked 대용량 binary는 `git diff --stat`으로 크기를 먼저 보고 `-- ':(exclude)<path>'`로 빼되 목록에 표기한다. ② **untracked 정규 파일 전문**(index 무변경 — `git add -N` 금지). 항목마다 `### untracked: <경로> (<크기>)` 헤더를 먼저 적어 **빈 파일도 가시화**한다. symlink는 target 1줄, FIFO·socket·device는 타입 1줄, binary는 `file` 타입 1줄. **untracked 한정으로 파일당 1MB·총 5MB 상한** — 초과분은 *절단하지 않고* 목록만 넣어 `packet truncated`로 표시하고 사용자에게 보고한다. **현재 작업 폴더의 `log.md`는 제외**한다(리뷰 ledger·메인 판단이 리뷰어에게 새는 경로). ③ **spec 원문**(⓪′) ④ **연관 파일 목록** — 변경 hunk의 심볼(함수·타입·설정키)로 돌린 `git grep`의 **명령 원문과 원시 결과를 그대로** 붙인다. 이건 **탐색 힌트지 증거 범위가 아니다** — 메인이 해석·선별·요약을 덧붙이지 않는다(사전 판단 유입 방지). ⑤ 이번 루프 수정 diff는 참고로만 별도 표기(마지막 수정만 보면 전체 일관성 문제를 놓친다) ⑥ **read-only 미러**(①) — tracked(심링크 제외) + ②에서 본문을 붙인 untracked만, `log.md` 제외, packet 산출물은 미러 안 `_packet/`에 둔다. **보안 스캔(§5①)은 packet 전체 + 미러 전체**에 적용하고, 통과한 동일 입력을 양쪽에 제공 — 비대칭 입력이 불가피하면 결과 신뢰도에 명시.
 
 ```bash
 # repo 루트에서 실행 (하위 디렉터리 cwd면 untracked 수집이 그 서브트리로 잘린다)
-BASE=<페이즈 시작 SHA>; OUT=<packet 저장 디렉터리>; MAX_F=1048576; MAX_T=5242880
+set -o pipefail; BASE=<페이즈 시작 SHA>; OUT=<packet 저장 디렉터리>; TASK=docs/plans/<날짜>/<작업>
+MAX_F=1048576; MAX_T=5242880                       # untracked 한정 상한
+git diff --stat "$BASE" --                         # ① 크기 점검 → 대용량 binary는 ':(exclude)<path>'로 제외+목록 표기
 git diff --binary "$BASE" -- > "$OUT/packet-diff.md"          # ① base vs index+작업트리
+: > "$OUT/untracked-included.txt"
 git ls-files --others --exclude-standard -z |                 # ② untracked (index 무변경)
   { tot=0; while IFS= read -r -d '' f; do
-      sz=$(stat -c %s "$f" 2>/dev/null || echo 0)
+      case "$f" in "$TASK"/log.md) continue;; esac            # 리뷰 ledger·메인 판단 차단
+      sz=$(stat -c %s "$f" 2>/dev/null || echo 0); echo "### untracked: $f ($sz B)"
       if   [ -L "$f" ];   then echo "symlink: $f -> $(readlink "$f")"
       elif [ ! -f "$f" ]; then echo "special: $f ($(stat -c %F "$f"))"
-      elif [ "$sz" -gt "$MAX_F" ] || [ $((tot+sz)) -gt "$MAX_T" ]; then echo "packet truncated (목록만): $f ($sz B)"
+      elif [ "$sz" -gt "$MAX_F" ] || [ $((tot+sz)) -gt "$MAX_T" ]; then echo "packet truncated (목록만): $f"
       elif [ -s "$f" ] && file -b --mime-encoding "$f" | grep -q binary; then echo "binary: $f ($(file -b "$f"))"
-      else tot=$((tot+sz)); git diff --no-index /dev/null "$f" || true   # rc 1 = 차이 있음(정상)
+      else tot=$((tot+sz)); echo "$f" >> "$OUT/untracked-included.txt"
+           git diff --no-index /dev/null "$f" || { rc=$?; [ "$rc" -le 1 ] || echo "packet error: $f (rc=$rc)"; }
       fi
     done; } >> "$OUT/packet-diff.md"
 # ④ 탐색 힌트 — 명령 원문과 원시 결과를 그대로 packet에 (메인 해석 금지)
 git grep -n --untracked '<변경 심볼>' -- . > "$OUT/packet-related-raw.txt"
-# ⑥ read-only 미러 — tracked 작업트리 내용 + 승인된 untracked 정규 파일만
-mirror=$(mktemp -d); git ls-files -z | tar --null -T - -cf - | tar -xf - -C "$mirror"
-#   ignored(.env 등)·.git·~/.claude·대화 저장소는 미러에 없다. §5① 스캔을 미러 전체에도 돌린 뒤 리뷰어에 전달.
-#   리뷰 종료 후: rm -rf "$mirror"
+# ⑥ read-only 미러 — tracked(심링크·log.md 제외) + ②에서 본문을 붙인 untracked만
+mirror=$(mktemp -d)
+git ls-files -z -- . ":(exclude)$TASK/log.md" \
+  | { while IFS= read -r -d '' f; do [ -L "$f" ] || printf '%s\0' "$f"; done; } \
+  | tar --null -T - -cf - | tar -xf - -C "$mirror" || { echo "mirror 생성 실패"; exit 1; }
+while IFS= read -r f; do install -D -m 0444 "$f" "$mirror/$f"; done < "$OUT/untracked-included.txt"
+for q in packet-diff.md packet-related-raw.txt; do install -D -m 0444 "$OUT/$q" "$mirror/_packet/$q"; done
+#   spec 원문·리뷰 프롬프트(입력.md)도 $mirror/_packet/ 에. ignored(.env 등)·.git·~/.claude·대화 저장소·log.md는 미러에 없다.
+#   §5① 스캔을 미러 전체에 돌린 뒤 전달. 리뷰 종료 후: rm -rf "$mirror"
 ```
 
 - **⓪′ spec 기준 판정 (구현이 아닌 spec)**: packet ③는 **spec 원문**이며, 리뷰어 프롬프트에 "구현이 그럴듯한가가 아니라 **spec과 일치하는가**로 판정하라"를 명시한다 — 잘못된 구현을 "의도대로"로 오검증한 사고(03c 관찰)를 spec 원문 대조로 차단. 구현 diff는 "무엇이 바뀌었나"의 근거일 뿐, 정답의 기준이 아니다.
-- **① 병렬 리뷰**: Opus 워커(Agent 호출, model: opus) ∥ codex(`codex exec` — §5②). **리뷰어는 packet + read-only 미러를 받고, 원 repo가 아니라 미러를 탐색한다** — packet-only가 아니라 **미러-only**다. 미러 = tracked 작업트리 내용 + 승인된 untracked 정규 파일이며 **ignored 파일(`.env` 등)·`.git`·`~/.claude`·대화 저장소는 미러에 없다**(⓪ ⑥). Opus 워커는 미러 경로에서 Read/Grep/Glob 허용·**Edit/Write/Bash 쓰기 금지**, codex는 **cwd=미러**(§5②) — 양쪽 프롬프트에 **"미러 밖 읽기 금지"**를 명시하고 리뷰 종료 후 미러를 삭제한다. **절단 계약의 본질은 파일 차단이 아니라 맥락 차단이다** — 리뷰어에게 주지 않는 것: 대화 맥락·구현 의도·메인의 사전 판단·(①단계에서) 다른 리뷰어의 원문. packet 밖 미러 파일을 근거로 쓴 finding은 **`file:line` 필수**(메인이 재현할 수 있어야 채택 — §2 자격조건 ②). 비대칭 플래그는 **한쪽만 미러 접근이 가능했던 경우**에만 붙인다.
+- **① 병렬 리뷰**: Opus 워커(Agent 호출, model: opus) ∥ codex(`codex exec` — §5②). **리뷰어는 packet + read-only 미러를 받고, 원 repo가 아니라 미러를 탐색한다** — packet-only가 아니라 **미러-only**다. 미러 = tracked 작업트리 내용 + 승인된 untracked 정규 파일이며 **ignored 파일(`.env` 등)·`.git`·`~/.claude`·대화 저장소는 미러에 없다**(⓪ ⑥). Opus 워커는 미러 경로에서 Read/Grep/Glob 허용·**Edit/Write/Bash 쓰기 금지**, codex는 **cwd=미러**(§5②) — 양쪽 프롬프트에 **"미러(`_packet/` 포함) 밖 읽기 금지"**를 명시하고 리뷰 종료 후 미러를 삭제한다. **리뷰어에게 주는 문서는 spec 원문뿐** — `log.md`(리뷰 ledger)·`measurement-log`·대화 요약은 주지 않는다. **절단 계약의 본질은 파일 차단이 아니라 맥락 차단이다** — 리뷰어에게 주지 않는 것: 대화 맥락·구현 의도·메인의 사전 판단·(①단계에서) 다른 리뷰어의 원문. packet 밖 미러 파일을 근거로 쓴 finding은 **`file:line` 필수**(메인이 재현할 수 있어야 채택 — §2 자격조건 ②). 비대칭 플래그는 **한쪽만 미러 접근이 가능했던 경우**에만 붙인다.
 - **① 실패 분기**: 한쪽 실패 시 1회 재시도 → 그래도 실패면 **`review blocked`** — 정상 종료 불가. 같은 packet으로 동등한 대체 독립 리뷰어를 실행하면 루프 계속 가능. 사용자가 단일 리뷰 진행을 명시 승인하면 **`user override`로 기록**하고 잔여 리스크를 보고 — 머지 가부는 사용자 결정 (높음 codex 스킵 불가 — core §4).
 - **② 메인 종합**: 중복 병합 + finding별 채택/기각. **허용 근거는 packet + 미러 실파일(`file:line` — 원 repo와 동일 내용)로 제한** — 기각 사유도 file:line 또는 spec 조항에 귀속. **대화 맥락·숨은 구현 의도는 근거로 쓰지 않는다** (절단 계약 보호).
 - **③ codex 종합 감사 (1회)**: 입력 = packet + 양 리뷰 원문 + 메인 채택/기각표. 역할은 "메인 판정 오류·누락 후보 지적"까지 — codex가 자기 finding의 기각을 재검토하는 것이므로 **독립 리뷰 1표가 아니라 종합 품질 감사**다. 추가 왕복 금지.
@@ -88,6 +98,6 @@ mirror=$(mktemp -d); git ls-files -z | tar --null -T - -cf - | tar -xf - -C "$mi
 > ①~③은 codex를 실제로 호출하는 절차. §1 ⓪·①의 "보안 스캔·codex 실행"이 이 절을 참조한다.
 
 - **① 보안 스캔 (전송 전 필수)**: **packet 전체(누적 diff·untracked 전문·spec·연관 파일 원시 결과) + 미러 전체**에서 `sk-`·`ghp_`·`AKIA`·`PRIVATE KEY`·`password|token|secret[:=]` 값·PII·내부 호스트/경로를 스캔 — 매칭 0건만 자동 통과, 발견 시 오탐 여부 개별 판정 후 redact(미러 파일은 미러에서 redact) 또는 사용자 확인 — 해소 못 하면 `review blocked`.
-- **② 호출**: `cd "$mirror" && cat 입력.md | codex exec --skip-git-repo-check --dangerously-bypass-approvals-and-sandbox -c model_reasoning_effort=medium --ephemeral -o 출력.md -` (Bash, 백그라운드 권장) — **cwd=미러**(§1 ①), 미러는 git repo가 아니므로 `--skip-git-repo-check`가 필요하다. packet 파일 경로를 함께 넘기고 "미러 밖 읽기 금지"를 프롬프트에 명시한다.
+- **② 호출**: `cd "$mirror" && cat _packet/입력.md | codex exec --skip-git-repo-check --sandbox read-only -c model_reasoning_effort=medium --ephemeral -o "$OUT/출력.md" -` (Bash, 백그라운드 권장) — **cwd=미러**(§1 ①), 미러는 git repo가 아니므로 `--skip-git-repo-check`가 필요하다. 출력은 **미러 밖 `$OUT`** 에 받는다(미러는 리뷰 후 삭제되므로 안에 두면 결과가 사라진다). packet은 `_packet/` 아래 있고, 프롬프트에 "미러(`_packet/` 포함) 밖 읽기 금지"를 명시한다.
 - **③ 비대화형 PATH 함정**: codex는 nvm 설치라 Claude Bash(비대화형)의 PATH에 안 잡힌다 — `CODEX=$(ls ~/.nvm/versions/node/*/bin/codex 2>/dev/null | head -1)`로 전체 경로를 확보한다(`which codex` 실패 ≠ 미설치).
-- **④ 샌드박스 중첩 페널티 (2026-07-20 실측)**: Claude Bash가 이미 외부 샌드박스라, `-s read-only`로 codex를 부르면 codex가 **자체 bubblewrap 샌드박스를 중첩 생성**하려다 user namespace 문제로 모델갱신 자식이 hang → 매 호출 **+~30s** 고정 페널티(`failed to refresh available models: timeout waiting for child process to exit`). **리뷰는 codex가 셸을 실행하지 않고**(읽기·추론만) **대상이 일회용 미러(§1 ①)라 쓰기 위험이 없으므로** `--dangerously-bypass-approvals-and-sandbox`가 안전하고 이 페널티를 없앤다. config `model_reasoning_effort=high`도 리뷰를 느리게 하니 호출 시 `medium`으로 낮춘다(52s→12s 실측). **타임아웃을 너무 짧게(≤4분) 걸면 high-effort 추론을 완주 전 죽인다** — 넉넉히(6분+) 주거나 백그라운드로 회수하라. (codex가 셸 명령을 실제 실행하는 용도라면 bypass 금지 — 리뷰 전용.)
+- **④ 샌드박스 중첩 페널티 (2026-07-20 실측)**: Claude Bash가 이미 외부 샌드박스라, `-s read-only`로 codex를 부르면 codex가 **자체 bubblewrap 샌드박스를 중첩 생성**하려다 user namespace 문제로 모델갱신 자식이 hang → 매 호출 **+~30s** 고정 페널티(`failed to refresh available models: timeout waiting for child process to exit`). 그럼에도 **리뷰는 `--sandbox read-only`로 돈다** — +~30s는 비용으로 수용한다. `read-only`는 **쓰기** 제한이지 읽기 경계가 아니다: 읽기 경계를 만드는 것은 **미러 + 프롬프트 지시**("미러(`_packet/` 포함) 밖 읽기 금지")다. `--dangerously-bypass-approvals-and-sandbox`는 **사용자가 명시 승인한 경우에만** 대안으로 쓰고 `user override`로 기록한다. config `model_reasoning_effort=high`도 리뷰를 느리게 하니 호출 시 `medium`으로 낮춘다(52s→12s 실측). **타임아웃을 너무 짧게(≤4분) 걸면 high-effort 추론을 완주 전 죽인다** — 넉넉히(6분+) 주거나 백그라운드로 회수하라. (codex가 셸 명령을 실제 실행하는 용도라면 bypass 금지 — 리뷰 전용.)

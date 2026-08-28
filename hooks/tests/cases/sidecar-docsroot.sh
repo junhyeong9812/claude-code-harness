@@ -150,6 +150,10 @@ test_sd_07() { # [GREEN 회귀] .gitignore 가 다른 내용으로 이미 있으
   run_hook session-mode-guard.sh "$(_sd_json_session "$REPO")"
   assert_exit 0 sd07-session-exit
   assert_file_contains "$REPO/.claude/lazymode/.gitignore" "keepme" sd07-gitignore-preserved
+  # 보호가 성립하지 않는 디렉토리(내용 불일치 = rc 2)에는 **새 사이드카를 만들지 않는다**(L1-01 inert).
+  run_hook capture-prompt.sh "$(_sd_json_prompt "keepme probe" "$REPO")"
+  assert_exit 0 sd07-capture-exit
+  _sd_no_sidecar_under "$REPO" sd07-capture-inert-when-unprotected
 }
 
 test_sd_08() { # [RED@base] 30일 초과 .gitignore 가 session-mode-guard 의 stale prune 에 삭제되면 안 된다
@@ -265,4 +269,34 @@ test_sd_14() { # [GREEN 회귀] 일반 repo 기존 동작 불변 — docs/ 컴�
   assert_exit 0 sd14-normal-docs-allowed
   run_hook gate-guard.sh "$(_sd_json_file PreToolUse Write "$REPO/src/a.md" "$REPO")"
   assert_exit 2 sd14-normal-src-gated
+}
+
+# ── C. 듀얼 리뷰 loop1 채택 finding 검증 (L1-09) ──────────────────────────────
+
+test_sd_21() { # [L1-09] 빈 sid 여도 폴백은 워크트리 루트 — set-state 의 '인자 없음' 자동선택이 이 경로를 탄다
+  mkdir -p "$REPO/sub/deep"
+  local got; got=$(_sd_resolve "$REPO/sub/deep" "") || true
+  _sd_eq "$got" "$REPO/.claude/lazymode" sd21-empty-sid-root-fallback
+}
+
+test_sd_22() { # [L1-09] .claude 가 repo 밖 심링크 → L1 쓰기는 fail-closed 차단 + 원인 노출 + 대상에 무기록
+  rm -rf "$REPO/.claude"
+  mkdir -p "$SANDBOX/outside-sd22" "$REPO/src"
+  ln -s "$SANDBOX/outside-sd22" "$REPO/.claude"
+  run_hook gate-guard.sh "$(_sd_json_file PreToolUse Edit "$REPO/src/a.c" "$REPO")"
+  assert_exit 2 sd22-symlink-l1-blocked
+  assert_stderr_match '(심링크|symlink:)' sd22-symlink-reason-shown
+  _sd_dir_empty "$SANDBOX/outside-sd22" sd22-no-write-through-symlink
+}
+
+test_sd_23() { # [L1-09] state-lib 부재 → detect-layer 는 .events 를 만들지 않는다(inert, exit 0)
+  mkdir -p "$SANDBOX/nolib23"
+  cp "$HOOKS_DIR"/*.sh "$SANDBOX/nolib23/" 2>/dev/null || fail sd23-copy-hooks
+  rm -f "$SANDBOX/nolib23/state-lib.sh"
+  local j; j=$(jq -cn --arg f "$REPO/.claude/settings.local.json" --arg c "$REPO" --arg s "$SID" \
+    '{hook_event_name:"ConfigChange", source:"local_settings", file_path:$f, cwd:$c, session_id:$s}')
+  _sd_run_hook_from "$SANDBOX/nolib23" detect-layer.sh "$j"
+  assert_exit 0 sd23-detect-exit
+  local out; out=$(find "$REPO" "$SANDBOX/nolib23" -name '*.events' 2>/dev/null | head -5)
+  [ -z "$out" ] || { echo "  [dbg] events: $(printf '%s' "$out" | tr '\n' ' ')"; fail sd23-no-events-without-state-lib; }
 }

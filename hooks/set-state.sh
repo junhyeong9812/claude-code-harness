@@ -61,6 +61,14 @@ else
     *)
       if [ ! -e "$STATE" ]; then
         sid=$(basename -- "$STATE" 2>/dev/null || true)
+        sdir=$(dirname -- "$STATE" 2>/dev/null || true)
+        # **디렉토리 부분까지 정확히 일치**할 때만 재해소한다(L1-06): 안내 문구의 상대경로 형태
+        #   `.claude/lazymode/<sid>` · `./.claude/lazymode/<sid>` 만 대상 — 그 외 상대경로(오타·다른
+        #   디렉토리)는 조용히 다른 파일로 흡수되지 않고 종전 "상태파일 없음" 오류를 그대로 낸다.
+        case "$sdir" in
+          ".claude/lazymode"|"./.claude/lazymode") ;;
+          *) sid="" ;;
+        esac
         case "$sid" in
           ''|*[!A-Za-z0-9-]*) ;;   # session_id 형식([A-Za-z0-9-]) 밖 → 해소하지 않음(종전 오류 경로 유지)
           *)
@@ -80,7 +88,7 @@ fi
 
 # 손상 상태 위 기록 금지 — 판정 불가 = 거부(C2 원칙②). **격리·재생성이 방금 일어났으면 기록 거부**(post-fix I3):
 # 손상 전 합의 상태를 알 수 없으므로 게이트를 처음부터(스펙 합의 재확인) 다시 밟게 한다.
-state_ensure_valid "$STATE" || { echo "[set-state] 상태 검증 실패 — 기록 거부(fail-closed)." >&2; exit 1; }
+state_ensure_valid "$STATE" || { echo "[set-state] 상태 검증 실패${STATE_ENSURE_REASON:+ (원인: $STATE_ENSURE_REASON)} — 기록 거부(fail-closed)." >&2; exit 1; }
 [ "${STATE_QUARANTINED:-0}" = "0" ]   || { echo "[set-state] 상태가 손상돼 격리·재생성됨 — 직전 합의를 신뢰할 수 없어 기록 거부. 게이트를 처음부터(명세 합의 재확인) 진행하세요." >&2; exit 2; }
 
 # reset-pending 인계 (loop3 I2 연계): task-mode-guard 의 리셋이 미완이면 여기서 먼저 리셋을 완수한다 —

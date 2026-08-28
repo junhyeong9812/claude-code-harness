@@ -45,7 +45,7 @@ STATE_DIR="$(state_resolve_dir "$CWD" "$SESSION_ID")"
 STATE="$STATE_DIR/$SESSION_ID"
 # 디렉토리·자기무시 .gitignore 보장 실패(심링크 포함) → 아무 파일도 쓰지 않고 inert (A-04/A-07)
 if ! state_ensure_dir "$STATE_DIR"; then
-  echo "[session-mode-guard] 경고: 상태 디렉토리 보장 실패(심링크·권한 등) — 상태 초기화 생략(통과)." >&2
+  echo "[session-mode-guard] 경고: 상태 디렉토리 보장 실패${STATE_ENSURE_REASON:+ (원인: $STATE_ENSURE_REASON)} — 상태 초기화 생략(통과)." >&2
   exit 0
 fi
 

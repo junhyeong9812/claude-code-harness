@@ -327,10 +327,10 @@ fi
 # rc 1 = 판정 불가(flock 획득 실패·재생성/격리 실패) → C2: Pre 차단, Post 경고+통과.
 if ! state_ensure_valid "$STATE"; then
   if [ "$EVENT" = "PreToolUse" ]; then
-    echo "[gate-guard] 상태 검증 실패(flock 획득 불가 또는 재생성/격리 실패) — 안전을 위해 차단(fail-closed). .claude/lazymode/$SESSION_ID 를 확인하세요. (C2: flock 실패=차단)" >&2
+    echo "[gate-guard] 상태 검증 실패(flock 획득 불가 또는 재생성/격리 실패)${STATE_ENSURE_REASON:+ (원인: $STATE_ENSURE_REASON)} — 안전을 위해 차단(fail-closed). .claude/lazymode/$SESSION_ID 를 확인하세요. (C2: flock 실패=차단)" >&2
     exit 2
   fi
-  echo "[gate-guard] 경고: 상태 검증 실패 — 모드 게이트를 적용 못 했습니다(상태 미갱신). .claude/lazymode/$SESSION_ID 확인." >&2
+  echo "[gate-guard] 경고: 상태 검증 실패${STATE_ENSURE_REASON:+ (원인: $STATE_ENSURE_REASON)} — 모드 게이트를 적용 못 했습니다(상태 미갱신). .claude/lazymode/$SESSION_ID 확인." >&2
   exit 0
 fi
 
