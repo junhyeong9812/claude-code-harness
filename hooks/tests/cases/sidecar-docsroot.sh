@@ -357,3 +357,18 @@ test_sd_28() { # [L2-06] rc 2 상황에서 capture-prompt 는 조용히 넘어�
   assert_stderr_match 'gitignore-mismatch' sd28-capture-reason
   _sd_no_sidecar_under "$REPO" sd28-capture-inert
 }
+
+test_sd_29() { # [loop3 F1] 심링크 .claude 는 cwd 로 조용히 갈아타지 않는다 — 루트 유지 + fail-closed + 조치 안내
+  rm -rf "$REPO/.claude"
+  mkdir -p "$SANDBOX/outside-sd29" "$REPO/sub/deep" "$REPO/src"
+  ln -s "$SANDBOX/outside-sd29" "$REPO/.claude"
+  # resolver 는 루트를 그대로 반환한다(심링크는 '사용자 조치' 원인 — 위치를 흩뜨려 숨기지 않는다)
+  local got; got=$(_sd_resolve "$REPO/sub/deep" "$SID") || true
+  _sd_eq "$got" "$REPO/.claude/lazymode" sd29-symlink-root-kept
+  run_hook gate-guard.sh "$(_sd_json_file PreToolUse Edit "$REPO/src/a.c" "$REPO/sub/deep")"
+  assert_exit 2 sd29-symlink-l1-blocked
+  assert_stderr_match '실디렉토리' sd29-symlink-howto-shown
+  _sd_dir_empty "$SANDBOX/outside-sd29" sd29-no-write-through-symlink
+  [ ! -e "$REPO/sub/.claude" ] || fail sd29-no-cwd-fallback-seed
+  [ ! -e "$REPO/sub/deep/.claude" ] || fail sd29-no-deep-fallback-seed
+}

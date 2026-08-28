@@ -19,6 +19,8 @@ set -o pipefail; OUT=$(mktemp -d); PKT="$OUT/packet"; RES="$OUT/results"; mkdir 
 #   OUT·mirror는 반드시 repo 밖 — repo 안에 두면 packet 산출물이 untracked로 잡혀 자기 자신을 읽는다
 BASE=<페이즈 시작 SHA>; TASK=docs/plans/<날짜>/<작업>; MAX_F=1048576; MAX_T=5242880   # 상한은 untracked 한정
 mkpacket() {
+  [ -f "$TASK/requirement-spec.md" ] && install -m 0444 "$TASK/requirement-spec.md" "$PKT/spec.md" \
+    || { echo "spec 원문 없음: $TASK/requirement-spec.md"; return 1; }   # ③ spec 원문 — 판정 기준(없으면 packet 불성립)
   git diff --stat "$BASE" -- . ":(exclude)$TASK/log.md"        # ① 크기 점검 → 대용량 binary는 ':(exclude)<path>' 추가
   git diff --binary "$BASE" -- . ":(exclude)$TASK/log.md" > "$PKT/packet-diff.md"    # ① base vs index+작업트리
   : > "$OUT/untracked-included.txt"
