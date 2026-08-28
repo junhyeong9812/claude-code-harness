@@ -212,3 +212,4 @@ state_ensure_dir() { # <dir> → rc 0(보장) / 1(디렉토리 확보 실패) / 
 - **수용한 잔여 리스크(사용자 결정)**: docs-root repo의 실행물(.sh/.yml 등)도 L0(정책 파일 5종만 제외).
 - **범위 밖 후속 후보**: docs repo 워크트리 이름≠docs면 교착 재현(L1-Q3) · `_` sid 계약 불일치(capture-prompt vs state-lib) · `special:` 분기 도달 불가 · archive/…/measurement-log 미러 잔존 · 미러 untracked 복사 수동·스캔 비용 상한 없음 · TMPDIR이 repo 안인 환경의 deploy 스모크 · P1-3 git-guard 문자열 패턴(이번 작업 중 실차단 1회)·P1-5·P2-1·P2-2.
 - **배포 고지**: 심링크 `.claude`/`lazymode` 환경과 내용이 `*`가 아닌 기존 `.claude/lazymode/.gitignore` 프로젝트는 L1 진입이 차단된다(조치 안내 메시지 표시).
+| 11:24 | 배포본 신규 세션 스모크(scratch deploy-smoke.sh): a1~a6 하위 cwd 루트 시드·사이드카·.gitignore=*·status clean·set-state 재해소, b1~b3 docs-root allow/정책 파일 차단/x-docs 종전 — **9 passed, 0 failed** | 작업 완료 — 이월은 완료 요약 §5 |
