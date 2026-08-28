@@ -77,10 +77,12 @@ test_cr_07() { # 비절대 cwd → 즉시 cwd/.claude/lazymode (파일시스템 
   _cr_eq "$got" "rel/sub/.claude/lazymode" cr07-relative-cwd-immediate
 }
 
-test_cr_08() { # 빈 sid → 즉시 cwd/.claude/lazymode (유효 상태가 있어도 무시)
-  write_state auto
-  local got; got=$(_cr_resolve "$REPO" "") || true
-  _cr_eq "$got" "$REPO/.claude/lazymode" cr08-empty-sid-immediate
+test_cr_08() { # 빈 sid → 즉시 cwd/.claude/lazymode (조상 탐색 스킵)
+  # 2026-08-28 재배치(L2-07): 종전엔 cwd=$REPO(= git 루트)라 "빈 sid 즉시 반환"과 새 "루트 폴백"이 같은 값이
+  #   되어 판별력이 없었다. **비-repo cwd** 로 옮겨 빈 sid 의 의미(탐색 없이 cwd)를 그대로 고정한다.
+  mkdir -p "$SANDBOX/outside/sub"
+  local got; got=$(_cr_resolve "$SANDBOX/outside/sub" "") || true
+  _cr_eq "$got" "$SANDBOX/outside/sub/.claude/lazymode" cr08-empty-sid-immediate
 }
 
 test_cr_09() { # 성분 상한 64: 비-repo 트리에서 cwd 가 앵커보다 80 단계 아래 → 상한이 조상 앵커 도달 차단 → cwd 시드 (2026-08-28 비-repo 재배치 — repo 안이면 루트 폴백이 상한 의미를 가린다)

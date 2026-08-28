@@ -291,6 +291,7 @@ test_sd_22() { # [L1-09] .claude 가 repo 밖 심링크 → L1 쓰기는 fail-cl
   run_hook gate-guard.sh "$(_sd_json_file PreToolUse Edit "$REPO/src/a.c" "$REPO")"
   assert_exit 2 sd22-symlink-l1-blocked
   assert_stderr_match '(심링크|symlink:)' sd22-symlink-reason-shown
+  assert_stderr_match '실디렉토리' sd22-symlink-howto-shown      # L2-05: 조치 안내까지 노출
   _sd_dir_empty "$SANDBOX/outside-sd22" sd22-no-write-through-symlink
 }
 
@@ -326,4 +327,33 @@ test_sd_25() { # [A-02] 읽기전용 상태 디렉토리(환경 실패 rc 3) →
   chmod 755 "$STATE_DIR"
   assert_exit 0 sd25-readonly-dir-passes
   assert_stderr_match '보호 미보장' sd25-readonly-warns
+}
+
+test_sd_26() { # [L2-04] .gitignore 자리를 디렉토리가 차지 → 사용자 조치(rc 2) → L1 차단 + not-regular 안내
+  local g="$REPO/.claude/lazymode/.gitignore"
+  mkdir -p "$g" "$REPO/src"
+  run_hook gate-guard.sh "$(_sd_json_file PreToolUse Edit "$REPO/src/a.c" "$REPO")"
+  assert_exit 2 sd26-not-regular-blocked
+  assert_stderr_match 'gitignore-not-regular' sd26-not-regular-reason
+  [ -d "$g" ] || fail sd26-user-entry-untouched
+}
+
+test_sd_27() { # [L2-09] 루트가 읽기전용이면 루트 폴백을 채택하지 않는다 — 쓰기 가능한 cwd 폴백(L1 전면 차단 회귀 방지)
+  if [ "$(id -u)" = "0" ]; then return 0; fi   # root 는 권한을 무시 — 이 케이스 무의미(skip)
+  rm -rf "$REPO/.claude"
+  mkdir -p "$REPO/sub"
+  chmod 555 "$REPO"
+  local got; got=$(_sd_resolve "$REPO/sub" "$SID") || true
+  chmod 755 "$REPO"
+  _sd_eq "$got" "$REPO/sub/.claude/lazymode" sd27-readonly-root-falls-back-to-cwd
+}
+
+test_sd_28() { # [L2-06] rc 2 상황에서 capture-prompt 는 조용히 넘어가지 않는다 — 경고 1줄 + inert
+  local g="$REPO/.claude/lazymode/.gitignore"
+  printf 'keepme\n' > "$g"
+  run_hook capture-prompt.sh "$(_sd_json_prompt "warn probe" "$REPO")"
+  assert_exit 0 sd28-capture-exit
+  assert_stderr_match '사이드카 생략' sd28-capture-warns
+  assert_stderr_match 'gitignore-mismatch' sd28-capture-reason
+  _sd_no_sidecar_under "$REPO" sd28-capture-inert
 }

@@ -33,8 +33,12 @@ if ! . "$SCRIPT_DIR/state-lib.sh" 2>/dev/null \
   exit 0
 fi
 STATE_DIR="$(state_resolve_dir "$CWD" "$SID")"
-# 디렉토리·자기무시 .gitignore 보장 실패(심링크 포함) → 아무 파일도 쓰지 않고 inert (A-04/A-07)
-state_ensure_dir "$STATE_DIR" || exit 0
+# 디렉토리·자기무시 .gitignore 보장 실패 → 아무 파일도 쓰지 않고 inert. **무음 금지**(L2-06): 왜 이벤트가
+#   기록되지 않는지 stderr 1줄로 남긴다(관측 전용 훅이라 차단은 여전히 없다).
+if ! state_ensure_dir "$STATE_DIR"; then
+  echo "[detect-layer] 경고: 사이드카 생략 (원인: ${STATE_ENSURE_REASON:-unknown})" >&2
+  exit 0
+fi
 SIDECAR="$STATE_DIR/$SID.events"
 
 # sanitize: 개행·탭·`|` → 공백 + 잔여 C0 제어문자·DEL 제거(CR·ESC 로그 위조 차단 — 리뷰 loop1 codex∥Opus 합치).

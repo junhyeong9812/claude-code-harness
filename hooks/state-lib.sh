@@ -30,6 +30,25 @@ state_sanitize_sid() {
   fi
 }
 
+# 상태 디렉토리를 그 자리에 만들 수 있나(폴백 채택 전 선판정 — L2-09). rc 0 = 만들 수 있다.
+#   ① 경로 성분(<dir>·부모 .claude)이 심링크가 아니어야 한다(state_ensure_dir 와 같은 규약 — 트리 밖 유출 차단).
+#   ② 가장 가까운 **실존 조상 디렉토리**가 쓰기 가능([ -w ])해야 한다 — 읽기전용 루트에서 루트를 채택하면
+#      mkdir 이 매번 실패해 상태 확정 불가 → L1 전면 차단으로 회귀한다.
+#   판정 불가·실패는 전부 rc 1(채택하지 않음 = 종전 cwd 폴백, 안전측).
+_state_dir_seedable() { # <dir> → rc 0/1
+  local d="${1:-}" p i=0
+  [ -n "$d" ] || return 1
+  [ ! -L "$d" ] || return 1
+  p=$(dirname -- "$d" 2>/dev/null) || return 1
+  [ ! -L "$p" ] || return 1
+  while [ ! -e "$d" ] && [ "$d" != "/" ] && [ "$i" -lt 256 ]; do
+    p=$(dirname -- "$d" 2>/dev/null) || return 1
+    [ "$p" != "$d" ] || break
+    d="$p"; i=$((i+1))
+  done
+  [ -d "$d" ] && [ -w "$d" ]
+}
+
 # 상태 디렉토리 해소 — cwd 원시 사용의 추종 오차단 수정 (gate-cwd-resolution 2026-07-23 실측:
 #   Bash persistent cd 가 훅 입력 cwd 를 추종시켜 하위 디렉토리에 UNSET 시드 → SPEC=0 거짓 차단).
 # 계약: <cwd>부터 조상으로 올라가며 <dir>/.claude/lazymode/<sid> 가 **실존 정규 파일**(심링크 제외)인
@@ -71,6 +90,9 @@ state_resolve_dir() {
   #   판정 = cwd 기준 `rev-parse --show-toplevel`(GIT_DIR/GIT_WORK_TREE 상속 무시 — gate-guard 동일 규약).
   #   채택 조건: rc 0 · 비공백 · 절대경로 · cwd 가 root 자체이거나 `$root/` 접두(**문자열 prefix** — realpath
   #   는 쓰지 않는다, 위 loop2 근거 동일) · `$root/.claude/lazymode` 가 $HOME 글로벌 배포 경로가 아님.
+  #   + **seedable**(L2-09): 루트 상태 디렉토리를 실제로 만들 수 있어야 한다(_state_dir_seedable).
+  #   읽기전용 루트 체크아웃(권한·마운트)에서 루트를 채택하면 mkdir 이 매번 실패해 **L1 이 전면 차단**되는
+  #   회귀가 생긴다 — 그 경우 쓰기 가능한 cwd 폴백으로 돌아가는 편이 안전하다(I3 안전측).
   #   비-repo·bare(--show-toplevel rc≠0)·판정 불가·조건 불일치 = 종전 폴백(cwd 기준 .claude/lazymode, 안전측).
   #   워크트리는 그 워크트리 루트가 폴백된다(per-worktree 상태 모델 불변).
   local root grc=1
@@ -80,7 +102,8 @@ state_resolve_dir() {
       /*)
         case "$cwd" in
           "$root"|"$root"/*)
-            if [ "$root/.claude/lazymode" != "$home_lz" ]; then
+            if [ "$root/.claude/lazymode" != "$home_lz" ] \
+               && _state_dir_seedable "$root/.claude/lazymode"; then
               printf '%s/.claude/lazymode' "$root"; return 0
             fi
             ;;
@@ -99,7 +122,7 @@ state_resolve_dir() {
 #   rc 1 = **디렉토리 확보 실패**(빈 인자·`<dir>` 또는 부모(.claude) 심링크·mkdir 실패) = 판정 불가.
 #          심링크면 검사 전 **아무것도 쓰지 않는다** — 심링크 경유 쓰기는 상태·사이드카를 트리 밖으로
 #          내보내 .gitignore 보호를 무력화한다.
-#   rc 2 = **사용자가 고쳐야 하는 미보장**(gitignore-mismatch·gitignore-symlink). 우리가 손댈 수 없고
+#   rc 2 = **사용자가 고쳐야 하는 미보장**(gitignore-mismatch·gitignore-symlink·gitignore-not-regular). 우리가 손댈 수 없고
 #          (기존 파일 무수정) 방치하면 상태·사이드카가 계속 git 에 노출되므로 **상태 writer 는 fail-closed** —
 #          REASON 에 조치 안내를 담아 사용자가 고치게 만든다.
 #   rc 3 = **환경 실패**(gitignore-create-failed·gitignore-missing — 읽기전용 디렉토리 등). 사용자 설정 문제가
@@ -113,8 +136,8 @@ state_ensure_dir() { # <dir> → rc 0(보장) / 1(디렉토리 확보 실패) / 
   [ -n "$dir" ] || { STATE_ENSURE_REASON="empty-dir"; return 1; }
   parent=$(dirname -- "$dir" 2>/dev/null) || { STATE_ENSURE_REASON="dirname-failed: $dir"; return 1; }
   # 심링크 방어 — <dir> 자신 또는 부모(.claude). 검사 전 어떤 쓰기도 하지 않는다.
-  if [ -L "$dir" ];    then STATE_ENSURE_REASON="symlink: $dir";    return 1; fi
-  if [ -L "$parent" ]; then STATE_ENSURE_REASON="symlink: $parent"; return 1; fi
+  if [ -L "$dir" ];    then STATE_ENSURE_REASON="$(_state_dir_symlink_reason "$dir")";    return 1; fi
+  if [ -L "$parent" ]; then STATE_ENSURE_REASON="$(_state_dir_symlink_reason "$parent")"; return 1; fi
   mkdir -p "$dir" 2>/dev/null || true
   [ -d "$dir" ] || { STATE_ENSURE_REASON="mkdir-failed: $dir"; return 1; }
   gi="$dir/.gitignore"
@@ -129,7 +152,11 @@ state_ensure_dir() { # <dir> → rc 0(보장) / 1(디렉토리 확보 실패) / 
     rm -f "$tmp" 2>/dev/null || true            # mv 성공 시 no-op / 실패·경합 시 temp 잔재 정리
   fi
   if [ -L "$gi" ]; then STATE_ENSURE_REASON="$(_state_gi_symlink_reason "$gi")"; return 2; fi  # 경합 재확인
-  [ -f "$gi" ] || { STATE_ENSURE_REASON="gitignore-missing: $gi (디렉토리 쓰기 권한 확인)"; return 3; }
+  # 자리를 디렉토리·fifo 등이 차지하고 있으면 우리가 고칠 수 없다 → 사용자 조치(rc 2). '부재'(rc 3)와 구분.
+  if [ -e "$gi" ] && [ ! -f "$gi" ]; then
+    STATE_ENSURE_REASON="$(_state_gi_not_regular_reason "$gi")"; return 2
+  fi
+  [ -f "$gi" ] || { STATE_ENSURE_REASON="gitignore-missing: $gi (생성 직후 부재 — 경합·권한 확인)"; return 3; }
   # 보호 성립 = `*` 행이 있고 **`!` 재포함 행이 없음**. 둘 중 하나라도 어긋나면 무수정 + rc 2(사용자 조치).
   if ! grep -qxF '*' "$gi" 2>/dev/null || grep -q '^!' "$gi" 2>/dev/null; then
     STATE_ENSURE_REASON="$(_state_gi_mismatch_reason "$gi")"; return 2
@@ -140,6 +167,9 @@ state_ensure_dir() { # <dir> → rc 0(보장) / 1(디렉토리 확보 실패) / 
 # rc 2 사유 문자열(조치 안내 포함) — 메시지 단일 출처.
 _state_gi_mismatch_reason() { printf "gitignore-mismatch: %s — 그 파일에 '*' 한 줄을 넣고 '!' 행을 제거하세요" "$1"; }
 _state_gi_symlink_reason()  { printf "gitignore-symlink: %s — 심링크를 지우고 '*' 한 줄짜리 정규 파일로 바꾸세요" "$1"; }
+_state_gi_not_regular_reason() { printf "gitignore-not-regular: %s — 지우고 '*' 한 줄짜리 정규 파일로 바꾸세요" "$1"; }
+# rc 1(디렉토리 확보 실패 — 심링크) 사유: 무엇을 어떻게 고쳐야 하는지까지 준다(L2-05).
+_state_dir_symlink_reason() { printf "symlink: %s — 상태 디렉토리는 실디렉토리여야 합니다. 심링크를 지우거나 실디렉토리로 바꾸세요" "$1"; }
 
 # rc 3(환경 실패) 공통 경고 — 상태 조작은 계속하되 유출 가능성을 소리 내어 알린다(무음 금지).
 _state_warn_unprotected() {

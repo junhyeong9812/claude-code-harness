@@ -37,8 +37,12 @@ if ! . "$SCRIPT_DIR/state-lib.sh" 2>/dev/null \
   exit 0
 fi
 STATE_DIR="$(state_resolve_dir "$CWD" "$SESSION_ID")"
-# 디렉토리·자기무시 .gitignore 보장 실패(심링크 포함) → 아무 파일도 쓰지 않고 inert (A-04/A-07)
-state_ensure_dir "$STATE_DIR" || exit 0
+# 디렉토리·자기무시 .gitignore 보장 실패 → 아무 파일도 쓰지 않고 inert. **무음 금지**(L2-06): 왜 사이드카가
+#   없는지 stderr 1줄로 남긴다 — 조용한 스킵은 실측 최다 사고 유형(silent failure)이다.
+if ! state_ensure_dir "$STATE_DIR"; then
+  echo "[capture-prompt] 경고: 사이드카 생략 (원인: ${STATE_ENSURE_REASON:-unknown})" >&2
+  exit 0
+fi
 SIDECAR="$STATE_DIR/$SESSION_ID.prompt"
 TURN_FILE="$STATE_DIR/$SESSION_ID.turn"
 
