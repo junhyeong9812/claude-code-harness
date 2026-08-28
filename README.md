@@ -62,7 +62,7 @@ Claude Code로 작업하면 산출물 문서가 계속 늘어난다. 이 repo의
 ├── src/core.md                # ★ 규칙 본체 v4 — 배포 소스 (루트에 두면 세션 런타임이 중복 주입하는 실측 때문에 src/)
 ├── HISTORY.md                 # 버전 이력
 ├── playbooks/                 # 조건부 문서 (core §8 트리거 시에만)
-│   ├── review.md              #   中↑ 듀얼 리뷰 절차 + codex 호출·보안 스캔·PATH 함정 (단일 출처)
+│   ├── review.md              #   中↑ 듀얼 리뷰 절차 — packet(diff+untracked 전문+spec+grep 원시) + 스캔 통과 read-only 미러(리뷰어 미러-only 탐색), codex 호출·보안 스캔 (단일 출처)
 │   ├── refactoring.md         #   리팩토링 고정 순서 — 특성테스트 baseline green 선행 (JIT 절차 지식)
 │   ├── implementation-lazymode.md  # lazy: 매 diff 주관식 이해 게이트 + 판정 워커
 │   ├── open-source.md         #   외부 OSS 기여 절차
@@ -73,16 +73,17 @@ Claude Code로 작업하면 산출물 문서가 계속 늘어난다. 이 repo의
 │   └── measurement-log.md     #   측정 로그 최초 생성용
 ├── hooks/                     # 강제 계층 (배포: bash hooks/deploy.sh)
 │   ├── gate-guard.sh          #   L0/L1 판별(C1) + SPEC→MODE 게이트 + lazy per-diff 차단
-│   ├── state-lib.sh           #   상태 SCHEMA=4 (MODE·SPEC·PENDING_GATE·DEBT·TASK_PATH) — flock 원자쓰기·quarantine
+│   ├── state-lib.sh           #   상태 SCHEMA=4 (MODE·SPEC·PENDING_GATE·DEBT·TASK_PATH) — flock 원자쓰기·quarantine · 경로 해소(조상 앵커→git 워크트리 루트→cwd) · 자기무시 .gitignore 보장(rc 0/1/2/3)
 │   ├── set-state.sh           #   상태 기록 유일 경로 CLI (mode | spec-approved | emergency | debt-clear | gate-pass)
 │   ├── task-mode-guard.sh     #   새 작업 폴더(spec·log 생성) → SPEC·MODE 리셋 (DEBT 는 유지 — 크로스-태스크 빚)
 │   ├── session-mode-guard.sh  #   SessionStart 상태 시드·복구·quarantine
 │   ├── reinject-mode.sh       #   매 턴 모드·빚(DEBT) 재주입 (컨텍스트 요약 후 일관성)
 │   ├── git-guard.sh           #   push 네이티브 승인(ask) 위임 + 커밋/gh 발행 attribution 하드 차단
 │   ├── codex-scan.sh          #   codex 호출 명령의 시크릿 backstop
-│   ├── capture-prompt.sh      #   push 승인 판정용 프롬프트 사이드카
+│   ├── capture-prompt.sh      #   현재 턴 프롬프트 사이드카(.prompt/.turn — 상태 디렉토리에 기록, 현 소비자 없음·이월)
+│   ├── detect-layer.sh        #   관측 전용 이벤트 사이드카(.events — InstructionsLoaded·ConfigChange·SubagentStop)
 │   ├── deploy.sh              #   manifest diff → 백업+원자 교체 → stale 최상위 파일 정리 → smoke (실패 시 D9 자동 복원)
-│   └── tests/                 #   훅 테스트 (run.sh — tests.lock 무결성 + hermetic 검증, 155 tests)
+│   └── tests/                 #   훅 테스트 (run.sh — tests.lock 무결성 + hermetic 검증, 258 tests)
 └── docs/                      # measurement-log + 작업 기록 (L0)
 ```
 
@@ -109,6 +110,7 @@ bash hooks/tests/run.sh          # 훅 테스트
 
 ## 이력
 
+- **v4.1 (2026-08-28)**: 실측 리서치(v4 이후 5주 — `docs/plans/2026-08-27/harness-usage-research/synthesis.md`) 기반 수정 — 상태·사이드카가 하위 cwd에 흩어져 PR에 혼입되던 유출 차단(git 워크트리 루트 폴백 + 자기무시 `.gitignore`), docs 가 git 루트인 repo 의 게이트 교착 해소, review packet 을 diff-only 에서 **untracked 전문 + 스캔 통과 read-only 미러(리뷰어 탐색 허용)** 로 재정의. 근거·리뷰 3루프: `docs/plans/2026-08-28/review-context-and-sidecar-fix/`
 - **v4 (2026-07-21)**: 슬림화 — 인터뷰→명세서 게이트(SPEC 관측)·auto/lazy 1축·문서 2파일·dimensions 폐지·경고 훅 삭제·core.md 소스 src/ 이동(중복 주입 해소). 근거·듀얼 리뷰 3루프: `docs/plans/2026-07-21/harness-v4-slimdown/`
 - **v3 (2026-07-19)**: L0/L1 경계·모드 5종·라이브 문서 구조·git-guard push-only ask. 근거: `docs/plans/2026-07-19/harness-v3-restructure/`
 - 상세: `HISTORY.md`
