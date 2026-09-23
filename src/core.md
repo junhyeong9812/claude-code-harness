@@ -111,7 +111,7 @@
 - 작업 폴더 `docs/plans/YYYY-MM-DD/작업명/` = **requirement-spec.md + log.md** 2파일(`templates/`). log는 발생 시점 append(`시각|사건|결과` — 사후 재구성 금지) + 리뷰 ledger + 생략한 검증(빚 정본) + 완료 요약.
 - **저장 위치 = 변경된 프로젝트**(cwd 아님). 상위 repo에는 roll-up 1줄만. 대상이 docs를 gitignore하면 로컬-only 기록으로 인정. **세션 재개** = 최신 작업 폴더의 spec 승인 상태 + log 마지막 행 + `docs/plans/NEXT.md`부터.
 - 종료 시: `docs/measurement-log.md` 1행(<1분, 워커 모델 포함) + **완료 요약**(핵심 diff before/after 스니펫 — **실파일에서 복사**, 메모리 재현·placeholder 금지, 조사·작성은 Opus 워커 위임).
-- **사이클 마감 2단 (검증 완료 *후*, 병합·push 전 작업 브랜치의 docs 커밋으로 — 병합이 통제 밖(OSS·타인 리뷰)이어도 이 시점. 긴급은 DEBT=0 후 · 사전 예측 대신 사후 전망)**: ①프로젝트 `docs/plans/NEXT.md`(롤링 단일 문서, `templates/next.md`) 갱신 — 다음 작업 후보·발생 가능 문제·방법론 비교·대처·우선순위(관측 신호 기반만 — 자명 작업은 1행. NEXT 항목 착수도 새 작업 폴더 spec부터 — §1) ②log의 **CS 이슈**를 study-note `cs/issue`에 아카이브(`playbooks/issue-archive.md` — 0건이면 log 1행).
+- **사이클 마감 2단 (검증 완료 *후* — '검증 완료' = §4 안전선+stakes 리뷰. 병합·push 전 작업 브랜치의 docs 커밋으로, 병합이 통제 밖이어도 이 시점. 병합 뒤 검증(배포 smoke 등) 결과는 후속 docs 브랜치 커밋→병합으로 NEXT에 반영 · 긴급은 DEBT=0 후 · 사전 예측 대신 사후 전망 · ②의 study-note 쓰기는 spec 금지영역이 우선 — 걸리면 log `아카이브 보류` + NEXT 등재 후 재합의·별도 작업)**: ①프로젝트 `docs/plans/NEXT.md`(롤링 단일 문서, `templates/next.md`) 갱신 — 다음 작업 후보·발생 가능 문제·방법론 비교·대처·우선순위(관측 신호 기반만 — 자명 작업은 1행. NEXT 항목 착수도 새 작업 폴더 spec부터 — §1) ②log의 **CS 이슈**를 study-note `cs/issue`에 아카이브(`playbooks/issue-archive.md` — 0건이면 log 1행).
 
 ## 8. 조건부 문서 (트리거 시에만 — 각 ≤80줄·규칙은 한 곳에만)
 
