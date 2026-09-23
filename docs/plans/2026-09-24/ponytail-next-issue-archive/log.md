@@ -24,6 +24,9 @@
 | 2026-09-24 03:05 | loop3 수정(Opus R1~R6·OQ) → codex 인라인 리뷰 F1(P1: study-note 쓰기 '금지영역 판정 대상 아님'이 spec 금지영역·재합의 무력화 — 내 loop3 수정이 도입)·F2(병합 뒤 검증 결과 main docs 커밋 = §6 충돌) → 수정 | **3루프 상한 도달** — review.md §1 종료조건 미충족(loop3 신규 채택 8) → `review unresolved`. post-fix 타깃 재점검(codex 인라인) PF-01 1건(노출 스캔이 제거 커밋의 삭제 행을 잡아 교착) → 수정. run.sh `258 passed, 0 failed` |
 | 2026-09-24 03:15 | 사용자 결정 "리뷰 1회 더" → loop4 packet: OUT=/tmp/tmp.CnbHPoEbFi / mirror=/tmp/tmp.wxtO6T9aqy → codex 인라인(R4-01 P1 SPEC=1≠승인 범위 · R4-02 NEXT 상한이 미해소 보류 삭제) ∥ Opus(R1 P3 긴급 DEBT 이월 시 아카이브 무음 누락 + OQ3) | 채택 3 + OQ 1(선검증=동작 불변식 한정) → 보류 사유 5종 단일 경로 통합 |
 | 2026-09-24 03:25 | loop4 post-fix 재점검(codex 인라인) PF-01(DEBT 이월 보류 기록 시점 부재)·PF-02(범위 제약에 file:line 증빙 요구=날조 유발) → 수정 | run.sh `258 passed, 0 failed` |
+| 2026-09-24 03:35 | 사용자 "병합·push·배포" → main ff 병합(1754f16..97aab55) → push `9b828a2..97aab55 main -> main`(git-guard ask 승인; 이전 세션 미push 1754f16 포함 — 사용자에게 고지) → `deploy.sh`: `smoke 검증 통과`·`배포 완료 (diff 0 검증)` | — |
+| 2026-09-24 03:40 | 신규 세션 스모크: `claude -p --model haiku` → "필요성 검증 → 코드베이스 재사용 → stdlib → 플랫폼 기본 → 의존성 → 1줄 → 동작하는 최소 코드" / "① NEXT.md 갱신 ② CS 이슈 아카이브" | v4.2 주입 확인 |
+| 2026-09-24 03:45 | 사이클 마감(후속 docs 브랜치 docs/v4.2-closeout): ① docs/plans/NEXT.md 생성(N1~N4, 46줄) ② 아카이브 = 별도 작업 cs-issue-archive(spec §4 금지영역 — 합의된 별도 작업으로 이관) / measurement-log 1행 / 완료 요약(Opus 워커 초안, 스니펫 7줄 git show 대조 검증) | — |
 
 ## 리뷰 ledger
 
@@ -79,4 +82,42 @@
 - (없음)
 
 ## 완료 요약
+
+### ① 무엇이 됐나
+- core v4.2: §4에 Ponytail 구현 사다리(7단·근본원인 수정·게으름 비적용 목록) 이식, 강도표 높음의 설계 선검증을 "새 동작 불변식이 있을 때만"으로 조건화, §7에 사이클 마감 2단(NEXT.md 갱신 + CS 이슈 study-note 아카이브) 신설, §8에 issue-archive.md·templates/next.md 등재.
+- 신규 `playbooks/issue-archive.md`·`templates/next.md`, `playbooks/review.md`(선검증 문구·과잉 구현 렌즈·NEXT.md packet 제외), README·HISTORY 동기. `hooks/` 무변경, core 129→134줄(순증 5 ≤10).
+- 검증: `hooks/tests/run.sh` 258 passed, 0 failed(수정 루프마다 재실행), deploy dry-run manifest diff 확인. 듀얼 리뷰 4루프(3루프 상한 후 사용자 요청으로 1회 추가) + post-fix 2회.
+- 병합 상태: 1754f16..97aab55 커밋 10개가 main·origin/main에 포함. `~/.claude/core.md` = `src/core.md` 동일(배포 반영 확인).
+
+### ② 핵심 diff (실파일 복사)
+
+**§4 구현 사다리** — before(1754f16:74, 바로 뒤에 신규 행 삽입) / after(src/core.md:75, 신규)
+```diff
+ - **개발 자세**: 최소 검증가능 증분(계약은 앞단 고정) · 계획에 없는 파일 수정 금지(필요해지면 멈추고 보고) · **load-bearing 가정은 착수 직후 스모크로 조기 실증**(그 위에 쌓기 전에) · 테스트 설계는 구현 diff가 아닌 spec(명세서)에서 출발.
++- **구현 사다리 (Ponytail 이식 — MIT, DietrichGebert/ponytail)**: 문제와 변경이 닿는 코드·실제 흐름을 **끝까지 읽은 뒤**, 처음 성립하는 단에서 멈춘다 — ①정말 필요한가(불필요·추측성이면 만들지 않고 1줄 보고) ②이 코드베이스에 이미 있나(재사용) ③stdlib ④플랫폼 기본 기능 ⑤설치된 의존성(새 의존성은 최후 — 단 보안·암호·파서·인증은 검증된 라이브러리가 자작보다 우선) ⑥한 줄 ⑦그제야 동작하는 최소 코드. 요청 없는 추상화·보일러플레이트·'나중용' 스캐폴딩 금지, 삭제>추가, 같은 크기면 엣지케이스에 맞는 쪽. **버그는 근본 원인에서** — 고칠 함수의 호출처를 전수 grep해 공유 지점에서 1회(공유 지점이 계획 밖 파일이면 위 '멈추고 보고'가 우선 + §3 승격 판정). 알려진 상한이 있는 의도적 단순화는 `ponytail:` 주석(상한·업그레이드 경로 — 외부 OSS·회사 repo는 그 repo 주석 관례 우선). '삭제>추가'는 이번 변경 범위 안에서만(계획 밖 기존 코드 삭제는 §6). **게으름 비적용**: 문제 이해·신뢰경계 입력 검증·데이터 손실 방지·**실패 가시화**(에러 전파·무음 실패 방지·운영 관측)·보안·접근성·명시 요청(spec 합의 항목 포함)·테스트와 검증(§4 안전선·강도표 그대로).
+```
+
+**강도표 높음 셀 — 설계 선검증** — before(1754f16:86) / after(src/core.md:87)
+```diff
+-| 리뷰 | 셀프체크 | **듀얼 1패스**(Opus 워커 ∥ codex → 종합 → 감사 → post-fix 재점검 1회) | **듀얼 리뷰 루프**(≤3) + 설계 선검증 + blind 테스트 워커 |
++| 리뷰 | 셀프체크 | **듀얼 1패스**(Opus 워커 ∥ codex → 종합 → 감사 → post-fix 재점검 1회) | **듀얼 리뷰 루프**(≤3) + 설계 선검증(spec ②에 코드베이스에 없던 **동작 불변식**이 있을 때만 — 범위 제약(무변경·줄 수)은 대상 아님, 생략 시 log 1행: 동작 불변식별 기존 강제 위치 file:line, 없으면 '동작 불변식 없음') + blind 테스트 워커 |
+```
+
+**§7 세션 재개 + 사이클 마감 2단** — before(1754f16:111) / after(src/core.md:112, 114 신규)
+```diff
+-- **저장 위치 = 변경된 프로젝트**(cwd 아님). 상위 repo에는 roll-up 1줄만. 대상이 docs를 gitignore하면 로컬-only 기록으로 인정. **세션 재개** = 최신 작업 폴더의 spec 승인 상태 + log 마지막 행부터.
++- **저장 위치 = 변경된 프로젝트**(cwd 아님). 상위 repo에는 roll-up 1줄만. 대상이 docs를 gitignore하면 로컬-only 기록으로 인정. **세션 재개** = 최신 작업 폴더의 spec 승인 상태 + log 마지막 행 + `docs/plans/NEXT.md`부터.
++- **사이클 마감 2단 (검증 완료 *후* — '검증 완료' = §4 안전선+stakes 리뷰. 병합·push 전 작업 브랜치의 docs 커밋으로, 병합이 통제 밖이어도 이 시점. 병합 뒤 검증(배포 smoke 등) 결과는 후속 docs 브랜치 커밋→병합으로 NEXT에 반영 · 긴급은 DEBT=0 후 · 사전 예측 대신 사후 전망 · ②의 study-note 쓰기는 spec 범위 확인·금지영역이 우선 — 못 쓰면 보류 경로(issue-archive §1))**: ①프로젝트 `docs/plans/NEXT.md`(롤링 단일 문서, `templates/next.md`) 갱신 — 다음 작업 후보·발생 가능 문제·방법론 비교·대처·우선순위(관측 신호 기반만 — 자명 작업은 1행. NEXT 항목 착수도 새 작업 폴더 spec부터 — §1) ②log의 **CS 이슈**를 study-note `cs/issue`에 아카이브(`playbooks/issue-archive.md` — 0건이면 log 1행).
+```
+
+### ③ 배운 것 (log ledger 근거)
+- 리뷰 수정 자체가 새 결함을 만든다: loop3에서 메인이 넣은 "금지영역 판정 대상 아님" 문구가 spec 금지영역·재합의를 무력화(L3-3, codex F1 P1). 수정분도 반드시 다음 루프나 post-fix 점검에 넣어야 한다.
+- 문서 규칙의 결함은 대부분 경계와 우선순위 누락이었다: 근본원인 수정과 계획 밖 파일 금지(R2), 마감 시점과 병합·DEBT(L2-2·L3-1·L4-3), SPEC=1과 승인 범위(L4-1). 새 규칙을 넣을 때는 기존 규칙과의 우선순위를 한 줄 명시해야 한다.
+- 리뷰어 가용성이 흔들렸다: codex 사용량 한도(loop1)·bwrap 샌드박스 실패(loop3)·동시 서브에이전트 20 상한. Fable 대체 리뷰어와 stdin 인라인 codex로 우회했고, 병렬 워커 fan-out은 리뷰 슬롯과 경합한다.
+
+### ④ 남은 리스크 / 이월
+- open-question L2-OQ: Ponytail MIT 고지. 원문을 복제하지 않고 한국어로 요약 이식했으며 출처는 표기했다. 요약 이식이 substantial portion에 해당하는지는 판단하지 않았다.
+- open-question L4-OQ: 긴급 경로에서 사다리의 "계획 밖" 기준선은 긴급 확인 범위로 해석했다(core §1). 문구는 추가하지 않았다.
+- loop3 종료 시점 `review unresolved`(3루프 상한, 신규 채택 8). loop4는 사용자 요청으로 1회 더 돌렸고 post-fix 2건을 반영했다. 마지막 수정의 재점검 범위는 타깃 post-fix에 그쳤고, codex ③ 종합 감사는 loop1에서 실행하지 못했다(한도 소진, loop2 재리뷰로 대체).
+- spec task04: 완료 — main ff 병합·push(9b828a2..97aab55, 이전 세션 미push 1754f16 포함)·deploy(smoke 통과·diff 0)·신규 세션 스모크 통과·NEXT.md 생성·measurement-log 1행(후속 docs 브랜치 docs/v4.2-closeout). study-note 쪽 authoring-guide B2 개정과 이번 사이클 CS 이슈 아카이브는 별도 작업(cs-issue-archive)에서 수행(spec §4 금지영역 — 보류 경로 대신 합의된 별도 작업).
 
