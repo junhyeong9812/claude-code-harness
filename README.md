@@ -66,11 +66,13 @@ Claude Code로 작업하면 산출물 문서가 계속 늘어난다. 이 repo의
 │   ├── refactoring.md         #   리팩토링 고정 순서 — 특성테스트 baseline green 선행 (JIT 절차 지식)
 │   ├── implementation-lazymode.md  # lazy: 매 diff 주관식 이해 게이트 + 판정 워커
 │   ├── open-source.md         #   외부 OSS 기여 절차
-│   └── design-taste.md        #   설계 취향 카탈로그 (리뷰 렌즈·그룹핑 대화)
+│   ├── design-taste.md        #   설계 취향 카탈로그 (리뷰 렌즈·그룹핑 대화)
+│   └── issue-archive.md       #   사이클 마감 — log의 CS 이슈를 study-note cs/issue로 추상화 아카이브(append-only·카드별 커밋)
 ├── templates/
 │   ├── requirement-spec.md    #   ★ 진입 게이트 명세서 (필수 6칸 고정 — 빈 칸 금지 + 자율성 + load-bearing 가정)
 │   ├── log.md                 #   ★ 라이브 타임라인 + 리뷰 ledger + 생략한 검증(빚 정본) + 완료 요약
-│   └── measurement-log.md     #   측정 로그 최초 생성용
+│   ├── measurement-log.md     #   측정 로그 최초 생성용
+│   └── next.md                #   프로젝트 docs/plans/NEXT.md — 검증 완료 후 다음 작업 전망(문제·방법론·대처·우선순위)
 ├── hooks/                     # 강제 계층 (배포: bash hooks/deploy.sh)
 │   ├── gate-guard.sh          #   L0/L1 판별(C1) + SPEC→MODE 게이트 + lazy per-diff 차단
 │   ├── state-lib.sh           #   상태 SCHEMA=4 (MODE·SPEC·PENDING_GATE·DEBT·TASK_PATH) — flock 원자쓰기·quarantine · 경로 해소(조상 앵커→git 워크트리 루트→cwd) · 자기무시 .gitignore 보장(rc 0/1/2/3)
@@ -93,7 +95,7 @@ Claude Code로 작업하면 산출물 문서가 계속 늘어난다. 이 repo의
 |--------|----------|------|------------|
 | 낮음 | 불필요 | 셀프체크 | 구현자 작성 |
 | 중간 | 낯선 영역만 | **듀얼 1패스** (Opus 워커 ∥ codex → 종합 → 감사 → 수정 → post-fix 재점검) | 분리 패스 (spec 먼저) |
-| 높음 | 의무 | **듀얼 리뷰 루프**(≤3) + 설계 선검증 + blind 테스트 워커 | 별도 워커 (구현 diff 미열람 계약) |
+| 높음 | 의무 | **듀얼 리뷰 루프**(≤3) + 설계 선검증(신설 불변식이 있을 때만) + blind 테스트 워커 | 별도 워커 (구현 diff 미열람 계약) |
 
 ## 설치
 
