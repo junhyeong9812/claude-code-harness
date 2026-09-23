@@ -22,13 +22,16 @@
 | 2026-09-24 02:50 | loop2 수정: review.md EXCLP·case 가드·⓪ 서술에 NEXT.md 제외 / 렌즈 비적용 목록 재열거 삭제(정본 참조) / core 사다리 '삭제>추가' 범위·실패 가시화·명시 요청=spec 합의 포함 / 선검증 생략 기록을 ② 항목별 file:line로 / 설계 문서 분기 조건 동일 명시 / 마감 시점 = 검증 후·병합 전 작업 브랜치 docs 커밋 / NEXT ≤80줄·병합 상태 행 / issue-archive 게이트 L1 주의·보안 출처 무관·guide 하한 조항·ff 실패 처리·노출 스캔 오탐 판정 | run.sh `258 passed, 0 failed` · review.md mkpacket 블록 `bash -n` syntax-ok(placeholder 치환) · core 134줄 |
 | 2026-09-24 02:55 | loop3 packet: OUT=/tmp/tmp.vDzsz0azuy / mirror=/tmp/tmp.0Aoreiprdp → Opus(R1~R6 + OQ2) 회수 / codex(미러 cwd): `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`로 파일 읽기 불가 → review blocked 응답 | bypass 플래그는 사용자 승인 사항이라 미사용 — 동일 입력을 stdin 인라인(spec+누적 diff+전문 4개, 100KB)으로 재실행(loop3 수정 반영 상태) |
 | 2026-09-24 03:05 | loop3 수정(Opus R1~R6·OQ) → codex 인라인 리뷰 F1(P1: study-note 쓰기 '금지영역 판정 대상 아님'이 spec 금지영역·재합의 무력화 — 내 loop3 수정이 도입)·F2(병합 뒤 검증 결과 main docs 커밋 = §6 충돌) → 수정 | **3루프 상한 도달** — review.md §1 종료조건 미충족(loop3 신규 채택 8) → `review unresolved`. post-fix 타깃 재점검(codex 인라인) PF-01 1건(노출 스캔이 제거 커밋의 삭제 행을 잡아 교착) → 수정. run.sh `258 passed, 0 failed` |
+| 2026-09-24 03:15 | 사용자 결정 "리뷰 1회 더" → loop4 packet: OUT=/tmp/tmp.CnbHPoEbFi / mirror=/tmp/tmp.wxtO6T9aqy → codex 인라인(R4-01 P1 SPEC=1≠승인 범위 · R4-02 NEXT 상한이 미해소 보류 삭제) ∥ Opus(R1 P3 긴급 DEBT 이월 시 아카이브 무음 누락 + OQ3) | 채택 3 + OQ 1(선검증=동작 불변식 한정) → 보류 사유 5종 단일 경로 통합 |
+| 2026-09-24 03:25 | loop4 post-fix 재점검(codex 인라인) PF-01(DEBT 이월 보류 기록 시점 부재)·PF-02(범위 제약에 file:line 증빙 요구=날조 유발) → 수정 | run.sh `258 passed, 0 failed` |
 
 ## 리뷰 ledger
 
 - review packet: loop1 base 1754f16 / OUT=/tmp/tmp.eMwWJznqgr / mirror=/tmp/tmp.Th5keGzLhQ — codex 한도 소진 → 대체 독립 리뷰어 Fable
 - review packet: loop2 base 1754f16 / OUT=/tmp/tmp.lRQvq0yxnC / mirror=/tmp/tmp.FF9Gqrp4DX — Opus ∥ Fable(대체)
 - review packet: loop3 base 1754f16 / OUT=/tmp/tmp.vDzsz0azuy / mirror=/tmp/tmp.0Aoreiprdp — Opus ∥ codex(bwrap 실패 → stdin 인라인 codex-inline.md) + post-fix codex-postfix.md
-- **종료 상태: `review unresolved`(3루프 상한, loop3 신규 채택 8 전부 fixed, post-fix 1 fixed)** — 잔여 리스크: 마지막 PF-01 수정(1행)은 재점검 없이 메인 확인만 / Ponytail MIT 고지 open question / codex ③ 종합 감사 loop1 미실행(한도)
+- review packet: loop4(사용자 요청 추가 1회) OUT=/tmp/tmp.CnbHPoEbFi / mirror=/tmp/tmp.wxtO6T9aqy — Opus ∥ codex 인라인 + post-fix
+- **(loop3 시점) 종료 상태: `review unresolved`(3루프 상한, loop3 신규 채택 8 전부 fixed, post-fix 1 fixed)** — 잔여 리스크: 마지막 PF-01 수정(1행)은 재점검 없이 메인 확인만 / Ponytail MIT 고지 open question / codex ③ 종합 감사 loop1 미실행(한도)
 
 | id | first_seen_loop | source | 근거(file:line) | disposition | status | fixed_in_loop |
 |----|-----------------|--------|-----------------|-------------|--------|---------------|
@@ -63,6 +66,13 @@
 | L3-7 cwd 이동 시 상태 해소 변화 / 원 식별자 기록 의무 | 3 | opus OQ1·OQ2 | issue-archive.md:4,8 | 채택 | fixed | 3 |
 | L3-8 병합 뒤 검증 결과 main docs 커밋 = §6 충돌 | 3 | codex F2 | src/core.md:114 | 채택 — 후속 docs 브랜치→병합 | fixed | 3 |
 | PF-01 노출 스캔이 제거 커밋의 삭제 행을 잡아 교착 | post-fix | codex | playbooks/issue-archive.md:39 | 채택 | fixed | post-fix |
+| L4-1 SPEC=1을 승인 범위로 오인 — spec ①에 아카이브 없을 때 범위 확인 부재 | 4 | codex R4-01 · opus OQ1 | issue-archive.md:4 | 채택 — 쓰기 전 범위 확인 1회 | fixed | 4 |
+| L4-2 NEXT 상한 삭제가 미해소 보류를 지움 | 4 | codex R4-02 | templates/next.md:5 | 채택 | fixed | 4 |
+| L4-3 긴급 DEBT 이월 시 아카이브 무음 누락 | 4 | opus R1 | core:114, issue-archive.md:4 | 채택 — 보류 단일 경로 | fixed | 4 |
+| L4-4 선검증 조건이 범위 제약에 과잉 발동 | 4 | opus OQ2 | src/core.md:87 | 채택 — 동작 불변식 한정 | fixed | 4 |
+| L4-PF1 DEBT 이월 보류 기록 시점 부재 | post-fix4 | codex | issue-archive.md:13 | 채택 | fixed | post-fix4 |
+| L4-PF2 범위 제약에 file:line 증빙 요구 | post-fix4 | codex | src/core.md:87 | 채택 | fixed | post-fix4 |
+| L4-OQ 긴급 경로에서 사다리 '계획 밖' 기준선 | 4 | opus OQ3 | src/core.md:75 | open question — 긴급은 긴급 확인 범위가 기준선(core §1), 문구 미추가 | open-question | — |
 
 ## 생략한 검증
 
