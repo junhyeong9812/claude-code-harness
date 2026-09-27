@@ -2,7 +2,7 @@
 
 > 트리거: **L1 사이클 마감** — 검증(core §4 안전선·stakes 리뷰)이 끝나고 `docs/plans/NEXT.md`를 갱신한 뒤. 모든 프로젝트(개인·회사·하네스 자신) 공통.
 > ⚠️ 게이트: 카드 쓰기는 gate-guard가 **L1**(다른 repo의 비-docs 경로)로 본다 — 현재 작업의 SPEC=1 상태에서, **다음 작업 폴더를 만들기 전에** 수행한다. **범위**: spec ①·task에 아카이브가 없으면 쓰기 전에 사용자에게 범위 확인 1회(core §1 재합의 — SPEC=1은 실행 조건일 뿐 승인 범위가 아니다), 금지영역에 study-note가 있으면 하지 않는다. 세션 cwd는 원 프로젝트에 두고 study-note git 조작은 `git -C`로(cd하면 상태 해소 위치가 바뀐다). lazy면 `implementation-lazymode.md` 게이트를 그대로 따른다.
-> 대상: `/home/jun/project/study-note/cs/issue/` (study-note repo). **카드 형식·폴더 분류·서술 규칙의 정본 = 그 폴더의 `authoring-guide.md`** — 여기는 절차만 둔다(단일 출처).
+> 대상: `/home/jun/project/study-note/issue/` (study-note repo). **카드 형식·폴더 분류·서술 규칙의 정본 = 그 폴더의 `authoring-guide.md`** — 여기는 절차만 둔다(단일 출처).
 
 ## 1. 추출 — log.md에서 CS 이슈만
 
@@ -15,7 +15,7 @@
 
 ## 2. 매칭 — 기존 카드와 같은 원리인가
 
-`cs/issue/README.md` 인덱스로 후보를 찾고 카드 본문을 읽어 판정한다. 판별 질문: *"두 이슈를 밖의 사람에게 설명할 때 같은 문장으로 시작하나?"*
+`issue/README.md` 인덱스로 후보를 찾고 카드 본문을 읽어 판정한다. 판별 질문: *"두 이슈를 밖의 사람에게 설명할 때 같은 문장으로 시작하나?"*
 
 ```
 이슈 ──▶ 같은 원리 카드 있나?
@@ -39,6 +39,6 @@
 - **브랜치**: 배치마다 `archive/<YYYY-MM-DD>` 브랜치에서 커밋 → push 확인 시 main에 fast-forward 병합 후 push(core §6 브랜치 우선). ff 불가·push 거절이면 브랜치를 남기고 log 1행 + 보고(다음 배치는 그 브랜치에 이어 커밋).
 - **커밋 전 노출 스캔**: 스테이징 후 카드 **결과 내용**(`git diff --cached`의 추가 행 + 커밋될 파일 전문 — 노출 제거 커밋의 삭제 행은 대상 아님)을 log에 기록한 원 식별자(프로젝트·회사·클래스·호스트명) + `review.md §5①` 시크릿 패턴 + 경로·IP 패턴으로 grep — 실식별자·시크릿·호스트·경로·IP는 **0건이어야 커밋**, 일반 명사 매칭은 review.md §5①처럼 오탐 개별 판정(근거 log 1행) 후 커밋.
 - **카드(패턴 폴더) 1개 = 커밋 1개**. 그 카드 파일 + 영향받은 인덱스 README만 `git add <경로>`로 스테이징 — `git add -A`·`.` 금지(study-note의 무관한 미커밋 변경 혼입 방지). 커밋 전 `git diff --cached --stat`으로 범위 확인.
-- 메시지: `docs(cs/issue): <카드명> — <신규|방안 비교|정정>`. 검증 과정 출처·AI attribution 금지(core §6).
+- 메시지: `docs(issue): <카드명> — <신규|방안 비교|정정>`. 검증 과정 출처·AI attribution 금지(core §6).
 - push는 배치 끝 1회, 사용자 확인(core §6) — 확인 요청에 카드 목록과 출처 유형(개인/회사/하네스)을 함께 제시.
 - 원 작업 log.md에 `아카이브: <카드 경로> <ⓐ|ⓑ|ⓒ> <커밋 SHA>` 행 기록.
