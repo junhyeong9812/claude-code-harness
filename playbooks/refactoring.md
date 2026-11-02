@@ -29,6 +29,7 @@
 ### ③ 그룹핑·경계 대화 (design-taste 연결)
 - 무엇을 어떻게 묶고 가를지 사용자와 대화한다 — `design-taste.md`의 8앵커·Fowler 코드냄새(Long Method·Feature Envy·Data Clumps 등)·DDD(용어 일관성·Bounded Context·Aggregate)를 판단 렌즈로.
 - 취향은 finding이 아니다 — 단정 가능한 냄새·경계 위반만 변환 대상, 순수 선호는 open question으로 사용자에게.
+- 이름변경·파일 추출·이동의 새 이름은 `design-taste.md` §6(찾히는 이름) 기준으로 — 에이전트·사람 모두 파일 목록과 grep 낱말로 찾는다.
 
 ### ④ Claude 소단위 변환 (매 단위 green 유지)
 - 한 번에 하나의 변환(추출·이동·이름변경·중복 제거)씩. **매 소단위마다 특성테스트 재실행 → green 유지**를 확인하고 다음으로.
