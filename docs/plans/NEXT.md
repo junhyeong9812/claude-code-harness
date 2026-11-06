@@ -4,7 +4,7 @@
 
 ## 기준
 
-- 마지막 갱신: 2026-11-06 · 직전 작업: `docs/plans/2026-11-06/harness-v4-3/`(v4.3 일괄 — 전신 `2026-11-02/agent-search-findings/` 흡수) · 기준 커밋: c2254f0 · 병합 상태: 미병합(브랜치 harness-search-findings — push·병합·배포 사용자 확인 대기)
+- 마지막 갱신: 2026-11-06 · 직전 완료 작업: `docs/plans/2026-11-06/harness-v4-3/`(v4.3 일괄) · 기준 커밋: c0a4b72 · 병합 상태: 완료(push·main 병합·deploy·신규 세션 smoke 통과 — explorer Sonnet·Read/Grep/Glob)
 
 ## 다음 작업 후보 (우선순위순)
 

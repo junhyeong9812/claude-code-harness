@@ -269,3 +269,15 @@ tools: Read, Grep, Glob
 검색 도구(Grep·Glob)를 쓸 수 없으면 Read로 추측 탐색하지 말고, 보고 첫 줄에 '검색 도구 없음'을 적어라.
 ```
 | 2026-11-06 13:00 | 사용자 결정: review unresolved 잔여 리스크 수용 — **user override**(마지막 post-fix 수정 2건 미재점검) → push·main ff 병합·deploy·신규 세션 smoke | 진행 |
+
+| 시각 | 사건 | 결과 |
+|---|---|---|
+| 2026-11-06 13:02 | push origin/harness-search-findings · main ff 병합(c2254f0→c0a4b72) · push main · deploy.sh(smoke 통과, 백업 ~/.claude/.deploy-backup-3535604, agents 신규) — 사용자 지시 | 배포 |
+| 2026-11-06 13:02 | 신규 세션 smoke(임시 디렉터리, 프로젝트 agents 없음): explorer 1회 호출 — Grep으로 a.py:1, 도구 = Read·Grep·Glob(쓰기 도구 없음), modelUsage claude-sonnet-5-5 $0.047, core §5를 'explorer(Sonnet·읽기 전용)'로 답함(v4.3 로드) | 통과 — 가정 1 실증(사용자 레벨 정의) |
+| 2026-11-06 13:02 | 사이클 마감: NEXT 기준 갱신 · 측정 로그 13열 이행(헤더만 13열, 이전 행 그대로) + 1행 · CS 이슈 아카이브 0건(정책 문서 작업 — study-note 쓰기 금지영역) | 완료 |
+
+## 완료 요약
+
+- 목표(spec §1) 1~5 완료: core §5 탐색 위임 explorer · agents/explorer.md 배포 · WIP 흡수 · README·HISTORY·NEXT·적용 기준표·패치 기록 · CLI before/after(사용자 보고).
+- 리뷰: 3루프 상한 — review unresolved → user override(잔여 = 마지막 post-fix 2건 미재점검). 배포 후 smoke 통과.
+- 남은 것: NEXT N0(explorer 실사용 관찰)·N0b(gate-guard agents 판별·open-source Explore)·N1(codex 인라인 경로 정식화).
