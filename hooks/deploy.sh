@@ -15,7 +15,8 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST="$HOME/.claude"
 DRY=0; [ "${1:-}" = "--dry-run" ] && DRY=1
 
-MANIFEST="core.md HISTORY.md hooks playbooks templates"
+MANIFEST="core.md HISTORY.md hooks playbooks templates agents"
+# agents/ = 서브에이전트 정의(v4.3 explorer). 디렉토리 통째 교체 — ~/.claude/agents 에 따로 둔 정의(/agents UI 로 만든 것 포함)는 백업으로 옮겨지므로 repo 가 정본(dry-run "DEST에만" 경고로 확인).
 # dest 이름 → repo 소스 경로 매핑 (v4: core.md 소스는 src/ — 루트에 두면 세션 런타임이 project instructions 로
 # 중복 주입하는 실측 때문. harness-v4-slimdown task-01)
 src_of() { case "$1" in core.md) echo "src/core.md" ;; *) echo "$1" ;; esac; }
