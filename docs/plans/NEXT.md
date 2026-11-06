@@ -4,17 +4,21 @@
 
 ## 기준
 
-- 마지막 갱신: 2026-11-02 · 직전 완료 작업: `docs/plans/2026-11-02/agent-search-findings/`(v4.3) · 기준 커밋: c2254f0 · 병합 상태: 미병합(브랜치 harness-search-findings — push·병합·배포 사용자 확인 대기)
+- 마지막 갱신: 2026-11-06 · 직전 작업: `docs/plans/2026-11-06/harness-v4-3/`(v4.3 일괄 — 전신 `2026-11-02/agent-search-findings/` 흡수) · 기준 커밋: c2254f0 · 병합 상태: 미병합(브랜치 harness-search-findings — push·병합·배포 사용자 확인 대기)
 
 ## 다음 작업 후보 (우선순위순)
 
-### N0. 탐색 위임 모델 측정 → 워커 기본 모델 결정 — 우선순위: 높음 · 관측 신호: v4.3 README "실측" 절(캐시 읽기 75~93% — 메인 대화 재독 누적), 사용자 가설(탐색은 Haiku·Sonnet, 메인은 결정)
+### N0. 탐색 위임 실사용 관찰 — 우선순위: 중간 · 관측 신호: v4.3 explorer 도입(4차 결론 — 측정은 완료)
 
-- 설계는 clean-code-llm-experiment ADR-0009(러너·과제·토큰 집계 재사용): 같은 과제를 (a) 메인 직접 (b) 메인 + 싼 탐색 워커로 돌려 총 비용·성공 비교. **결과별 할 일을 측정 전에 등록**(예: 비용비 < 0.8·성공 비열등 → 탐색 워커 기본 모델 변경 / 0.8~1.25 → 탐색량 큰 작업에만 / > 1.25 → 현행 유지를 근거로 기록).
-- 발생 가능 문제: 작은 과제(찾기 1~3턴)만 쓰면 위임 비용이 이겨 "현행 유지" 쪽으로 기운다 — 탐색량이 큰 과제(여러 파일 읽고 정리)를 반드시 포함 · 러너가 서브에이전트 모델 지정을 지원하는지 미확인 · 요약 손실(약한 모델 날조)은 성공·결함으로만 보인다.
-- 입력: 측정 로그 13열 `워커`(v4.3)로 실제 작업의 워커 토큰을 함께 모은다.
+- 측정 완료(clean-code-llm-experiment 4차 결론): Sonnet explorer 채택. 남은 것은 **실사용 확인** — 측정 로그 13열 `워커`로 explorer 호출 수·토큰을 모아, 메인이 실제로 explorer를 쓰는지(실험: 지시 하에 큰 과제 54/54, 작은 과제 미호출)와 비용을 본다.
+- 발생 가능 문제: 실험 explorer는 Bash·Read였고 하네스는 Read·Grep·Glob(Bash 없음) — git 이력·빌드 산출물 조회가 필요한 탐색은 explorer가 못 한다(그때는 메인 직접 또는 Opus 워커) · 실험은 effort 기본값 · Sonnet 요약의 누락(Haiku 실패 형태)은 성공·결함으로만 보인다 — 핵심 1~2곳 교차 확인(core §2)을 지킬 것.
+- 후속 실험 후보(사용자 결정 전): 긴 세션의 컨텍스트 보호 효과 · Haiku 재측정(D3 layered 궤적부터) · 압축 위주 대안 비교.
 
-### N1. codex 샌드박스 실패 시 인라인 입력 경로를 review.md §5에 정식화 — 우선순위: 높음 · 이번에 리뷰가 두 번 막힘
+### N0b. gate-guard 배포 경로 판별에 `agents/` 추가 — 우선순위: 중간 · 관측 신호: v4.3 리뷰 루프 1(harness-v4-3 F4)
+
+- `hooks/gate-guard.sh`의 `~/.claude` 배포 경로 판별이 `hooks/·playbooks/·templates/`·정책 파일만 L1로 본다 — v4.3에서 deploy 대상이 된 `~/.claude/agents/`를 직접 고치면 L0으로 통과(explorer 도구 제한이 게이트 없이 바뀔 수 있음). 이번 작업은 훅 로직 금지라 core §1에 절차 규칙으로만 적었다. 착수 시 테스트 케이스(agents 경로 Edit → L1) 먼저. 같은 착수에서 `playbooks/open-source.md`의 Explore 지시를 explorer로 맞출지 결정(v4.3 금지영역이었음 — 리뷰 루프 2 F3).
+
+### N1. codex 샌드박스 실패 시 인라인 입력 경로를 review.md §5에 정식화 — 우선순위: 높음 · 이번에 리뷰가 두 번 막힘(v4.3 리뷰 루프 1에서 또 — 2026-11-06)
 
 - **왜 다음인가**: loop3 codex가 미러 cwd에서 `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`로 파일을 못 읽어 `review blocked`를 반환 → spec+diff+전문을 stdin에 인라인해 재실행하자 정상 리뷰됨(log 02:55·03:05 행).
 - **발생 가능한 문제**: 인라인 입력은 미러 탐색이 없어 "diff에 없는 것" 렌즈가 약해짐(관측: 인라인 codex 지적은 전부 전문을 준 4파일 안에서만 나옴).
@@ -49,5 +53,6 @@
 
 ## 완료 이력
 
+- 완료 → `docs/plans/2026-11-06/harness-v4-3/`(v4.3 일괄)
 - 완료 → `docs/plans/2026-11-02/agent-search-findings/`(v4.3)
 - 완료 → `docs/plans/2026-09-24/ponytail-next-issue-archive/`
